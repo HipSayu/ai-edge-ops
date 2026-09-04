@@ -1,0 +1,1071 @@
+/* ---------- Live monitor panel ---------- */
+.av-live-panel {
+  overflow: hidden;
+}
+
+.av-live-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.av-live-cam-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.av-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--critical);
+}
+
+.av-live-badge.offline {
+  color: var(--text-faint);
+}
+
+.av-live-badge.good-badge {
+  color: var(--good);
+}
+
+.av-live-badge.overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.av-panel-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.av-video-frame {
+  position: relative;
+  margin: 12px 14px 0;
+  aspect-ratio: 16 / 8.2;
+  max-height: 420px;
+  background: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+}
+
+.av-video-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(0.15) contrast(1.08) brightness(0.92);
+}
+
+.av-video-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0px,
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.av-video-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.55);
+}
+
+.av-overlay-topbar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.av-overlay-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #d7dee8;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+}
+
+.av-overlay-chip.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.av-detect-box {
+  position: absolute;
+  border: 1.5px solid var(--critical);
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.av-detect-box.safe {
+  border-color: var(--good);
+}
+
+.av-detect-tag {
+  position: absolute;
+  left: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 5px;
+  white-space: nowrap;
+  color: #05070a;
+}
+
+.av-detect-tag.person {
+  top: -18px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.av-detect-tag.violation {
+  top: -36px;
+  background: var(--critical);
+  color: #fff;
+}
+
+.av-detect-tag.safe {
+  background: var(--good);
+}
+
+.av-detect-box.safe .av-detect-tag.safe:nth-of-type(1) {
+  top: -34px;
+}
+
+.av-detect-box.safe .av-detect-tag.safe:nth-of-type(2) {
+  top: -18px;
+}
+
+.av-video-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+
+.av-ctrl-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e8ecf2;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.av-ctrl-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.av-ctrl-spacer {
+  flex: 1;
+}
+
+.av-video-offline {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-size: 12px;
+  background: #0a0c11;
+}
+
+.av-video-offline.small {
+  font-size: 10px;
+}
+
+.av-telemetry-bar {
+  display: flex;
+  gap: 20px;
+  padding: 10px 16px 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.av-telemetry-bar strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* ---------- Camera list panel ---------- */
+.av-camera-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.av-camera-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.av-camera-row:hover {
+  background: var(--panel-2);
+}
+
+.av-camera-row.active {
+  border-color: var(--border-strong);
+  background: var(--panel-2);
+}
+
+.av-camera-thumb {
+  width: 44px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.av-camera-thumb-off {
+  color: var(--critical);
+  font-size: 12px;
+}
+
+.av-camera-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.av-camera-row-id {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.av-camera-row-zone {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.av-camera-row-status {
+  font-size: 10px;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.av-alert-pill {
+  font-size: 10px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.av-alert-pill.has-alerts {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+/* ---------- Alerts panel ---------- */
+.av-alert-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.av-alert-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px 52px 60px 1fr 60px 76px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.av-alert-row:hover {
+  background: var(--panel-2);
+}
+
+.av-alert-list li:last-child .av-alert-row {
+  border-bottom: none;
+}
+
+.av-alert-time {
+  color: var(--text-dim);
+}
+
+.av-alert-camera {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.av-alert-person {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.av-severity-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.av-severity-badge.critical {
+  color: var(--critical);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.av-severity-badge.warning {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.av-severity-badge.info {
+  color: var(--info);
+  background: rgba(234, 179, 8, 0.12);
+}
+
+/* ---------- Mini charts ---------- */
+.av-mini-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.av-mini-chart-grid.compact {
+  grid-template-columns: 1fr;
+}
+
+.av-mini-chart {
+  background: var(--panel);
+  padding: 14px 16px;
+}
+
+.av-mini-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.av-mini-chart-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.av-mini-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* ---------- Incidents table ---------- */
+.av-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.av-filter-row select {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--panel-2);
+  color: var(--text-dim);
+}
+
+.av-table-wrap {
+  overflow-x: auto;
+}
+
+.av-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.av-table th {
+  text-align: left;
+  padding: 9px 16px;
+  color: var(--text-faint);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.av-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.av-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.av-clickable-row {
+  cursor: pointer;
+}
+
+.av-clickable-row:hover {
+  background: var(--panel-2);
+}
+
+.av-table-empty {
+  text-align: center;
+  color: var(--text-faint);
+  padding: 24px 16px;
+}
+
+.av-status-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.av-status-pill.new {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.av-status-pill.reviewed {
+  color: var(--good);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.av-status-pill.escalated {
+  color: var(--critical);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* ---------- Edge device ---------- */
+.av-device-name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.av-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.av-telemetry-grid.compact {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.av-telemetry-tile {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.av-telemetry-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.av-telemetry-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.av-telemetry-bar-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.av-telemetry-bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.av-telemetry-bar-fill.warn {
+  background: var(--warning);
+}
+
+@media (max-width: 900px) {
+  .av-telemetry-grid,
+  .av-telemetry-grid.compact {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---------- Incident modal ---------- */
+.av-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 5, 8, 0.65);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+  animation: av-fade-in 0.15s ease-out;
+}
+
+@keyframes av-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.av-incident-modal {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  animation: av-modal-in 0.18s ease-out;
+}
+
+@keyframes av-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.av-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+}
+
+.av-incident-modal-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+
+.av-incident-modal-body {
+  padding: 20px 22px 22px;
+}
+
+.av-incident-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.av-incident-id {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.av-incident-title {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.av-incident-fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 20px;
+  margin-bottom: 18px;
+}
+
+.av-incident-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.av-incident-field-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.av-incident-field-value {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.av-incident-explanation {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+
+.av-incident-explanation p {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.av-incident-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.av-btn-primary,
+.av-btn-secondary {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.av-btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.av-btn-secondary {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-dim);
+}
+
+.av-btn-secondary.danger {
+  color: var(--critical);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.av-btn-secondary:hover {
+  background: var(--panel-2);
+}
+
+/* ---------- AI assistant chat ---------- */
+.av-assistant {
+  display: flex;
+  flex-direction: column;
+}
+
+.av-chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.av-chat-msg {
+  max-width: 80%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.av-chat-msg p {
+  margin: 4px 0 0;
+}
+
+.av-chat-role {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.av-chat-msg.user {
+  align-self: flex-end;
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+.av-chat-msg.assistant {
+  align-self: flex-start;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+
+.av-suggested-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 12px;
+}
+
+.av-suggested-chip {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.av-suggested-chip:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.av-chat-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.av-chat-input-row input {
+  flex: 1;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.av-chat-input-row input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---------- Live Monitor grid layouts ---------- */
+.av-layout-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.av-layout-switch {
+  display: flex;
+  gap: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+
+.av-layout-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.av-layout-btn.active {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+.av-grid-view {
+  display: grid;
+  gap: 2px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.av-grid-view.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.av-grid-view.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.av-grid-view.cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.av-grid-tile {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  cursor: pointer;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.av-grid-tile.active {
+  outline-color: var(--accent);
+}
+
+.av-grid-tile video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(0.15) contrast(1.05) brightness(0.9);
+}
+
+.av-grid-tile-label {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Cameras management page ---------- */
+.av-cameras-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.av-camera-card {
+  overflow: hidden;
+}
+
+.av-camera-card-thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.av-camera-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.av-camera-card-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.av-camera-card-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.av-camera-runtime {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.av-camera-runtime-title {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.av-camera-runtime-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.av-camera-runtime-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.av-camera-runtime-row .av-mono {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- Responsive scroll fixes ---------- */
+.av-alert-list {
+  overflow-x: auto;
+}
+
+.av-alert-row {
+  min-width: 480px;
+}
+
+.av-chat-log {
+  max-height: 46vh;
+}
+
+@media (max-width: 900px) {
+  .av-mini-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .av-telemetry-grid,
+  .av-telemetry-grid.compact {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .av-incident-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .av-telemetry-bar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .av-video-controls {
+    flex-wrap: wrap;
+  }
+
+  .av-layout-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .av-cameras-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  .av-chat-msg {
+    max-width: 92%;
+  }
+}
+
+@media (max-width: 640px) {
+  .av-video-frame {
+    aspect-ratio: 16 / 9;
+    max-height: 220px;
+  }
+
+  .av-telemetry-grid,
+  .av-telemetry-grid.compact {
+    grid-template-columns: 1fr;
+  }
+
+  .av-cameras-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .av-incident-modal {
+    max-height: 94vh;
+  }
+
+  .av-filter-row select {
+    flex: 1 1 46%;
+  }
+}
