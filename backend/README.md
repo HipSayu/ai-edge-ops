@@ -1,71 +1,68 @@
-# AI Edge Ops — Backend
+# AI Edge Ops — backend
 
-FastAPI service for the edge AI operations platform.
+Everything server-side lives here; the repo splits cleanly into `frontend/` and
+`backend/`.
 
 ```
-ai-edge-ops
-├── fleet          devices + monitoring telemetry (heartbeats, metrics)
-├── model_registry models + versioned / compressed artifacts
-├── deployment     bind a published model version to a device
-├── observability  violations · alerts · analytics
-└── edge           server<->edge protocol + FleetGateway (svc_core messaging bus)
+backend/
+├── packages/svc_core/     dqh.svc_core — generic: messaging, config, http, presence, reconcile, errors
+├── libs/edge_protocol/    edge_protocol — the server<->edge wire contract (payloads + topics)
+├── server/                control plane: FastAPI + Postgres, operator API, FleetGateway
+├── edge_agent/            runs on each edge device (Jetson): MQTT link, runtime, camera pipeline, local API
+└── deploy/
+    ├── server/docker-compose.yml   db + emqx + minio + redis + server
+    └── edge/docker-compose.yml     edge-agent (points at a central broker)
 ```
 
-Built on **`dqh.svc_core`** (`packages/svc_core`, installed editable): the FastAPI
-app factory + `ApiResponse` envelope + error taxonomy (`dqh.svc_core.http` /
-`dqh.svc_core.errors`), pagination, the messaging bus (`InMemoryMessageBus` /
-`MqttMessageBus`), presence tracking, and the composable settings groups
-(`DatabaseConfig`, `MqttConfig`, `S3Config`, ...). Every endpoint returns
-`ApiResponse[T]` = `{ success, data, error, request_id }`.
+`server` and `edge_agent` both depend on `dqh-svc-core` and `edge-protocol`
+(installed editable from `packages/` and `libs/`).
 
-## Architecture
-
-Modular monolith, **package-by-feature**. One module per bounded context under
-`app/modules/<name>/`, each with a fixed layout:
-
-| File | Responsibility |
-|------|----------------|
-| `router.py`     | HTTP layer — request/response, status codes. No logic. |
-| `service.py`    | Use-cases, transaction boundary, publishes events. **No FastAPI imports.** |
-| `repository.py` | All query construction. Flushes but never commits. |
-| `models.py`     | SQLAlchemy ORM. |
-| `schemas.py`    | Pydantic request/response contracts. |
-| `domain.py`     | Enums, events, pure business rules. |
-| `events.py`     | Subscribers to other modules' events. |
-
-Modules talk to each other only via **public services** (exported from the module
-`__init__.py`) or **in-process domain events** (`app/core/events.py`) — never by
-importing another module's repository or models. Device traffic (heartbeats,
-violations, deploy commands) crosses `app/edge/` over a `dqh.svc_core` MessageBus
-(`memory` in dev/tests, `mqtt` in prod via `EDGE_TRANSPORT`).
-
-Request flow: `router → service → repository → model`.
-
-## Run
+## Dev setup (one venv for all four)
 
 ```bash
-# from repo root — full stack (Postgres + backend + frontend)
-docker compose up --build
-#   API docs:  http://localhost:8000/docs
-#   frontend:  http://localhost:5173
-
-# or backend only, locally
 cd backend
-python -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/uvicorn app.main:app --reload --port 8000
+python -m venv .venv
+.venv/Scripts/pip install -e "packages/svc_core[fastapi,mqtt,dev]" \
+                          -e "libs/edge_protocol[dev]" \
+                          -e "server[dev]" \
+                          -e "edge_agent[dev]"
 ```
-
-Schema is created on startup (`init_db` → `Base.metadata.create_all`). Swap for
-Alembic migrations when the schema stabilises.
 
 ## Test
 
 ```bash
-cd backend
-.venv/bin/pytest          # in-memory SQLite, no external services
+cd backend/packages/svc_core   && ../../.venv/Scripts/python -m pytest -q   # 29
+cd backend/libs/edge_protocol  && ../../.venv/Scripts/python -m pytest -q   # 2
+cd backend/server              && ../.venv/Scripts/python -m pytest -q      # 11
+cd backend/edge_agent          && ../.venv/Scripts/python -m pytest -q      # 7
 ```
+
+## Run
+
+```bash
+# control plane
+cd backend/deploy/server && docker compose up --build      # http://localhost:8000/docs
+
+# an edge node (see docs/run-edge-agent.md for the full guide)
+cd backend/deploy/edge && DEVICE_ID=1 MQTT_HOST=host.docker.internal docker compose up --build
+```
+
+## The server
+
+Modular monolith, package-by-feature. One module per bounded context under
+`server/app/modules/<name>/` — `router → service → repository → model`, plus
+`domain.py` (enums/events/rules) and `events.py` (subscribers). Modules talk only
+via **public services** or **in-process domain events** (`app/core/events.py`).
+
+Built on **`dqh.svc_core`**: `create_app` + `ApiResponse` envelope
+(`{ success, data, error, request_id }`) + error taxonomy + pagination + the
+messaging bus. Device traffic crosses `server/app/edge/` over a `dqh.svc_core`
+MessageBus (`memory` in dev/tests, `mqtt` in prod via `EDGE_TRANSPORT`).
+
+Schema is created on startup (`init_db`). Swap for Alembic when it stabilises.
 
 ## Config
 
-Environment variables (see `.env.example`): `DATABASE_URL`, `CORS_ORIGINS`,
-`OFFLINE_THRESHOLD_SECONDS`, `LATENCY_SLO_MS`.
+One `Settings` object, nested groups from `dqh.svc_core.config`, env with `__`:
+`DB__URL`, `MQTT__HOST`, `S3__ENDPOINT_URL`, `REDIS__URL`, `CORS_ORIGINS`,
+`OFFLINE_THRESHOLD_SECONDS`, `EDGE_TRANSPORT`.

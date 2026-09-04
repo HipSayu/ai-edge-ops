@@ -1,0 +1,36 @@
+# Edge-node stack — runs ON each edge device (Jetson).  From backend/deploy/edge/:
+#   MQTT_HOST=<central-broker> DEVICE_ID=cam-plant-a-01 docker compose up --build
+# Local agent API: http://localhost:9100/status
+name: ai-edge-ops-edge
+
+services:
+  edge-agent:
+    image: ai-edge-ops/edge-agent:dev
+    build:
+      context: ../..
+      dockerfile: edge_agent/Dockerfile
+    environment:
+      DEVICE_ID: ${DEVICE_ID:-edge-dev-0}
+      TRANSPORT: mqtt
+      LOG_LEVEL: INFO
+      MQTT__HOST: ${MQTT_HOST:-host.docker.internal}
+      MQTT__PORT: ${MQTT_PORT:-1883}
+      MQTT__USERNAME: ${MQTT_USERNAME:-}
+      MQTT__PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT__TLS: ${MQTT_TLS:-false}
+      SERVER__BASE_URL: ${SERVER_BASE_URL:-http://host.docker.internal:8000/api/v1}
+      # cameras: CAMERAS__0__ID / CAMERAS__0__SOURCE / CAMERAS__0__ZONE
+      CAMERAS__0__ID: ${CAMERA_ID:-bay-1}
+      CAMERAS__0__SOURCE: ${CAMERA_SOURCE:-0}
+      CAMERAS__0__ZONE: ${CAMERA_ZONE:-loading-bay}
+    ports:
+      - "9100:9100"
+    volumes:
+      - edge_state:/var/lib/edge-agent
+    # Jetson: uncomment for GPU + camera passthrough
+    # runtime: nvidia
+    # devices: ["/dev/video0:/dev/video0"]
+    restart: unless-stopped
+
+volumes:
+  edge_state:
