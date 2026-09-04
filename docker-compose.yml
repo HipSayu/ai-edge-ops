@@ -1,0 +1,53 @@
+# Full local stack: Postgres + FastAPI backend + Vite frontend.
+#   docker compose up --build
+# Backend:  http://localhost:8000/docs
+# Frontend: http://localhost:5173
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ppe
+      POSTGRES_PASSWORD: ppe
+      POSTGRES_DB: ai_edge_ops
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ppe -d ai_edge_ops"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      ENVIRONMENT: local
+      DATABASE_URL: postgresql+asyncpg://ppe:ppe@db:5432/ai_edge_ops
+      CORS_ORIGINS: '["http://localhost:5173"]'
+      OFFLINE_THRESHOLD_SECONDS: "90"
+      LATENCY_SLO_MS: "80"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

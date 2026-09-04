@@ -2,15 +2,15 @@ export type Severity = 'critical' | 'warning' | 'info'
 export type IncidentStatus = 'New' | 'Reviewed' | 'Escalated'
 
 export const SEVERITY_LABEL: Record<Severity, string> = {
-  critical: 'NGHIÊM TRỌNG',
-  warning: 'CẢNH BÁO',
-  info: 'THÔNG TIN',
+  critical: 'CRITICAL',
+  warning: 'WARNING',
+  info: 'INFO',
 }
 
 export const STATUS_LABEL: Record<IncidentStatus, string> = {
-  New: 'Mới',
-  Reviewed: 'Đã xem xét',
-  Escalated: 'Đã chuyển cấp',
+  New: 'New',
+  Reviewed: 'Reviewed',
+  Escalated: 'Escalated',
 }
 
 export interface Incident {
@@ -31,63 +31,66 @@ export const mockIncidents: Incident[] = [
     id: 128,
     time: '11:45:32',
     camera: 'CAM-03',
-    event: 'Không mũ bảo hộ',
+    event: 'No Hard Hat',
     confidence: 96.2,
     severity: 'critical',
     status: 'New',
     personId: '#128',
-    location: 'Sàn nhà máy — Khu C, Gian 4',
+    location: 'Main Factory Floor — Sector C, Bay 4',
     explanation:
-      'Phát hiện người với độ tin cậy 98.7%; vùng đầu được phân loại là không đội mũ bảo hộ với độ tin cậy 96.2% trong 3 khung hình liên tiếp, vượt ngưỡng bền vững 5 khung hình dùng để loại bỏ báo động giả.',
+      'Person detected with 98.7% confidence; head region classified as missing protective hard hat with 96.2% confidence over 3 consecutive frames, exceeding the 5-frame persistence threshold for false positive rejection.',
   },
   {
     id: 91,
     time: '11:44:17',
     camera: 'CAM-01',
-    event: 'Không áo phản quang',
+    event: 'No Safety Vest',
     confidence: 94.8,
     severity: 'warning',
     status: 'Reviewed',
     personId: '#091',
-    location: 'Cổng A — Lối vào vành đai',
+    location: 'Gate 01 — Perimeter Access',
     explanation:
-      'Vùng thân không khớp với đặc trưng áo phản quang (màu sắc + dải phản quang) với độ tin cậy 94.8%; người này đứng yên gần lối vào trong 12 giây.',
+      'Upper torso feature embeddings failed high-visibility vest classification (color + retroreflective striping) with 94.8% confidence; subject stationary near access lane for 12 seconds.',
   },
   {
     id: 77,
     time: '11:43:02',
     camera: 'CAM-02',
-    event: 'Xâm nhập khu vực hạn chế',
+    event: 'Perimeter Intrusion',
     confidence: 98.1,
     severity: 'critical',
     status: 'New',
     personId: '#077',
-    location: 'Khu sản xuất — Khu B, vùng hạn chế 2',
-    explanation: 'Tâm điểm của người đã vượt qua ranh giới ảo khu vực hạn chế mà không có sự kiện quẹt thẻ hợp lệ trong 60 giây gần nhất.',
+    location: 'Assembly Line Alpha — Sector B, Zone 2',
+    explanation:
+      'Subject centroid crossed virtual geofenced boundary without valid RFID authentication badge event logged within the previous 60 seconds.',
   },
   {
     id: 112,
     time: '11:39:51',
     camera: 'CAM-03',
-    event: 'Không găng tay',
+    event: 'No Safety Gloves',
     confidence: 91.4,
     severity: 'warning',
     status: 'Reviewed',
     personId: '#112',
-    location: 'Sàn nhà máy — Khu C, Gian 2',
-    explanation: 'Bộ phân loại vùng bàn tay không phát hiện đặc trưng kết cấu/màu sắc của găng tay với độ tin cậy 91.4% trong lúc người này vận hành máy móc.',
+    location: 'Main Factory Floor — Sector C, Machine Bay 2',
+    explanation:
+      'Hand region classifier detected bare skin pattern without required nitrile/kevlar protective gloves at 91.4% confidence during machinery operation.',
   },
   {
     id: 78,
     time: '11:31:08',
     camera: 'CAM-01',
-    event: 'Không khẩu trang',
+    event: 'No Face Mask',
     confidence: 89.6,
     severity: 'warning',
     status: 'Escalated',
     personId: '#078',
-    location: 'Cổng A — Lối vào vành đai',
-    explanation: 'Bộ phân loại vùng mặt không phát hiện khẩu trang che phủ với độ tin cậy 89.6% tại khu vực bắt buộc đeo khẩu trang.',
+    location: 'Gate 01 — Perimeter Access',
+    explanation:
+      'Facial feature classifier detected absence of mandatory surgical/particulate respirator at 89.6% confidence in active cleanroom corridor.',
   },
 ]
 
@@ -103,7 +106,7 @@ export const liveTelemetry = {
   latencyMs: 42,
   objects: 8,
   aiConfidence: 96.2,
-  resolution: '1080p',
+  resolution: '1080p60',
 }
 
 export interface AnalyticsPoint {
@@ -146,9 +149,9 @@ export const edgeDevice = {
   temperatureC: 68,
   inferenceFps: 30,
   inferenceLatencyMs: 42,
-  powerMode: 'MAXN',
-  model: 'YOLO26n-pruned',
-  runtime: 'TensorRT FP16',
+  powerMode: '15W MAXN',
+  model: 'YOLOv11-Enterprise',
+  runtime: 'TensorRT 10.3 FP16',
 }
 
 export interface ChatMessage {
@@ -158,18 +161,22 @@ export interface ChatMessage {
 }
 
 export const suggestedQuestions = [
-  'Hiển thị các sự cố nghiêm trọng',
-  'Camera nào có nhiều vi phạm nhất?',
-  'Hiện có bao nhiêu người được phát hiện?',
-  'Xem CAM-03',
-  'Điều gì đã xảy ra trong 10 phút qua?',
+  'Show all critical safety incidents',
+  'Which camera has the highest violation rate?',
+  'How many people are currently detected?',
+  'Focus live monitor on CAM-03',
+  'Summarize events in the last 15 minutes',
 ]
 
 export const initialChat: ChatMessage[] = [
-  { id: 1, role: 'user', text: 'Camera nào có nhiều vi phạm nhất trong 30 phút qua?' },
+  {
+    id: 1,
+    role: 'user',
+    text: 'Which camera logged the highest number of safety violations in the past 30 minutes?',
+  },
   {
     id: 2,
     role: 'assistant',
-    text: 'CAM-03 có số lượng vi phạm cao nhất với 5 sự cố PPE trong 30 phút qua — chủ yếu là thiếu mũ bảo hộ và găng tay tại Sàn nhà máy, Gian 2-4.',
+    text: 'CAM-03 (Main Factory Floor) logged the highest violation frequency with 5 PPE non-compliance events in the past 30 minutes — primarily missing hard hats and protective gloves across Sector C, Bays 2–4. Overall facility compliance is at 90.3%.',
   },
 ]
