@@ -15,7 +15,12 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "alembic>=1.14",
+    "dqh-svc-core",
 ]
+
+# local monorepo package — installed editable from packages/ (see Dockerfile / README)
+[tool.uv.sources]
+dqh-svc-core = { path = "packages/svc_core", editable = true }
 
 [project.optional-dependencies]
 dev = [

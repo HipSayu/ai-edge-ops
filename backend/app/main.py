@@ -15,15 +15,22 @@ from app.core.config import settings
 from app.core.database import init_db
 from app.core.exception_handlers import register_exception_handlers
 from app.core.logging import configure_logging
+from app.edge.runtime import EdgePlane
 from app.modules import register_event_handlers
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(app: FastAPI):
     configure_logging()
     register_event_handlers()
     await init_db()
-    yield
+    edge = EdgePlane()
+    await edge.start()
+    app.state.edge = edge
+    try:
+        yield
+    finally:
+        await edge.stop()
 
 
 def create_app() -> FastAPI:
