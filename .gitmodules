@@ -1,0 +1,3 @@
+[submodule "backend/packages"]
+	path = backend/packages
+	url = https://github.com/hopquangdo/python-packages
