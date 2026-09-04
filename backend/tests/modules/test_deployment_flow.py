@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
+from dqh.svc_core.errors import BadRequestError as BusinessRuleError
 
-from app.core.exceptions import BusinessRuleError
 from app.modules.deployment.domain import DeploymentStatus
 from app.modules.deployment.schemas import DeploymentCreate
 from app.modules.deployment.service import DeploymentService

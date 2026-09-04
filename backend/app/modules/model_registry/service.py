@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dqh.svc_core.errors import BadRequestError as BusinessRuleError
+from dqh.svc_core.errors import ConflictError, NotFoundError
+from dqh.svc_core.http import Page
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BusinessRuleError, ConflictError, NotFoundError
-from app.core.pagination import Page, PageParams
 from app.modules.model_registry.domain import ModelTask, ModelVersionStatus
 from app.modules.model_registry.models import Model, ModelVersion
 from app.modules.model_registry.repository import ModelRepository, ModelVersionRepository
@@ -41,7 +43,7 @@ class ModelRegistryService:
 
     async def list_models(self, *, task: ModelTask | None, params: PageParams) -> Page[Model]:
         items, total = await self.models.list_page(task=task, params=params)
-        return Page.build(items, total, params)
+        return Page.of(items, total=total, params=params)
 
     async def add_version(self, model_id: int, data: ModelVersionCreate) -> ModelVersion:
         await self.get_model(model_id)

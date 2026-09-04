@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy import select
 
-from app.core.pagination import PageParams
 from app.modules.deployment.domain import DeploymentStatus
 from app.modules.deployment.models import Deployment
 from app.shared.repository import BaseRepository

@@ -7,8 +7,16 @@ ai-edge-ops
 ├── fleet          devices + monitoring telemetry (heartbeats, metrics)
 ├── model_registry models + versioned / compressed artifacts
 ├── deployment     bind a published model version to a device
-└── observability  violations · alerts · analytics
+├── observability  violations · alerts · analytics
+└── edge           server<->edge protocol + FleetGateway (svc_core messaging bus)
 ```
+
+Built on **`dqh.svc_core`** (`packages/svc_core`, installed editable): the FastAPI
+app factory + `ApiResponse` envelope + error taxonomy (`dqh.svc_core.http` /
+`dqh.svc_core.errors`), pagination, the messaging bus (`InMemoryMessageBus` /
+`MqttMessageBus`), presence tracking, and the composable settings groups
+(`DatabaseConfig`, `MqttConfig`, `S3Config`, ...). Every endpoint returns
+`ApiResponse[T]` = `{ success, data, error, request_id }`.
 
 ## Architecture
 
@@ -26,8 +34,10 @@ Modular monolith, **package-by-feature**. One module per bounded context under
 | `events.py`     | Subscribers to other modules' events. |
 
 Modules talk to each other only via **public services** (exported from the module
-`__init__.py`) or **domain events** (`app/core/events.py`) — never by importing
-another module's repository or models.
+`__init__.py`) or **in-process domain events** (`app/core/events.py`) — never by
+importing another module's repository or models. Device traffic (heartbeats,
+violations, deploy commands) crosses `app/edge/` over a `dqh.svc_core` MessageBus
+(`memory` in dev/tests, `mqtt` in prod via `EDGE_TRANSPORT`).
 
 Request flow: `router → service → repository → model`.
 

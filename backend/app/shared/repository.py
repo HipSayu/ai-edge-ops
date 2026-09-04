@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
 
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy import ColumnExpressionArgument, Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import Base
-from app.core.pagination import PageParams
 
 ModelT = TypeVar("ModelT", bound=Base)
 

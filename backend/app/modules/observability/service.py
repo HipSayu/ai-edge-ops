@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.errors import NotFoundError
+from dqh.svc_core.http import Page
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
-from app.core.exceptions import NotFoundError
-from app.core.pagination import Page, PageParams
 from app.modules.observability.domain import (
     AlertRaised,
     AlertSeverity,
@@ -64,7 +65,7 @@ class ViolationService:
         items, total = await self.repo.list_page(
             device_id=device_id, violation_type=violation_type, since=since, params=params
         )
-        return Page.build(items, total, params)
+        return Page.of(items, total=total, params=params)
 
 
 class AlertService:
@@ -122,7 +123,7 @@ class AlertService:
         items, total = await self.repo.list_page(
             status=status, alert_type=alert_type, device_id=device_id, params=params
         )
-        return Page.build(items, total, params)
+        return Page.of(items, total=total, params=params)
 
     async def acknowledge(self, alert_id: int) -> Alert:
         alert = await self.get(alert_id)

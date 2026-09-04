@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.errors import BadRequestError as BusinessRuleError
+from dqh.svc_core.errors import NotFoundError
+from dqh.svc_core.http import Page
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
-from app.core.exceptions import BusinessRuleError, NotFoundError
-from app.core.pagination import Page, PageParams
 from app.modules.deployment.domain import (
     DeploymentActivated,
     DeploymentFailed,
@@ -53,7 +55,7 @@ class DeploymentService:
         items, total = await self.repo.list_page(
             device_id=device_id, status=status, params=params
         )
-        return Page.build(items, total, params)
+        return Page.of(items, total=total, params=params)
 
     async def create(self, data: DeploymentCreate) -> Deployment:
         await self.fleet.get_device(data.device_id)  # 404 if missing

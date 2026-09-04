@@ -7,13 +7,13 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+from dqh.svc_core.http.adapters.fastapi import create_app as svc_create_app
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.router import api_router
 from app.core.config import settings
-from app.core.database import init_db
-from app.core.exception_handlers import register_exception_handlers
+from app.core.database import init_db, session_scope
 from app.core.logging import configure_logging
 from app.edge.runtime import EdgePlane
 from app.modules import register_event_handlers
@@ -21,7 +21,7 @@ from app.modules import register_event_handlers
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    configure_logging()
+    configure_logging(settings.log_level)
     register_event_handlers()
     await init_db()
     edge = EdgePlane()
@@ -33,18 +33,23 @@ async def lifespan(app: FastAPI):
         await edge.stop()
 
 
+async def _db_check() -> bool:
+    async with session_scope() as session:
+        await session.execute(text("SELECT 1"))
+    return True
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name, lifespan=lifespan)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+    return svc_create_app(
+        title=settings.app_name,
+        version="0.1.0",
+        routers=[api_router],
+        router_prefix=settings.api_v1_prefix,
+        cors_origins=settings.cors_origins,
+        lifespan=lifespan,
+        health_path=f"{settings.api_v1_prefix}/health",
+        health_checks={"db": _db_check},
     )
-    register_exception_handlers(app)
-    app.include_router(api_router, prefix=settings.api_v1_prefix)
-    return app
 
 
 app = create_app()

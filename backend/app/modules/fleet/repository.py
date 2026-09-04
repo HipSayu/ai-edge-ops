@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy import func, select
 
-from app.core.pagination import PageParams
 from app.modules.fleet.domain import DeviceStatus
 from app.modules.fleet.models import Device, MetricSample
 from app.shared.repository import BaseRepository

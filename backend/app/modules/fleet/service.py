@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.errors import ConflictError, NotFoundError
+from dqh.svc_core.http import Page
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.events import event_bus
-from app.core.exceptions import ConflictError, NotFoundError
-from app.core.pagination import Page, PageParams
 from app.modules.fleet.domain import (
     DeviceLatencyDegraded,
     DeviceRegistered,
@@ -52,7 +53,7 @@ class FleetService:
         self, *, site: str | None, status: DeviceStatus | None, params: PageParams
     ) -> Page[Device]:
         items, total = await self.devices.list_page(site=site, status=status, params=params)
-        return Page.build(items, total, params)
+        return Page.of(items, total=total, params=params)
 
     async def update_device(self, device_id: int, data: DeviceUpdate) -> Device:
         device = await self.get_device(device_id)
@@ -104,7 +105,7 @@ class FleetService:
     ) -> Page[MetricSample]:
         await self.get_device(device_id)
         items, total = await self.metrics.list_for_device(device_id, since=since, params=params)
-        return Page.build(items, total, params)
+        return Page.of(items, total=total, params=params)
 
     async def sweep_offline(self) -> int:
         """Mark devices with a stale heartbeat OFFLINE. Intended for a scheduler."""

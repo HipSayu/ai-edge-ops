@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
+from dqh.svc_core.errors import ConflictError
 
-from app.core.exceptions import ConflictError
 from app.modules.fleet.domain import DeviceStatus
 from app.modules.fleet.schemas import DeviceCreate, HeartbeatIn
 from app.modules.fleet.service import FleetService

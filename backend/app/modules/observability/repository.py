@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.http import PaginationParams as PageParams
 from sqlalchemy import cast, func, select
 from sqlalchemy.types import Date
 
-from app.core.pagination import PageParams
 from app.modules.observability.domain import AlertStatus, AlertType
 from app.modules.observability.models import Alert, Violation
 from app.shared.repository import BaseRepository
