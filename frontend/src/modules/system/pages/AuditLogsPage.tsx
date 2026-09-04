@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Search, Download } from 'lucide-react'
-import { mockAuditLogs } from '@/mock\system'
+import { mockAuditLogs } from '@/modules/system/mock/system'
 
 export default function AuditLogsPage() {
   const [search, setSearch] = useState('')
@@ -30,7 +30,7 @@ export default function AuditLogsPage() {
         (l) =>
           `"${l.timestamp}","${l.actor}","${l.actorEmail}","${l.action}","${l.category}","${l.targetResource}","${l.ipAddress}","${l.status}","${l.detail}"`
       ),
-    ].join('\n')
+    ].join('/n')
 
     navigator.clipboard.writeText(csv)
     setCopiedNotice(true)

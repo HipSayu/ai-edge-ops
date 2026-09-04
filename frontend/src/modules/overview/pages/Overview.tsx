@@ -14,11 +14,11 @@ import {
   ShieldAlert,
   Heart,
 } from 'lucide-react'
-import KpiCard from '@/components\KpiCard'
-import { mockDevices, type EdgeDevice } from '@/mock\fleet'
-import { mockCameras } from '@/mock\cameras'
-import { mockDeployments } from '@/mock\ai'
-import { mockIncidents } from '@/mock\incidents'
+import KpiCard from '@/shared/components/KpiCard'
+import { mockDevices, type EdgeDevice } from '@/modules/fleet/mock/fleet'
+import { mockCameras } from '@/modules/fleet/mock/cameras'
+import { mockDeployments } from '@/modules/ai/mock/ai'
+import { mockIncidents } from '@/modules/observability/mock/incidents'
 
 // Initial seed data for rolling telemetry (16 points)
 const INITIAL_POINTS = Array.from({ length: 16 }, (_, i) => {

@@ -1,5 +1,5 @@
 import { Cpu, CheckCircle2 } from 'lucide-react'
-import { edgeDevice } from '@/mock\incidents'
+import { edgeDevice } from '@/modules/observability/mock/incidents'
 
 export default function EdgeDeviceCard({ compact }: { compact?: boolean }) {
   const memPct = Math.round((edgeDevice.gpuMemUsedGb / edgeDevice.gpuMemTotalGb) * 100)

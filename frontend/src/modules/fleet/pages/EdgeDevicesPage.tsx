@@ -1,6 +1,6 @@
 import { Server, CheckCircle2, WifiOff } from 'lucide-react'
-import EdgeDeviceCard from '@/components\EdgeDeviceCard'
-import { mockCameras } from '@/mock\cameras'
+import EdgeDeviceCard from '@/modules/fleet/components/EdgeDeviceCard'
+import { mockCameras } from '@/modules/fleet/mock/cameras'
 
 export default function EdgeDevicesPage() {
   return (

@@ -1,6 +1,6 @@
-import { useIncidents } from '@/hooks\useIncidents'
-import IncidentsTable from '@/components\IncidentsTable'
-import IncidentModal from '@/components\IncidentModal'
+import { useIncidents } from '@/modules/observability/hooks/useIncidents'
+import IncidentsTable from '@/modules/observability/components/IncidentsTable'
+import IncidentModal from '@/modules/observability/components/IncidentModal'
 
 export default function IncidentsPage() {
   const { incidents, selected, setSelected, markReviewed, escalate } = useIncidents()

@@ -11,8 +11,8 @@ import {
   WifiOff,
   Zap,
 } from 'lucide-react'
-import type { Camera } from '@/mock\cameras'
-import { liveTelemetry } from '@/mock\incidents'
+import type { Camera } from '@/modules/fleet/mock/cameras'
+import { liveTelemetry } from '@/modules/observability/mock/incidents'
 
 const MOCK_STREAM_URL = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
 

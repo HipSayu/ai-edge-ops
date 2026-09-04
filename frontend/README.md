@@ -1,5 +1,17 @@
 # React + TypeScript + Vite
 
+## API layer
+
+API access is centralized in `src/shared/api`. Import a domain service from `@/shared/api`, for example `fleetService` or `observabilityService`.
+
+The client uses `/api` by default. Set `VITE_API_URL` when the backend runs elsewhere:
+
+```bash
+VITE_API_URL=http://localhost:8000/api npm run dev
+```
+
+Authentication is available through `authService` with `/auth/login`, `/auth/refresh`, `/auth/me`, and `/auth/logout`. Access and refresh tokens are stored by `authStorage`; authenticated requests automatically send the bearer token and retry once after a `401` response.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Check, X as XIcon, Search } from 'lucide-react'
-import { mockUsers, type UserAccount, type SystemRole } from '@/mock\system'
+import { mockUsers, type UserAccount, type SystemRole } from '@/modules/system/mock/system'
 
 const ROLES_MATRIX: { permission: string; admin: boolean; mlops: boolean; operator: boolean; auditor: boolean; viewer: boolean }[] = [
   { permission: 'Deploy AI Models to Edge Fleet', admin: true, mlops: true, operator: false, auditor: false, viewer: false },

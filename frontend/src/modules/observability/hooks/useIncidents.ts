@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { mockIncidents, type Incident } from '@/mock\incidents'
+import { mockIncidents, type Incident } from '@/modules/observability/mock/incidents'
 
 export function useIncidents() {
   const [incidents, setIncidents] = useState<Incident[]>(mockIncidents)

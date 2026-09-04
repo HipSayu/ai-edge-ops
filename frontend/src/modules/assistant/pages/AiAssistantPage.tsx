@@ -1,4 +1,4 @@
-import AiAssistantChat from '@/components\AiAssistantChat'
+import AiAssistantChat from '@/modules/assistant/components/AiAssistantChat'
 
 export default function AiAssistantPage() {
   return (

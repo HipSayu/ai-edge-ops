@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Bot, Send, Sparkles, User } from 'lucide-react'
-import { initialChat, suggestedQuestions, type ChatMessage } from '@/mock\incidents'
+import { initialChat, suggestedQuestions, type ChatMessage } from '@/modules/observability/mock/incidents'
 
 const CANNED_REPLY =
   'Based on real-time telemetry across the past 30 minutes, CAM-03 (Main Factory Floor) logged the highest violation frequency — primarily missing hard hats and protective gloves in Sector C, Bays 2–4. Facility-wide PPE compliance is currently holding at 90.3%.'

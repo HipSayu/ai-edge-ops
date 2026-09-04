@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Zap, Search, Cpu, Camera, Rocket, Shield } from 'lucide-react'
-import { mockEvents } from '@/mock\observability'
+import { mockEvents } from '@/modules/observability/mock/observability'
 
 export default function EventsPage() {
   const [search, setSearch] = useState('')
@@ -36,11 +36,11 @@ export default function EventsPage() {
   }
 
   return (
-    <div>
+    <div className="av-page-layout">
       
 
       {/* Filter and Search Bar */}
-      <section className="av-panel" style={{ marginBottom: 18 }}>
+      <section className="av-page-header av-panel" style={{ marginBottom: 0 }}>
         <div className="av-filter-row">
           <div className="av-search-box">
             <Search size={14} color="var(--text-faint)" />
@@ -72,7 +72,8 @@ export default function EventsPage() {
       </section>
 
       {/* Events Timeline */}
-      <div className="av-panel" style={{ padding: 22 }}>
+      <div className="av-page-content">
+        <div className="av-panel" style={{ padding: 22 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {filtered.map((evt, idx) => (
             <div
@@ -171,6 +172,7 @@ export default function EventsPage() {
               No system events match the selected criteria.
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

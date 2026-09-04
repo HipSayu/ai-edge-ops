@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Search, Download, Play, Pause, Trash2, RotateCw } from 'lucide-react'
-import { mockLogs, type LogEntry } from '@/mock\observability'
+import { mockLogs, type LogEntry } from '@/modules/observability/mock/observability'
 
 export default function LogsPage() {
   const [search, setSearch] = useState('')
@@ -39,7 +39,7 @@ export default function LogsPage() {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         
         <div style={{ display: 'flex', gap: 8 }}>
@@ -115,10 +115,12 @@ export default function LogsPage() {
           fontFamily: 'var(--font-mono)',
           fontSize: 12.5,
           lineHeight: 1.6,
-          maxHeight: 560,
+          flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
           border: '1px solid var(--border-strong)',
-          boxShadow: \'none\', 0, 0, 0.6)'}}
+          boxShadow: 'none'
+        }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {filtered.map((log) => (

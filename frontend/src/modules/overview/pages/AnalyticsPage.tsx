@@ -1,14 +1,15 @@
 import { useState } from 'react'
-import KpiCard from '@/components\KpiCard'
+import KpiCard from '@/shared/components/KpiCard'
 import { TrendingUp, ShieldCheck, AlertCircle, Clock } from 'lucide-react'
-import { analyticsTimeline } from '@/mock\incidents'
-import AnalyticsChart from '@/components\AnalyticsChart'
+import { analyticsTimeline } from '@/modules/observability/mock/incidents'
+import AnalyticsChart from '@/shared/components/AnalyticsChart'
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('2h')
 
   return (
-    <div>
+    <div className="av-page-layout">
+      <div className="av-page-header">
       <div className="av-layout-toolbar">
         
         <div className="av-layout-switch">
@@ -74,8 +75,10 @@ export default function AnalyticsPage() {
           chartColor="#f59e0b"
         />
       </div>
+      </div>
 
-      <AnalyticsChart data={analyticsTimeline} />
+      <div className="av-page-content">
+        <AnalyticsChart data={analyticsTimeline} />
 
       
 
@@ -86,6 +89,7 @@ export default function AnalyticsPage() {
           <CategoryBar label="Missing Protective Gloves" count={18} percentage={17} color="var(--accent)" />
           <CategoryBar label="Restricted Zone Breach" count={8} percentage={8} color="var(--info)" />
         </div>
+      </div>
       </div>
     </div>
   )

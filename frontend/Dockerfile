@@ -1,12 +1,15 @@
-# Dev image — Vite dev server with HMR. For production, build and serve dist/ via nginx.
-FROM node:22-alpine
-
+# Production image: build the SPA, serve it with nginx.
+# (For local dev use `npm run dev` — no container needed.)
+FROM node:22-alpine AS build
 WORKDIR /app
-
 COPY package.json package-lock.json ./
 RUN npm ci
-
 COPY . .
+# VITE_API_URL is optional — defaults to "/api" (Caddy routes /api to the server)
+ARG VITE_API_URL
+RUN npm run build
 
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

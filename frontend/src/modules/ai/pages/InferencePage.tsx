@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Activity, Zap, CheckCircle2, Shield, Camera } from 'lucide-react'
-import { mockInferenceSamples } from '@/mock\ai'
-import KpiCard from '@/components\KpiCard'
-import { mockCameras } from '@/mock\cameras'
-import LiveMonitorPanel from '@/components\LiveMonitorPanel'
+import { mockInferenceSamples } from '@/modules/ai/mock/ai'
+import KpiCard from '@/shared/components/KpiCard'
+import { mockCameras } from '@/modules/fleet/mock/cameras'
+import LiveMonitorPanel from '@/modules/fleet/components/LiveMonitorPanel'
 
 export default function InferencePage() {
   const [selectedCamId, setSelectedCamId] = useState('CAM-03')

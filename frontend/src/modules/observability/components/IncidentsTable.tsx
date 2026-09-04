@@ -12,8 +12,8 @@ import {
   type Incident,
   type IncidentStatus,
   type Severity,
-} from '@/mock\incidents'
-import { mockCameras } from '@/mock\cameras'
+} from '@/modules/observability/mock/incidents'
+import { mockCameras } from '@/modules/fleet/mock/cameras'
 
 type SortKey = 'time' | 'confidence' | 'severity'
 

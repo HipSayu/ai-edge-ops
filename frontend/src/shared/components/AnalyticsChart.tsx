@@ -1,6 +1,6 @@
 import { BarChart3 } from 'lucide-react'
-import type { AnalyticsPoint } from '@/mock\incidents'
-import MiniTimeSeries from '@/components\MiniTimeSeries'
+import type { AnalyticsPoint } from '@/modules/observability/mock/incidents'
+import MiniTimeSeries from '@/shared/components/MiniTimeSeries'
 
 interface Props {
   data: AnalyticsPoint[]

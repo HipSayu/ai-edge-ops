@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { LayoutGrid, WifiOff } from 'lucide-react'
-import { mockCameras } from '@/mock\cameras'
-import LiveMonitorPanel from '@/components\LiveMonitorPanel'
-import CameraListPanel from '@/components\CameraListPanel'
+import { mockCameras } from '@/modules/fleet/mock/cameras'
+import LiveMonitorPanel from '@/modules/fleet/components/LiveMonitorPanel'
+import CameraListPanel from '@/modules/fleet/components/CameraListPanel'
 
 const LAYOUTS = [
   { key: '1x1', cols: 1, label: '1×1 Focus' },

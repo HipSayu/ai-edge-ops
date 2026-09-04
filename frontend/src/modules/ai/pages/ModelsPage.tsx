@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Search } from 'lucide-react'
-import { mockModels, type ModelArtifact } from '@/mock\ai'
+import { mockModels, type ModelArtifact } from '@/modules/ai/mock/ai'
 
 export default function ModelsPage() {
   const [search, setSearch] = useState('')
@@ -47,40 +47,43 @@ export default function ModelsPage() {
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="av-page-layout">
+      <div className="av-page-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
-        <button className="av-btn-primary" onClick={() => setShowRegisterModal(true)}>
-          <Plus size={15} />
-          <span>Register New Model</span>
-        </button>
+          <button className="av-btn-primary" onClick={() => setShowRegisterModal(true)}>
+            <Plus size={15} />
+            <span>Register New Model</span>
+          </button>
+        </div>
+
+        {/* Filter and Search */}
+        <section className="av-panel" style={{ marginBottom: 0 }}>
+          <div className="av-filter-row">
+            <div className="av-search-box">
+              <Search size={14} color="var(--text-faint)" />
+              <input
+                type="text"
+                placeholder="Search by model name, architecture, or tag..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            <select value={formatFilter} onChange={(e) => setFormatFilter(e.target.value)}>
+              <option value="all">All Runtime Formats</option>
+              <option value="TensorRT FP16">TensorRT FP16</option>
+              <option value="ONNX FP16">ONNX FP16</option>
+              <option value="TorchScript">TorchScript</option>
+            </select>
+          </div>
+        </section>
       </div>
 
-      {/* Filter and Search */}
-      <section className="av-panel" style={{ marginBottom: 18 }}>
-        <div className="av-filter-row">
-          <div className="av-search-box">
-            <Search size={14} color="var(--text-faint)" />
-            <input
-              type="text"
-              placeholder="Search by model name, architecture, or tag..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <select value={formatFilter} onChange={(e) => setFormatFilter(e.target.value)}>
-            <option value="all">All Runtime Formats</option>
-            <option value="TensorRT FP16">TensorRT FP16</option>
-            <option value="ONNX FP16">ONNX FP16</option>
-            <option value="TorchScript">TorchScript</option>
-          </select>
-        </div>
-      </section>
-
       {/* Models Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
-        {filtered.map((model) => (
+      <div className="av-page-content">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
+          {filtered.map((model) => (
           <div
             key={model.id}
             style={{
@@ -88,7 +91,7 @@ export default function ModelsPage() {
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
               padding: 20,
-              boxShadow: \'none\',
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               gap: 14}}
@@ -176,7 +179,8 @@ export default function ModelsPage() {
               </button>
             </div>
           </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Register Model Modal */}

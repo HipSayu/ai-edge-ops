@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, MapPin, Camera, AlertTriangle, Activity, CheckCircle2, Layers } from 'lucide-react'
-import { mockCameraGroups, type CameraGroup } from '@/mock\fleet'
+import { mockCameraGroups, type CameraGroup } from '@/modules/fleet/mock/fleet'
 
 export default function CameraGroupsPage() {
   const [groups, setGroups] = useState<CameraGroup[]>(mockCameraGroups)
@@ -31,16 +31,19 @@ export default function CameraGroupsPage() {
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="av-page-layout">
+      <div className="av-page-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
         <button className="av-btn-primary" onClick={() => setShowCreateModal(true)}>
           <Plus size={15} />
           <span>New Camera Group</span>
         </button>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+      <div className="av-page-content">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
         {groups.map((grp) => (
           <div
             key={grp.id}
@@ -49,7 +52,7 @@ export default function CameraGroupsPage() {
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
               padding: 20,
-              boxShadow: \'none\',
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               gap: 14}}
@@ -132,7 +135,8 @@ export default function CameraGroupsPage() {
               </button>
             </div>
           </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Create Camera Group Modal */}

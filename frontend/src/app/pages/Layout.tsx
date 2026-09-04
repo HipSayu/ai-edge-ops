@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import Sidebar from '@/components\Sidebar'
-import Header from '@/components\Header'
-import ChatWidget from '@/components\ChatWidget'
+import Sidebar from '@/shared/components/Sidebar'
+import Header from '@/shared/components/Header'
+import ChatWidget from '@/modules/assistant/components/ChatWidget'
 
 export type Theme = 'dark' | 'light'
 
@@ -56,9 +56,11 @@ export default function Layout() {
             onToggleMobileMenu={() => setMobileOpen((prev) => !prev)}
             mobileOpen={mobileOpen}
           />
-          <main className="av-main">
-            <Outlet context={{ theme, toggleTheme }} />
-          </main>
+          <div className="av-body">
+            <main className="av-main">
+              <Outlet context={{ theme, toggleTheme }} />
+            </main>
+          </div>
         </div>
       </div>
       {location.pathname !== '/chat' && <ChatWidget />}

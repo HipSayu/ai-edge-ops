@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, RotateCcw, RotateCw } from 'lucide-react'
-import { mockDeployments, type Deployment } from '@/mock\ai'
-import { mockModels } from '@/mock\ai'
+import { mockDeployments, type Deployment } from '@/modules/ai/mock/ai'
+import { mockModels } from '@/modules/ai/mock/ai'
 
 export default function DeploymentsPage() {
   const [deployments, setDeployments] = useState<Deployment[]>(mockDeployments)
@@ -48,7 +48,7 @@ export default function DeploymentsPage() {
   }
 
   return (
-    <div>
+    <div className="av-page-layout">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         
         <button className="av-btn-primary" onClick={() => setShowDeployModal(true)}>
@@ -79,7 +79,7 @@ export default function DeploymentsPage() {
       )}
 
       {/* Active Rollout Pipelines */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
+      <div className="av-page-content" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {deployments.map((dep) => (
           <div
             key={dep.id}
@@ -88,7 +88,7 @@ export default function DeploymentsPage() {
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
               padding: 20,
-              boxShadow: \'none\',
+              boxShadow: 'none',
               display: 'flex',
               flexDirection: 'column',
               gap: 14}}

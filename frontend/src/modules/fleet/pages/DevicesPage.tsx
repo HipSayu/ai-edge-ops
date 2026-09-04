@@ -11,8 +11,8 @@ import {
   Activity,
   Plus,
   X} from 'lucide-react'
-import KpiCard from '@/components\KpiCard'
-import { mockDevices, type EdgeDevice } from '@/mock\fleet'
+import KpiCard from '@/shared/components/KpiCard'
+import { mockDevices, type EdgeDevice } from '@/modules/fleet/mock/fleet'
 
 export default function DevicesPage() {
   const [search, setSearch] = useState('')
@@ -85,7 +85,7 @@ export default function DevicesPage() {
   const avgGpu = deviceList.length > 0 ? Math.round(deviceList.reduce((acc, d) => acc + d.gpuUsage, 0) / deviceList.length) : 0
 
   return (
-    <div>
+    <div className="av-page-layout">
       {actionNotice && (
         <div
           style={{
@@ -108,6 +108,7 @@ export default function DevicesPage() {
       )}
 
       {/* Metrics Row */}
+      <div className="av-page-header">
       <div className="av-kpi-row">
         <KpiCard
           label="Total Nodes"
@@ -186,9 +187,13 @@ export default function DevicesPage() {
             <span>Add Device</span>
           </button>
         </div>
+      </section>
 
         {/* Device Cards Grid */}
-        <div style={{ padding: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
+      </div>
+
+      <div className="av-page-content">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
           {filtered.map((dev) => (
             <div
               key={dev.id}
@@ -329,7 +334,7 @@ export default function DevicesPage() {
             </div>
           )}
         </div>
-      </section>
+      </div>
 
       {/* Add Device Modal */}
       {showAddModal && (

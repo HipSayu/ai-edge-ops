@@ -9,6 +9,7 @@ import {
   Boxes,
   Rocket,
   Target,
+  Tags,
   Activity,
   AlertTriangle,
   Zap,
@@ -58,6 +59,7 @@ const NAVIGATION_GROUPS: NavGroup[] = [
       { to: '/ai/models', label: 'Models', icon: Boxes },
       { to: '/ai/deployments', label: 'Deployments', icon: Rocket, badge: '1', dotColor: 'blue' },
       { to: '/ai/inference', label: 'Inference', icon: Target },
+      { to: '/ai/class-config', label: 'Class Config', icon: Tags },
     ],
   },
   {

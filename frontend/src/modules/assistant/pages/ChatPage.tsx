@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Bot, User } from 'lucide-react'
-import ChatInputForm from '@/components/ChatInputForm'
+import ChatInputForm from '@/modules/assistant/components/ChatInputForm'
 
 interface Message {
   id: string
@@ -78,7 +78,7 @@ export default function ChatPage() {
       let replyContent = "I've analyzed your request regarding '" + currentInput.substring(0, 20) + "...'. All systems are currently operating within normal parameters. Is there a specific edge node you'd like me to investigate?"
       
       if (currentInput.startsWith('/diagnose')) {
-        replyContent = 'Initiating full diagnostic sweep... \n\n[ OK ] Network Latency\n[ OK ] Memory Allocation\n[ OK ] Thermal Sensors\n[ OK ] TensorRT Engine Status\n\nNo anomalies detected.'
+        replyContent = 'Initiating full diagnostic sweep... /n/n[ OK ] Network Latency/n[ OK ] Memory Allocation/n[ OK ] Thermal Sensors/n[ OK ] TensorRT Engine Status/n/nNo anomalies detected.'
       } else if (currentInput.startsWith('/deploy')) {
         replyContent = 'Preparing rollout pipeline. Please specify the target group and model version (e.g., group=factory-floor model=yolov8n-v2.1).'
       }
@@ -95,7 +95,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', marginBottom: -20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, marginBottom: -20 }}>
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0 24px', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 840, margin: '0 auto', width: '100%' }}>
         {messages.map(msg => (
           <div key={msg.id} style={{ display: 'flex', gap: 16, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', padding: '0 24px' }}>

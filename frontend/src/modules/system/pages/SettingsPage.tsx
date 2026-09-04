@@ -8,7 +8,7 @@ import {
   Save,
   Key} from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
-import type { Theme } from '@/pages\Layout'
+import type { Theme } from '@/app/pages/Layout'
 
 type TabKey = 'general' | 'ai' | 'alerts' | 'edge'
 

@@ -1,5 +1,5 @@
 import { Camera as CameraIcon, WifiOff } from 'lucide-react'
-import type { Camera } from '@/mock\cameras'
+import type { Camera } from '@/modules/fleet/mock/cameras'
 
 interface Props {
   cameras: Camera[]

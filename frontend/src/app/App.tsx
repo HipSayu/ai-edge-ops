@@ -1,32 +1,33 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Layout from '@/pages\Layout'
-import Overview from '@/pages\Overview'
-import ChatPage from '@/pages\ChatPage'
+import Layout from '@/app/pages/Layout'
+import Overview from '@/modules/overview/pages/Overview'
+import ChatPage from '@/modules/assistant/pages/ChatPage'
 
 // FLEET
-import DevicesPage from '@/pages\fleet\DevicesPage'
-import CamerasPage from '@/pages\fleet\CamerasPage'
-import SnapshotsPage from '@/pages\fleet\SnapshotsPage'
-import CameraGroupsPage from '@/pages\fleet\CameraGroupsPage'
+import DevicesPage from '@/modules/fleet/pages/DevicesPage'
+import CamerasPage from '@/modules/fleet/pages/CamerasPage'
+import SnapshotsPage from '@/modules/fleet/pages/SnapshotsPage'
+import CameraGroupsPage from '@/modules/fleet/pages/CameraGroupsPage'
 
 // AI
-import ModelsPage from '@/pages\ai\ModelsPage'
-import DeploymentsPage from '@/pages\ai\DeploymentsPage'
-import InferencePage from '@/pages\ai\InferencePage'
+import ModelsPage from '@/modules/ai/pages/ModelsPage'
+import DeploymentsPage from '@/modules/ai/pages/DeploymentsPage'
+import InferencePage from '@/modules/ai/pages/InferencePage'
+import ClassConfigPage from '@/modules/ai/pages/ClassConfigPage'
 
 // OBSERVABILITY
-import MonitoringPage from '@/pages\observability\MonitoringPage'
-import AlertsPage from '@/pages\observability\AlertsPage'
-import EventsPage from '@/pages\observability\EventsPage'
-import LogsPage from '@/pages\observability\LogsPage'
+import MonitoringPage from '@/modules/observability/pages/MonitoringPage'
+import AlertsPage from '@/modules/observability/pages/AlertsPage'
+import EventsPage from '@/modules/observability/pages/EventsPage'
+import LogsPage from '@/modules/observability/pages/LogsPage'
 
 // SYSTEM
-import UsersPage from '@/pages\system\UsersPage'
-import SettingsPage from '@/pages\system\SettingsPage'
-import AuditLogsPage from '@/pages\system\AuditLogsPage'
+import UsersPage from '@/modules/system/pages/UsersPage'
+import SettingsPage from '@/modules/system/pages/SettingsPage'
+import AuditLogsPage from '@/modules/system/pages/AuditLogsPage'
 
-import '@/app\styles\theme.css'
-import '@/app\styles\layout-extras.css'
+import '@/app/styles/theme.css'
+import '@/app/styles/layout-extras.css'
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
             <Route path="models" element={<ModelsPage />} />
             <Route path="deployments" element={<DeploymentsPage />} />
             <Route path="inference" element={<InferencePage />} />
+            <Route path="class-config" element={<ClassConfigPage />} />
           </Route>
 
           {/* OBSERVABILITY */}

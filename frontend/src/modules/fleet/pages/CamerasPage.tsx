@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Camera as CameraIcon, Wifi, WifiOff, Radio, Search, Play, Grid2X2, Grid3X3, LayoutGrid } from 'lucide-react'
-import { mockCameras, type Camera } from '@/mock\cameras'
-import LiveMonitorPanel from '@/components\LiveMonitorPanel'
+import { mockCameras, type Camera } from '@/modules/fleet/mock/cameras'
+import LiveMonitorPanel from '@/modules/fleet/components/LiveMonitorPanel'
 
 type ViewMode = 'cards' | 'grid4' | 'grid9'
 
@@ -32,9 +32,9 @@ export default function CamerasPage() {
   const displayedCameras = filtered.slice(0, displayLimit)
 
   return (
-    <div>
+    <div className="av-page-layout">
       {/* Camera Filter Bar */}
-      <section className="av-panel" style={{ marginBottom: 18 }}>
+      <section className="av-page-header av-panel" style={{ marginBottom: 0 }}>
         <div className="av-filter-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '300px' }}>
             <div className="av-search-box" style={{ flex: 1 }}>
@@ -81,6 +81,7 @@ export default function CamerasPage() {
       </section>
 
       {/* Grid Mode Render */}
+      <div className="av-page-content">
       {viewMode !== 'cards' && (
         <div
           style={{
@@ -210,6 +211,7 @@ export default function CamerasPage() {
           )}
         </div>
       )}
+      </div>
 
       {/* Camera Live Stream Dialog (only used in Card mode) */}
       {selectedCamera && viewMode === 'cards' && (

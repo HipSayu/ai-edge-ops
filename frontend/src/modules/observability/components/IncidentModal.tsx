@@ -1,5 +1,5 @@
 import { X, CheckCircle2, AlertTriangle, Video, Sparkles, Shield } from 'lucide-react'
-import { SEVERITY_LABEL, STATUS_LABEL, type Incident } from '@/mock\incidents'
+import { SEVERITY_LABEL, STATUS_LABEL, type Incident } from '@/modules/observability/mock/incidents'
 
 interface Props {
   incident: Incident

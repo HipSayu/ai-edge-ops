@@ -1,5 +1,5 @@
 import { Camera as CameraIcon, Wifi, WifiOff, Radio } from 'lucide-react'
-import { mockCameras } from '@/mock\cameras'
+import { mockCameras } from '@/modules/fleet/mock/cameras'
 
 export default function Cameras() {
   return (

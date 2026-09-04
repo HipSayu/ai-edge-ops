@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Clock, Cpu, HardDrive, Zap, ArrowDownUp } from 'lucide-react'
-import { mockMonitoringTimeline } from '@/mock\observability'
-import MiniTimeSeries from '@/components\MiniTimeSeries'
+import { mockMonitoringTimeline } from '@/modules/observability/mock/observability'
+import MiniTimeSeries from '@/shared/components/MiniTimeSeries'
 
 export default function MonitoringPage() {
   const [timeRange, setTimeRange] = useState('24h')
 
   return (
-    <div>
-      <div className="av-layout-toolbar">
+    <div className="av-page-layout">
+      <div className="av-page-header av-layout-toolbar">
         
         <div className="av-layout-switch">
           {['1h', '6h', '24h', '7d'].map((r) => (
@@ -24,7 +24,8 @@ export default function MonitoringPage() {
       </div>
 
       {/* Primary Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, marginTop: 14 }}>
+      <div className="av-page-content">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16 }}>
         <section className="av-panel">
           <div className="av-panel-header">
             <span className="av-panel-title">
@@ -120,6 +121,7 @@ export default function MonitoringPage() {
             unit=" Mbps"
           />
         </section>
+      </div>
       </div>
     </div>
   )

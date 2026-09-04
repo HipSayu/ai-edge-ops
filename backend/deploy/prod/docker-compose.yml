@@ -1,0 +1,97 @@
+# Production stack — runs on the deploy host. Images come from GHCR (pushed by CI).
+#   cp .env.example .env  &&  edit  &&  docker compose pull  &&  docker compose up -d
+# Caddy terminates TLS and routes: /api/* -> server, everything else -> frontend.
+name: ai-edge-ops
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - server
+      - frontend
+
+  frontend:
+    image: ${IMAGE_PREFIX:-ghcr.io/hopquangdo/ai-edge-ops}-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+
+  server:
+    image: ${IMAGE_PREFIX:-ghcr.io/hopquangdo/ai-edge-ops}-server:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      ENVIRONMENT: production
+      EDGE_TRANSPORT: mqtt
+      DB__URL: postgresql+asyncpg://ppe:${POSTGRES_PASSWORD}@db:5432/ai_edge_ops
+      CORS_ORIGINS: '["https://${DOMAIN}"]'
+      MQTT__HOST: mqtt
+      MQTT__PORT: "1883"
+      S3__ENDPOINT_URL: http://minio:9000
+      S3__ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      S3__SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      S3__BUCKET: artifacts
+      REDIS__URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ppe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ai_edge_ops
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ppe -d ai_edge_ops"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mqtt:
+    image: emqx/emqx:5.8
+    restart: unless-stopped
+    ports:
+      - "1883:1883"       # plain MQTT (LAN / VPN)
+      - "8883:8883"       # MQTT over TLS (edge devices)
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_etc:/opt/emqx/etc
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - miniodata:/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  miniodata:
+  emqx_data:
+  emqx_etc:
+  redisdata:
+  caddy_data:
+  caddy_config:

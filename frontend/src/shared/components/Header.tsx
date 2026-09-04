@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Bell, Moon, Sun, Radio, Activity, Menu, X } from 'lucide-react'
-import { mockCameras } from '@/mock\cameras'
+import { mockCameras } from '@/modules/fleet/mock/cameras'
 
 interface Props {
   theme?: 'dark' | 'light'
@@ -24,31 +24,22 @@ export default function Header({
   }, [])
 
   useEffect(() => {
-    // Check both window and root container for scroll (depending on layout structure)
+    // The body owns scrolling so the header stays fixed in the viewport.
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLElement | Document
-      const scrollTop =
-        target === document
-          ? window.scrollY
-          : (target as HTMLElement).scrollTop
+      const scrollTop = target === document ? window.scrollY : (target as HTMLElement).scrollTop
       setIsScrolled(scrollTop > 10)
     }
 
-    // Attach to window
     window.addEventListener('scroll', handleScroll, { passive: true })
-    
-    // Attach to av-root if it happens to be the scroll container
-    const rootEl = document.querySelector('.av-root')
-    if (rootEl) {
-      rootEl.addEventListener('scroll', handleScroll, { passive: true })
-    }
+    const bodyEl = document.querySelector('.av-body')
+    bodyEl?.addEventListener('scroll', handleScroll, { passive: true })
 
-    // Init state
-    setIsScrolled(window.scrollY > 10 || (rootEl && rootEl.scrollTop > 10) || false)
+    setIsScrolled(window.scrollY > 10 || (bodyEl?.scrollTop ?? 0) > 10)
 
     return () => {
       window.removeEventListener('scroll', handleScroll)
-      if (rootEl) rootEl.removeEventListener('scroll', handleScroll)
+      bodyEl?.removeEventListener('scroll', handleScroll)
     }
   }, [])
 

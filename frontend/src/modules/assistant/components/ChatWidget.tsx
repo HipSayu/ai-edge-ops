@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Bot, Sparkles } from 'lucide-react'
-import ChatInputForm from '@/components\ChatInputForm'
+import { X, Bot, Sparkles } from 'lucide-react'
+import ChatInputForm from '@/modules/assistant/components/ChatInputForm'
 
 interface Message {
   id: string
@@ -139,9 +139,10 @@ export default function ChatWidget() {
       <button
         className={`av-chat-toggle-btn ${isOpen ? 'open' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
-        title="Trợ lý AI"
+        aria-label={isOpen ? 'Đóng trợ lý AI' : 'Mở trợ lý AI'}
+        title={isOpen ? 'Đóng trợ lý AI' : 'Mở trợ lý AI'}
       >
-        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
+        {isOpen ? <X size={23} /> : <Bot size={25} strokeWidth={2.1} />}
       </button>
     </div>
   )
