@@ -14,7 +14,7 @@ export default function ChatPage() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I am your AI Edge Operations Assistant. I can help you query device telemetry, manage inference pipelines, or troubleshoot fleet health. How can I assist you today?',
+      content: 'Hello! I am your AI Edge Operations Assistant. I can help you query device telemetry, manage inference pipelines, or troubleshoot agent health. How can I assist you today?',
       timestamp: '09:00:12'
     },
     {
@@ -96,7 +96,7 @@ export default function ChatPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, marginBottom: -20 }}>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0 24px', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 840, margin: '0 auto', width: '100%' }}>
+      <div className="av-chat-scroll-area" style={{ flex: 1, overflowY: 'auto', padding: '10px 0 24px', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 840, margin: '0 auto', width: '100%' }}>
         {messages.map(msg => (
           <div key={msg.id} style={{ display: 'flex', gap: 16, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', padding: '0 24px' }}>
             <div style={{

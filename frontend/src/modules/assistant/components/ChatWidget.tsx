@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Bot, Sparkles } from 'lucide-react'
 import ChatInputForm from '@/modules/assistant/components/ChatInputForm'
+import { assistantService } from '@/shared/api/services/assistant'
 
 interface Message {
   id: string
@@ -11,14 +12,7 @@ interface Message {
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Xin chào! Tôi là Edge AI SOC Agent. Tôi có thể giúp gì cho bạn trong việc giám sát hệ thống hôm nay?',
-      sender: 'ai',
-      timestamp: new Date()
-    }
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -46,25 +40,9 @@ export default function ChatWidget() {
     setInput('')
     setIsTyping(true)
 
-    // Mock AI response
-    setTimeout(() => {
-      setIsTyping(false)
-      
-      const responses = [
-        'Hệ thống Camera đang hoạt động ổn định. Băng thông hiện tại là 1.2 GB/s.',
-        'Tôi đã phân tích 4 node. Node số 2 đang có tải GPU hơi cao (85%), bạn có muốn xem chi tiết không?',
-        'Dữ liệu real-time telemetry cho thấy không có sự cố bảo mật nào trong 24h qua.',
-        'Đã cập nhật biểu đồ giám sát thành công. Bạn cần tôi kiểm tra luồng video nào nữa không?'
-      ]
-      
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        text: responses[Math.floor(Math.random() * responses.length)],
-        sender: 'ai',
-        timestamp: new Date()
-      }
-      setMessages((prev) => [...prev, aiMsg])
-    }, 1500)
+    assistantService.sendMessage(userMsg.text).then((message) => {
+      setMessages((prev) => [...prev, { id: String(message.id), text: message.text, sender: message.role === 'assistant' ? 'ai' : 'user', timestamp: new Date() }])
+    }).finally(() => setIsTyping(false))
   }
 
   return (

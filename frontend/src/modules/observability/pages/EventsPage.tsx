@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Zap, Search, Cpu, Camera, Rocket, Shield } from 'lucide-react'
-import { mockEvents } from '@/modules/observability/mock/observability'
+import type { TimelineEvent } from '@/modules/observability/types'
+import { observabilityService } from '@/shared/api/services/observability'
 
 export default function EventsPage() {
   const [search, setSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('all')
   const [severityFilter, setSeverityFilter] = useState('all')
 
-  const filtered = mockEvents.filter((evt) => {
+  const [events, setEvents] = useState<TimelineEvent[]>([])
+  useEffect(() => { observabilityService.listEvents().then(setEvents).catch(() => setEvents([])) }, [])
+  const filtered = events.filter((evt) => {
     const matchSearch =
       search === '' ||
       evt.title.toLowerCase().includes(search.toLowerCase()) ||

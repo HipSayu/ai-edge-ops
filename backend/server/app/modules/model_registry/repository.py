@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dqh.svc_core.http import PaginationParams as PageParams
+from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dqh.svc_core.http import ApiResponse, Page, ok
+from dqh.svc_core.transports.http import ApiResponse, Page, ok
 from fastapi import APIRouter, Body, status
 
 from app.api.deps import DbSession, Pagination

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Check, X as XIcon, Search } from 'lucide-react'
-import { mockUsers, type UserAccount, type SystemRole } from '@/modules/system/mock/system'
+import type { UserAccount, SystemRole } from '@/modules/system/types'
+import { userService } from '@/shared/api/services/user'
 
 const ROLES_MATRIX: { permission: string; admin: boolean; mlops: boolean; operator: boolean; auditor: boolean; viewer: boolean }[] = [
-  { permission: 'Deploy AI Models to Edge Fleet', admin: true, mlops: true, operator: false, auditor: false, viewer: false },
+  { permission: 'Deploy AI Models to Edge Agent', admin: true, mlops: true, operator: false, auditor: false, viewer: false },
   { permission: 'Trigger Hardware Reboot & Reset', admin: true, mlops: true, operator: true, auditor: false, viewer: false },
   { permission: 'Modify AI Confidence & IoU Thresholds', admin: true, mlops: true, operator: false, auditor: false, viewer: false },
   { permission: 'Acknowledge & Triage Safety Incidents', admin: true, mlops: false, operator: true, auditor: true, viewer: false },
@@ -12,7 +13,11 @@ const ROLES_MATRIX: { permission: string; admin: boolean; mlops: boolean; operat
 ]
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<UserAccount[]>(mockUsers)
+  const [users, setUsers] = useState<UserAccount[]>([])
+
+  useEffect(() => {
+    userService.list().then(setUsers).catch(() => setUsers([]))
+  }, [])
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -129,7 +134,7 @@ export default function UsersPage() {
                         user.status === 'active' ? 'reviewed' : user.status === 'invited' ? 'new' : 'escalated'
                       }`}
                     >
-                      {user.status.toUpperCase()}
+                      {user.status}
                     </span>
                   </td>
                   <td className="av-mono">{user.lastActive}</td>

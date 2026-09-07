@@ -64,7 +64,7 @@ async def test_deploy_command_loads_runtime_and_acks(wired):
         p.TOPIC_CMD.render(device_id="dev-1"),
         Envelope(
             type=p.T_DEPLOY_MODEL,
-            source="fleet-gateway",
+            source="agent-gateway",
             payload=p.DeployModelPayload(
                 command_id="c1",
                 deployment_id=7,

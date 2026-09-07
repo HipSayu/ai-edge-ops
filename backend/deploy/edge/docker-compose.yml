@@ -5,6 +5,7 @@ name: ai-edge-ops-edge
 
 services:
   edge-agent:
+    container_name: ai-edge-ops-edge-agent-${DEVICE_ID:-edge-dev-0}
     image: ai-edge-ops/edge-agent:dev
     build:
       context: ../..
@@ -14,10 +15,14 @@ services:
       TRANSPORT: mqtt
       LOG_LEVEL: INFO
       MQTT__HOST: ${MQTT_HOST:-host.docker.internal}
-      MQTT__PORT: ${MQTT_PORT:-1883}
+      MQTT__PORT: ${MQTT_PORT:-8883}
+      MQTT__CLIENT_ID: ${MQTT_CLIENT_ID:-edge-${DEVICE_ID:-edge-dev-0}}
       MQTT__USERNAME: ${MQTT_USERNAME:-}
       MQTT__PASSWORD: ${MQTT_PASSWORD:-}
-      MQTT__TLS: ${MQTT_TLS:-false}
+      MQTT__TLS: ${MQTT_TLS:-true}
+      MQTT__TLS_CA_FILE: ${MQTT_TLS_CA_FILE:-/run/secrets/mqtt/ca.crt}
+      MQTT__TLS_CERT_FILE: ${MQTT_TLS_CERT_FILE:-/run/secrets/mqtt/client.crt}
+      MQTT__TLS_KEY_FILE: ${MQTT_TLS_KEY_FILE:-/run/secrets/mqtt/client.key}
       SERVER__BASE_URL: ${SERVER_BASE_URL:-http://host.docker.internal:8000/api/v1}
       # cameras: CAMERAS__0__ID / CAMERAS__0__SOURCE / CAMERAS__0__ZONE
       CAMERAS__0__ID: ${CAMERA_ID:-bay-1}
@@ -27,6 +32,7 @@ services:
       - "9100:9100"
     volumes:
       - edge_state:/var/lib/edge-agent
+      - ${MQTT_CERT_DIR:-./certs}:/run/secrets/mqtt:ro
     # Jetson: uncomment for GPU + camera passthrough
     # runtime: nvidia
     # devices: ["/dev/video0:/dev/video0"]

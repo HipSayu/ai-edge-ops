@@ -1,14 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Search, Download } from 'lucide-react'
-import { mockAuditLogs } from '@/modules/system/mock/system'
+import type { AuditLog } from '@/modules/system/types'
+import { systemService } from '@/shared/api/services/system'
 
 export default function AuditLogsPage() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [copiedNotice, setCopiedNotice] = useState(false)
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
 
-  const filtered = mockAuditLogs.filter((log) => {
+  useEffect(() => {
+    systemService.listAuditLogs().then(setAuditLogs).catch(() => setAuditLogs([]))
+  }, [])
+
+  const filtered = auditLogs.filter((log) => {
     const matchSearch =
       search === '' ||
       log.actor.toLowerCase().includes(search.toLowerCase()) ||

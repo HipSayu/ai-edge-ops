@@ -31,12 +31,22 @@ class Settings(BaseAppSettings):
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:5173"]
 
-    # Fleet health evaluation
+    # Agent health evaluation
     offline_threshold_seconds: int = 90
     latency_slo_ms: float = 80.0
+    evidence_dir: str = "var/evidence"
+    jwt_secret: str = "change-this-in-production"
+    jwt_algorithm: str = "HS256"
+    access_token_minutes: int = 15
+    refresh_token_days: int = 30
 
     # Edge transport: "memory" (in-process) or "mqtt"
     edge_transport: str = "memory"
+
+    # WebRTC video streaming (edge -> MediaMTX -> frontend), see app/modules/streaming
+    mediamtx_whip_url: str = "http://localhost:8889"
+    mediamtx_whep_url: str = "http://localhost:8889"
+    stream_token_seconds: int = 30
 
     # --- backing services (env: DB__* / MQTT__* / REDIS__* / S3__*) ------
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)

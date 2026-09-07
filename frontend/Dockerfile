@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# VITE_API_URL is optional — defaults to "/api" (Caddy routes /api to the server)
+# VITE_API_URL is optional — defaults to "/api/v1" (Caddy routes /api to the server)
 ARG VITE_API_URL
 RUN npm run build
 

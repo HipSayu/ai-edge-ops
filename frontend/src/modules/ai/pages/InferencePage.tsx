@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Activity, Zap, CheckCircle2, Shield, Camera } from 'lucide-react'
-import { mockInferenceSamples } from '@/modules/ai/mock/ai'
+import type { InferenceSample } from '@/modules/ai/types'
+import { aiService } from '@/shared/api/services/ai'
 import KpiCard from '@/shared/components/KpiCard'
-import { mockCameras } from '@/modules/fleet/mock/cameras'
-import LiveMonitorPanel from '@/modules/fleet/components/LiveMonitorPanel'
+import type { Camera as CameraType } from '@/modules/agent/types'
+import { agentService } from '@/shared/api/services/agent'
+import LiveMonitorPanel from '@/modules/agent/components/LiveMonitorPanel'
 
 export default function InferencePage() {
-  const [selectedCamId, setSelectedCamId] = useState('CAM-03')
-  const activeCamera = mockCameras.find((c) => c.id === selectedCamId) ?? mockCameras[0]
+  const [selectedCamId, setSelectedCamId] = useState('')
+  const [cameras, setCameras] = useState<CameraType[]>([])
+  const [samples, setSamples] = useState<InferenceSample[]>([])
+  useEffect(() => { agentService.listCameras().then((items) => { setCameras(items); setSelectedCamId(items[0]?.id ?? '') }).catch(() => setCameras([])) }, [])
+  useEffect(() => { aiService.listInferenceSamples().then(setSamples).catch(() => setSamples([])) }, [])
+  const activeCamera = cameras.find((c) => c.id === selectedCamId) ?? cameras[0]
+  if (!activeCamera) return <div className="av-panel">No camera data available.</div>
 
   return (
     <div>
@@ -94,7 +101,7 @@ export default function InferencePage() {
                 background: 'var(--panel-2)',
                 color: 'var(--text)'}}
             >
-              {mockCameras.map((c) => (
+              {cameras.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.id} — {c.name}
                 </option>
@@ -107,7 +114,7 @@ export default function InferencePage() {
               Recent Detections Feed
             </span>
 
-            {mockInferenceSamples.map((sample) => (
+            {samples.map((sample) => (
               <div
                 key={sample.id}
                 style={{

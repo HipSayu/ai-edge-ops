@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LayoutGrid, WifiOff } from 'lucide-react'
-import { mockCameras } from '@/modules/fleet/mock/cameras'
-import LiveMonitorPanel from '@/modules/fleet/components/LiveMonitorPanel'
-import CameraListPanel from '@/modules/fleet/components/CameraListPanel'
+import type { Camera } from '@/modules/agent/types'
+import { agentService } from '@/shared/api/services/agent'
+import LiveMonitorPanel from '@/modules/agent/components/LiveMonitorPanel'
+import CameraListPanel from '@/modules/agent/components/CameraListPanel'
 
 const LAYOUTS = [
   { key: '1x1', cols: 1, label: '1×1 Focus' },
@@ -11,15 +12,15 @@ const LAYOUTS = [
   { key: '4x4', cols: 4, label: '4×4 Wall' },
 ] as const
 
-const MOCK_STREAM_URL = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
-
 export default function LiveMonitor() {
-  const [activeId, setActiveId] = useState(mockCameras[0].id)
+  const [cameras, setCameras] = useState<Camera[]>([])
+  const [activeId, setActiveId] = useState('')
   const [layout, setLayout] = useState<(typeof LAYOUTS)[number]>(LAYOUTS[0])
-  const activeCamera = mockCameras.find((c) => c.id === activeId) ?? mockCameras[0]
+  const activeCamera = cameras.find((c) => c.id === activeId) ?? cameras[0]
+  useEffect(() => { agentService.listCameras().then((items) => { setCameras(items); setActiveId(items[0]?.id ?? '') }).catch(() => setCameras([])) }, [])
 
   const slots = layout.cols * layout.cols
-  const tiles = Array.from({ length: slots }, (_, i) => mockCameras[i % mockCameras.length])
+  const tiles = cameras.slice(0, slots)
 
   return (
     <div>
@@ -41,10 +42,10 @@ export default function LiveMonitor() {
         </div>
       </div>
 
-      {layout.key === '1x1' ? (
+      {layout.key === '1x1' && activeCamera ? (
         <div className="av-row av-row-live">
           <LiveMonitorPanel camera={activeCamera} />
-          <CameraListPanel cameras={mockCameras} activeId={activeId} onSelect={setActiveId} />
+          <CameraListPanel cameras={cameras} activeId={activeId} onSelect={setActiveId} />
         </div>
       ) : (
         <div className={`av-grid-view cols-${layout.cols}`}>
@@ -54,8 +55,8 @@ export default function LiveMonitor() {
               className={`av-grid-tile${cam.id === activeId ? ' active' : ''}`}
               onClick={() => setActiveId(cam.id)}
             >
-              {cam.online ? (
-                <video src={MOCK_STREAM_URL} autoPlay loop muted playsInline />
+              {cam.online && cam.runtime.streamUrl ? (
+                <video src={cam.runtime.streamUrl} autoPlay loop muted playsInline />
               ) : (
                 <div className="av-video-offline small">
                   <WifiOff size={20} />

@@ -12,7 +12,7 @@ from app.modules.model_registry.domain import (
     ModelTask,
     ModelVersionStatus,
 )
-from app.shared.enum import db_enum
+from app.shared.helpers.database import db_enum
 from app.shared.models import TimestampMixin
 
 

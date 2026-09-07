@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.shared.enum import StrEnum
+from app.shared.helpers.enums import StrEnum
 
 
 class ModelTask(StrEnum):

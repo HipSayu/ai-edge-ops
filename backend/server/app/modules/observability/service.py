@@ -4,19 +4,15 @@ from __future__ import annotations
 
 import datetime as dt
 
-from dqh.svc_core.errors import NotFoundError
-from dqh.svc_core.http import Page
-from dqh.svc_core.http import PaginationParams as PageParams
+from dqh.svc_core.contracts.errors import NotFoundError
+from dqh.svc_core.transports.http import Page
+from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
-from app.modules.observability.domain import (
-    AlertRaised,
-    AlertSeverity,
-    AlertStatus,
-    AlertType,
-    ViolationRecorded,
-)
+from app.shared.helpers.time import utcnow
+from app.modules.observability.event import AlertRaised, ViolationRecorded
+from app.modules.observability.domain import AlertSeverity, AlertStatus, AlertType
 from app.modules.observability.models import Alert, Violation
 from app.modules.observability.repository import AlertRepository, ViolationRepository
 from app.modules.observability.schemas import (
@@ -27,10 +23,6 @@ from app.modules.observability.schemas import (
 )
 
 
-def _utcnow() -> dt.datetime:
-    return dt.datetime.now(tz=dt.timezone.utc)
-
-
 class ViolationService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -38,7 +30,7 @@ class ViolationService:
 
     async def record(self, data: ViolationCreate) -> Violation:
         payload = data.model_dump()
-        payload["recorded_at"] = data.recorded_at or _utcnow()
+        payload["recorded_at"] = data.recorded_at or utcnow()
         violation = Violation(**payload)
         await self.repo.add(violation)
         await self.session.commit()
@@ -49,6 +41,7 @@ class ViolationService:
                 violation_type=violation.violation_type,
                 zone=violation.zone,
                 confidence=violation.confidence,
+                image_path=violation.image_path,
                 recorded_at=violation.recorded_at,
             )
         )
@@ -136,7 +129,7 @@ class AlertService:
         alert = await self.get(alert_id)
         if alert.status is not AlertStatus.RESOLVED:
             alert.status = AlertStatus.RESOLVED
-            alert.resolved_at = _utcnow()
+            alert.resolved_at = utcnow()
             await self.session.commit()
         return alert
 
@@ -151,13 +144,13 @@ class AnalyticsService:
 
     async def overview(self) -> OverviewKpis:
         from app.modules.deployment.service import DeploymentService
-        from app.modules.fleet.service import FleetService
+        from app.modules.agent.service import AgentService
 
-        now = _utcnow()
+        now = utcnow()
         day_ago = now - dt.timedelta(hours=24)
 
-        health = await FleetService(self.session).fleet_health()
-        avg_latency = await FleetService(self.session).avg_inference_latency_ms(day_ago)
+        health = await AgentService(self.session).agent_health()
+        avg_latency = await AgentService(self.session).avg_inference_latency_ms(day_ago)
         active_deployments = await DeploymentService(self.session).count_active()
 
         return OverviewKpis(
@@ -170,11 +163,11 @@ class AnalyticsService:
         )
 
     async def violations_timeseries(self, days: int = 14) -> list[TimeBucket]:
-        since = _utcnow() - dt.timedelta(days=days)
+        since = utcnow() - dt.timedelta(days=days)
         rows = await self.violations.daily_counts(since)
         return [TimeBucket(bucket=bucket, count=count) for bucket, count in rows]
 
     async def violations_by_type(self, days: int | None = 30) -> list[LabelCount]:
-        since = _utcnow() - dt.timedelta(days=days) if days else None
+        since = utcnow() - dt.timedelta(days=days) if days else None
         rows = await self.violations.count_by_type(since)
         return [LabelCount(label=label, count=count) for label, count in rows]

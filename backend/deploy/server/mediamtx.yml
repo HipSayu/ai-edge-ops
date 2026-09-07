@@ -1,0 +1,17 @@
+# MediaMTX config for local/dev: WHIP ingest (edge) + WHEP egress (frontend).
+# We don't touch media here — this process is the whole SFU. The FastAPI
+# server only issues per-path tokens and answers the auth webhook below.
+# Docs: https://mediamtx.org/docs/features/authentication
+
+authMethod: http
+authHTTPAddress: http://server:8000/api/v1/streaming/auth
+# path/action/protocol are already scoped by the token our server issues;
+# skip MediaMTX's own IP-based exclusion so every publish/read is checked.
+authHTTPExclude: []
+
+webrtcAdditionalHosts: [localhost]
+
+paths:
+  # created on demand: "cam_<camera_id>", one per camera (see
+  # server/app/modules/streaming/service.py:camera_path)
+  all_others:

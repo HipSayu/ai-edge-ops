@@ -6,6 +6,7 @@ name: ai-edge-ops-server
 
 services:
   db:
+    container_name: ai-edge-ops-dev-db
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ppe
@@ -20,6 +21,7 @@ services:
       retries: 10
 
   mqtt:
+    container_name: ai-edge-ops-dev-mqtt
     image: emqx/emqx:5.8
     ports: ["1883:1883", "18083:18083"]
     healthcheck:
@@ -29,6 +31,7 @@ services:
       retries: 12
 
   minio:
+    container_name: ai-edge-ops-dev-minio
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
@@ -38,10 +41,21 @@ services:
     volumes: ["miniodata:/data"]
 
   redis:
+    container_name: ai-edge-ops-dev-redis
     image: redis:7-alpine
     ports: ["6379:6379"]
 
+  mediamtx:
+    container_name: ai-edge-ops-dev-mediamtx
+    image: bluenviron/mediamtx:1.9.3
+    ports:
+      - "8889:8889"   # WHIP/WHEP HTTP
+      - "8189:8189/udp" # WebRTC/ICE
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+
   server:
+    container_name: ai-edge-ops-dev-server
     image: ai-edge-ops/server:dev
     build:
       context: ../..
@@ -52,6 +66,7 @@ services:
       EDGE_TRANSPORT: mqtt
       DB__URL: postgresql+asyncpg://ppe:ppe@db:5432/ai_edge_ops
       CORS_ORIGINS: '["http://localhost:5173"]'
+      EVIDENCE_DIR: /var/lib/ai-edge-ops/evidence
       MQTT__HOST: mqtt
       MQTT__PORT: "1883"
       S3__ENDPOINT_URL: http://minio:9000
@@ -59,8 +74,11 @@ services:
       S3__SECRET_ACCESS_KEY: minioadmin
       S3__BUCKET: artifacts
       REDIS__URL: redis://redis:6379/0
+      MEDIAMTX_WHIP_URL: http://localhost:8889
+      MEDIAMTX_WHEP_URL: http://localhost:8889
     volumes:
       - ../../server:/srv/server
+      - evidencedata:/var/lib/ai-edge-ops/evidence
     ports: ["8000:8000"]
     depends_on:
       db:
@@ -71,3 +89,4 @@ services:
 volumes:
   pgdata:
   miniodata:
+  evidencedata:

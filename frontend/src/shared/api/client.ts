@@ -1,11 +1,9 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '')
+import type { ApiEnvelope, AuthTokens, RequestOptions } from './types/client'
+export type { AuthTokens } from './types/client'
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '')
 const ACCESS_TOKEN_KEY = 'av_access_token'
 const REFRESH_TOKEN_KEY = 'av_refresh_token'
-
-export interface AuthTokens {
-  accessToken: string
-  refreshToken: string
-}
 
 export const authStorage = {
   getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
@@ -30,11 +28,6 @@ export class ApiError extends Error {
     this.status = status
     this.details = details
   }
-}
-
-type RequestOptions = Omit<RequestInit, 'body'> & {
-  body?: unknown
-  query?: Record<string, string | number | boolean | null | undefined>
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']) {
@@ -92,6 +85,15 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
         ? String(payload.message)
         : `API request failed with status ${response.status}`
     throw new ApiError(message, response.status, payload)
+  }
+
+  if (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'success' in payload &&
+    'data' in payload
+  ) {
+    return (payload as ApiEnvelope<T>).data
   }
 
   return payload as T

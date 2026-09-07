@@ -16,12 +16,11 @@ import {
   X,
 } from 'lucide-react'
 import {
-  mockClassProfiles,
   DEFAULT_COLORS,
   type ClassProfile,
   type PredictionClass,
   type ClassCategory,
-} from '@/modules/ai/mock/classes'
+} from '@/modules/ai/types'
 
 const CATEGORY_COLORS: Record<ClassCategory, string> = {
   PPE: '#06b6d4',
@@ -495,8 +494,8 @@ function AddClassModal({ nextId, onAdd, onClose }: AddClassModalProps) {
 
 /* ──────────────── MAIN PAGE ──────────────── */
 export default function ClassConfigPage() {
-  const [profiles, setProfiles] = useState<ClassProfile[]>(mockClassProfiles)
-  const [activeProfileId, setActiveProfileId] = useState(mockClassProfiles[0].id)
+  const [profiles, setProfiles] = useState<ClassProfile[]>([])
+  const [activeProfileId, setActiveProfileId] = useState('')
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState<ClassCategory | 'all'>('all')
   const [filterEnabled, setFilterEnabled] = useState<'all' | 'enabled' | 'disabled'>('all')

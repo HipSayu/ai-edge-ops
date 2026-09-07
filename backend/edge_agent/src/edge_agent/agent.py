@@ -52,6 +52,8 @@ class Agent:
         st.desired.artifact_uri = cmd.artifact_uri
         st.desired.model_format = cmd.format
         st.desired.config = cmd.config
+        effective_config = {**self.settings.inference.model_dump(), **cmd.config}
+        st.reported.config = effective_config
         st.reported.runtime_status = "applying"
         st.reported.deployment_id = cmd.deployment_id
         self.store.save()
@@ -67,7 +69,7 @@ class Agent:
             await self.runtime.load(
                 weights_path=path,
                 model_version_id=cmd.model_version_id,
-                config={**self.settings.inference.model_dump(), **cmd.config},
+                config=effective_config,
             )
         except Exception as exc:  # noqa: BLE001
             st.reported.runtime_status = "failed"

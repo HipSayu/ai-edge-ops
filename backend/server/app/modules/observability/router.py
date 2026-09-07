@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import datetime as dt
+import asyncio
+from pathlib import Path
+from uuid import uuid4
 
-from dqh.svc_core.http import ApiResponse, Page, ok
-from fastapi import APIRouter, status
+from dqh.svc_core.transports.http import ApiResponse, Page, ok
+from dqh.svc_core.transports.websocket.fastapi import serve_ws
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, WebSocket, status
+from fastapi.responses import FileResponse
 
 from app.api.deps import DbSession, Pagination
+from app.core.config import settings
+from app.core.ws import ws_hub
 from app.modules.observability.domain import AlertStatus, AlertType
 from app.modules.observability.schemas import (
     AlertOut,
@@ -20,6 +27,53 @@ from app.modules.observability.schemas import (
 from app.modules.observability.service import AlertService, AnalyticsService, ViolationService
 
 router = APIRouter(tags=["observability"])
+
+MAX_EVIDENCE_BYTES = 10 * 1024 * 1024
+ALLOWED_EVIDENCE_TYPES = {"image/jpeg", "image/png"}
+
+
+@router.post("/evidence", include_in_schema=False)
+async def upload_evidence(
+    request: Request,
+    file: UploadFile = File(...),
+    device_id: str = Form(...),
+    camera_id: str = Form(...),
+    violation_type: str = Form(...),
+    recorded_at: dt.datetime | None = Form(default=None),
+) -> dict[str, str]:
+    """Store a selected edge evidence frame and return its browser URL."""
+    if file.content_type not in ALLOWED_EVIDENCE_TYPES:
+        raise HTTPException(status_code=415, detail="evidence must be JPEG or PNG")
+
+    content = await file.read(MAX_EVIDENCE_BYTES + 1)
+    if len(content) > MAX_EVIDENCE_BYTES:
+        raise HTTPException(status_code=413, detail="evidence image is too large")
+
+    extension = ".png" if file.content_type == "image/png" else ".jpg"
+    filename = f"{uuid4().hex}{extension}"
+    evidence_dir = Path(settings.evidence_dir)
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    target = evidence_dir / filename
+    await asyncio.to_thread(target.write_bytes, content)
+
+    return {"image_path": str(request.url_for("get_evidence", filename=filename))}
+
+
+@router.get("/evidence/{filename}", name="get_evidence", include_in_schema=False)
+async def get_evidence(filename: str) -> FileResponse:
+    """Serve an evidence image stored by the upload endpoint."""
+    target = Path(settings.evidence_dir) / Path(filename).name
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="evidence not found")
+    media_type = "image/png" if target.suffix.lower() == ".png" else "image/jpeg"
+    return FileResponse(target, media_type=media_type)
+
+
+# --- live updates ------------------------------------------------------------
+@router.websocket("/ws/alerts")
+async def ws_alerts(websocket: WebSocket) -> None:
+    """Live feed of newly-raised alerts. No auth yet — the REST API has none either."""
+    await serve_ws(websocket, ws_hub, "alerts/#")
 
 
 # --- violations --------------------------------------------------------------

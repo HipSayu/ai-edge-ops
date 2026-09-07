@@ -18,6 +18,9 @@ dist-ssr/
 .env.*
 !.env.example
 
+# Edge model weights
+/backend/deploy/edge/weights/*.pt
+
 # Editors / OS
 .idea/
 .vscode/

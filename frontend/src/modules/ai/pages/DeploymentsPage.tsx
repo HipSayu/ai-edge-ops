@@ -1,15 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, RotateCcw, RotateCw } from 'lucide-react'
-import { mockDeployments, type Deployment } from '@/modules/ai/mock/ai'
-import { mockModels } from '@/modules/ai/mock/ai'
+import { type Deployment } from '@/modules/ai/types'
+import type { ModelArtifact } from '@/modules/ai/types'
+import { aiService } from '@/shared/api/services/ai'
 
 export default function DeploymentsPage() {
-  const [deployments, setDeployments] = useState<Deployment[]>(mockDeployments)
+  const [deployments, setDeployments] = useState<Deployment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showDeployModal, setShowDeployModal] = useState(false)
-  const [selectedModel, setSelectedModel] = useState(mockModels[0].name)
-  const [selectedVersion, setSelectedVersion] = useState(mockModels[0].version)
+  const [models, setModels] = useState<ModelArtifact[]>([])
+  const [selectedModel, setSelectedModel] = useState('')
+  const [selectedVersion, setSelectedVersion] = useState('')
   const [selectedStrategy, setSelectedStrategy] = useState<'Rolling Update' | 'Canary (20%)' | 'Immediate'>('Rolling Update')
   const [actionNotice, setActionNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    aiService.listDeployments()
+      .then(setDeployments)
+      .catch(() => setLoadError('Unable to load deployments from the backend.'))
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  useEffect(() => {
+    aiService.listModels().then((items) => {
+      setModels(items)
+      if (items[0]) {
+        setSelectedModel(items[0].name)
+        setSelectedVersion(items[0].version)
+      }
+    })
+  }, [])
 
   function handleRollback(depId: string, version?: string) {
     setActionNotice(`Initiated automated rollback of ${depId} to ${version || 'previous stable build'}`)
@@ -80,6 +101,8 @@ export default function DeploymentsPage() {
 
       {/* Active Rollout Pipelines */}
       <div className="av-page-content" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {loadError && <div className="av-panel">{loadError}</div>}
+        {isLoading && <div className="av-panel">Loading deployments...</div>}
         {deployments.map((dep) => (
           <div
             key={dep.id}
@@ -141,7 +164,7 @@ export default function DeploymentsPage() {
             {/* Progress Bar */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-                <span style={{ color: 'var(--text-dim)' }}>Fleet Sync Progress</span>
+                <span style={{ color: 'var(--text-dim)' }}>Agent Sync Progress</span>
                 <span className="av-mono">{dep.progressPct}% Completed</span>
               </div>
               <div className="av-telemetry-bar-track" style={{ height: 8 }}>
@@ -165,7 +188,7 @@ export default function DeploymentsPage() {
         <div className="av-modal-backdrop" onClick={() => setShowDeployModal(false)}>
           <div className="av-incident-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
             <div style={{ padding: 18, borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>Deploy Model Version to Fleet</div>
+              <div style={{ fontSize: 16, fontWeight: 800 }}>Deploy Model Version to Agent</div>
               <button className="av-icon-btn" onClick={() => setShowDeployModal(false)} style={{ width: 30, height: 30 }}>✕</button>
             </div>
             <form onSubmit={handleCreateDeploy} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -176,7 +199,7 @@ export default function DeploymentsPage() {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'var(--panel-2)', color: 'var(--text)', outline: 'none' }}
                 >
-                  {mockModels.map((m) => (
+                  {models.map((m) => (
                     <option key={m.id} value={m.name}>
                       {m.name} ({m.format})
                     </option>
@@ -202,7 +225,7 @@ export default function DeploymentsPage() {
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'var(--panel-2)', color: 'var(--text)', outline: 'none' }}
                 >
                   <option value="Rolling Update">Rolling Update (Zero Downtime)</option>
-                  <option value="Canary (20%)">Canary (20% Fleet Testing)</option>
+                  <option value="Canary (20%)">Canary (20% Agent Testing)</option>
                   <option value="Immediate">Immediate Flash Rollout</option>
                 </select>
               </div>

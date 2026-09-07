@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Clock, Cpu, HardDrive, Zap, ArrowDownUp } from 'lucide-react'
-import { mockMonitoringTimeline } from '@/modules/observability/mock/observability'
+import type { MonitoringPoint } from '@/modules/observability/types'
+import { observabilityService } from '@/shared/api/services/observability'
 import MiniTimeSeries from '@/shared/components/MiniTimeSeries'
 
 export default function MonitoringPage() {
+  const [timeline, setTimeline] = useState<MonitoringPoint[]>([])
+  useEffect(() => { observabilityService.getMonitoringTimeline().then(setTimeline).catch(() => setTimeline([])) }, [])
   const [timeRange, setTimeRange] = useState('24h')
 
   return (
@@ -17,7 +20,7 @@ export default function MonitoringPage() {
               className={`av-layout-btn${timeRange === r ? ' active' : ''}`}
               onClick={() => setTimeRange(r)}
             >
-              {r.toUpperCase()}
+              {r}
             </button>
           ))}
         </div>
@@ -30,13 +33,13 @@ export default function MonitoringPage() {
           <div className="av-panel-header">
             <span className="av-panel-title">
               <Cpu size={14} color="var(--accent)" />
-              <span>Fleet GPU Utilization (%)</span>
+              <span>Agent GPU Utilization (%)</span>
             </span>
             <span className="av-panel-sub av-mono">Avg: 68%</span>
           </div>
           <MiniTimeSeries
             title="GPU Utilization"
-            data={mockMonitoringTimeline.map((d) => ({ time: d.time, value: d.gpuAvg }))}
+            data={timeline.map((d) => ({ time: d.time, value: d.gpuAvg }))}
             color="var(--accent)"
             unit="%"
           />
@@ -52,7 +55,7 @@ export default function MonitoringPage() {
           </div>
           <MiniTimeSeries
             title="CPU Core Load"
-            data={mockMonitoringTimeline.map((d) => ({ time: d.time, value: d.cpuAvg }))}
+            data={timeline.map((d) => ({ time: d.time, value: d.cpuAvg }))}
             color="var(--warning)"
             unit="%"
           />
@@ -68,7 +71,7 @@ export default function MonitoringPage() {
           </div>
           <MiniTimeSeries
             title="Inference Speed"
-            data={mockMonitoringTimeline.map((d) => ({ time: d.time, value: d.fpsAvg }))}
+            data={timeline.map((d) => ({ time: d.time, value: d.fpsAvg }))}
             color="var(--good)"
             unit=" FPS"
           />
@@ -84,7 +87,7 @@ export default function MonitoringPage() {
           </div>
           <MiniTimeSeries
             title="P95 Latency"
-            data={mockMonitoringTimeline.map((d) => ({ time: d.time, value: d.latencyP95 }))}
+            data={timeline.map((d) => ({ time: d.time, value: d.latencyP95 }))}
             color="var(--critical)"
             unit="ms"
           />
@@ -100,7 +103,7 @@ export default function MonitoringPage() {
           </div>
           <MiniTimeSeries
             title="Memory Allocated"
-            data={mockMonitoringTimeline.map((d) => ({ time: d.time, value: d.ramAvg }))}
+            data={timeline.map((d) => ({ time: d.time, value: d.ramAvg }))}
             color="var(--info)"
             unit="%"
           />
@@ -116,7 +119,7 @@ export default function MonitoringPage() {
           </div>
           <MiniTimeSeries
             title="Network Throughput"
-            data={mockMonitoringTimeline.map((d) => ({ time: d.time, value: d.networkMbps }))}
+            data={timeline.map((d) => ({ time: d.time, value: d.networkMbps }))}
             color="#8b5cf6"
             unit=" Mbps"
           />

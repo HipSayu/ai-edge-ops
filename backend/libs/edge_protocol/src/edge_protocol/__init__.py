@@ -1,17 +1,22 @@
 """AI Edge Ops server<->edge contract — shared by ``server`` and ``edge_agent``.
 
-Payloads travel as ``dqh.svc_core.messaging.Envelope[<Payload>]``; ``Envelope.type``
-is one of the ``T_*`` constants; topics follow the ``fleet/devices/{id}/<channel>``
+Payloads travel as ``dqh.svc_core.contracts.messaging.Envelope[<Payload>]``; ``Envelope.type``
+is one of the ``T_*`` constants; topics follow the ``agent/devices/{id}/<channel>``
 scheme.
 """
 
 from __future__ import annotations
 
 from edge_protocol.messages import (
+    BboxFramePayload,
+    BboxPayload,
     CommandAckPayload,
     DeployModelPayload,
     HeartbeatPayload,
+    LogPayload,
     StateReportPayload,
+    StreamTokenReplyPayload,
+    StreamTokenRequestPayload,
     TelemetryPayload,
     UpdateConfigPayload,
     ViolationPayload,
@@ -19,22 +24,31 @@ from edge_protocol.messages import (
 from edge_protocol.topics import (
     NS,
     SUB_ACK,
+    SUB_BBOX,
     SUB_EVENTS,
+    SUB_LOGS,
     SUB_STATE,
+    SUB_STREAM_TOKEN,
     SUB_TELEMETRY,
     TOPIC_ACK,
+    TOPIC_BBOX,
     TOPIC_CMD,
     TOPIC_EVENTS,
+    TOPIC_LOGS,
     TOPIC_STATE,
+    TOPIC_STREAM_TOKEN,
     TOPIC_TELEMETRY,
 )
 from edge_protocol.types import (
+    T_BBOX_FRAME,
     T_COMMAND_ACK,
     T_DEPLOY_MODEL,
     T_HEARTBEAT,
+    T_LOG,
     T_RESTART,
     T_RUN_DIAGNOSTICS,
     T_STATE_REPORT,
+    T_STREAM_TOKEN_REQUEST,
     T_TELEMETRY,
     T_UPDATE_CONFIG,
     T_VIOLATION,
@@ -47,28 +61,42 @@ __all__ = [
     "NS",
     "SCHEMA_VERSION",
     "SUB_ACK",
+    "SUB_BBOX",
     "SUB_EVENTS",
+    "SUB_LOGS",
     "SUB_STATE",
+    "SUB_STREAM_TOKEN",
     "SUB_TELEMETRY",
     "TOPIC_ACK",
+    "TOPIC_BBOX",
     "TOPIC_CMD",
     "TOPIC_EVENTS",
+    "TOPIC_LOGS",
     "TOPIC_STATE",
+    "TOPIC_STREAM_TOKEN",
     "TOPIC_TELEMETRY",
+    "T_BBOX_FRAME",
+    "T_STREAM_TOKEN_REQUEST",
     "T_COMMAND_ACK",
     "T_DEPLOY_MODEL",
     # types
     "T_HEARTBEAT",
+    "T_LOG",
     "T_RESTART",
     "T_RUN_DIAGNOSTICS",
     "T_STATE_REPORT",
     "T_TELEMETRY",
     "T_UPDATE_CONFIG",
     "T_VIOLATION",
+    "BboxFramePayload",
+    "BboxPayload",
+    "StreamTokenReplyPayload",
+    "StreamTokenRequestPayload",
     "CommandAckPayload",
     "DeployModelPayload",
     # payloads
     "HeartbeatPayload",
+    "LogPayload",
     "StateReportPayload",
     "TelemetryPayload",
     "UpdateConfigPayload",

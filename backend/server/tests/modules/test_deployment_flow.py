@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import pytest
-from dqh.svc_core.errors import BadRequestError as BusinessRuleError
+from dqh.svc_core.contracts.errors import BadRequestError as BusinessRuleError
 
 from app.modules.deployment.domain import DeploymentStatus
 from app.modules.deployment.schemas import DeploymentCreate
 from app.modules.deployment.service import DeploymentService
-from app.modules.fleet.schemas import DeviceCreate
-from app.modules.fleet.service import FleetService
+from app.modules.agent.schemas import DeviceCreate
+from app.modules.agent.service import AgentService
 from app.modules.model_registry.domain import ModelFormat, ModelTask, ModelVersionStatus
 from app.modules.model_registry.schemas import ModelCreate, ModelVersionCreate
 from app.modules.model_registry.service import ModelRegistryService
@@ -36,7 +36,7 @@ async def test_cannot_deploy_unpublished_version(session):
         model.id,
         ModelVersionCreate(version="0.1.0", format=ModelFormat.ONNX, artifact_uri="s3://m/0"),
     )
-    device = await FleetService(session).register_device(
+    device = await AgentService(session).register_device(
         DeviceCreate(name="cam-01", site="A", hardware="Orin")
     )
     with pytest.raises(BusinessRuleError):
@@ -47,7 +47,7 @@ async def test_cannot_deploy_unpublished_version(session):
 
 async def test_activate_supersedes_previous(session):
     version = await _published_version(session)
-    device = await FleetService(session).register_device(
+    device = await AgentService(session).register_device(
         DeviceCreate(name="cam-01", site="A", hardware="Orin")
     )
     svc = DeploymentService(session)

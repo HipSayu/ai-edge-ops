@@ -1,5 +1,5 @@
 import { AlertCircle, AlertTriangle, Info, BellRing, ArrowUpRight } from 'lucide-react'
-import { SEVERITY_LABEL, type Incident, type Severity } from '@/modules/observability/mock/incidents'
+import { SEVERITY_LABEL, type Incident, type Severity } from '@/modules/observability/types'
 
 interface Props {
   data: Incident[]

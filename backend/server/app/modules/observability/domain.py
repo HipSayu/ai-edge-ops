@@ -1,11 +1,6 @@
-"""Observability domain: enums and events."""
+"""Observability domain enums."""
 
-from __future__ import annotations
-
-import datetime as dt
-from dataclasses import dataclass
-
-from app.shared.enum import StrEnum
+from app.shared.helpers.enums import StrEnum
 
 
 class AlertSeverity(StrEnum):
@@ -27,19 +22,4 @@ class AlertType(StrEnum):
     DEPLOYMENT_FAILED = "deployment_failed"
 
 
-@dataclass(frozen=True)
-class ViolationRecorded:
-    violation_id: int
-    device_id: int
-    violation_type: str
-    zone: str
-    confidence: float
-    recorded_at: dt.datetime
-
-
-@dataclass(frozen=True)
-class AlertRaised:
-    alert_id: int
-    type: AlertType
-    severity: AlertSeverity
-    device_id: int | None
+__all__ = ["AlertSeverity", "AlertStatus", "AlertType"]

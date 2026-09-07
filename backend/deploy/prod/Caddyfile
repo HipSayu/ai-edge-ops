@@ -5,6 +5,18 @@
 		reverse_proxy server:8000
 	}
 
+	# WHIP (edge publish) / WHEP (frontend view) signaling — MediaMTX paths
+	# are "/<camera-path>/whip" and "/<camera-path>/whep" (see
+	# server/app/modules/streaming/service.py). MediaMTX terminates the
+	# WebRTC/ICE itself; Caddy only routes the HTTP handshake.
+	handle /*/whip {
+		reverse_proxy mediamtx:8889
+	}
+
+	handle /*/whep {
+		reverse_proxy mediamtx:8889
+	}
+
 	handle {
 		reverse_proxy frontend:80
 	}

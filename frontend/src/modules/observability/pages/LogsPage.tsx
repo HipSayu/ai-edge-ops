@@ -1,14 +1,43 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Search, Download, Play, Pause, Trash2, RotateCw } from 'lucide-react'
-import { mockLogs, type LogEntry } from '@/modules/observability/mock/observability'
+import type { LogEntry } from '@/modules/observability/types'
+import { observabilityService } from '@/shared/api/services/observability'
+import { useRealtimeChannel, type RealtimeEnvelope } from '@/shared/contexts/RealtimeContext'
+
+type EdgeLogPayload = {
+  level: string
+  logger: string
+  message: string
+  recorded_at: string
+  exception?: string | null
+  device_id?: string
+}
 
 export default function LogsPage() {
   const [search, setSearch] = useState('')
   const [levelFilter, setLevelFilter] = useState('all')
   const [componentFilter, setComponentFilter] = useState('all')
   const [autoTail, setAutoTail] = useState(true)
-  const [logs, setLogs] = useState<LogEntry[]>(mockLogs)
+  const [logs, setLogs] = useState<LogEntry[]>([])
   const [copiedNotice, setCopiedNotice] = useState(false)
+
+  const handleRealtimeLog = useCallback((envelope: RealtimeEnvelope) => {
+    if (!autoTail || envelope.type !== 'device.log') return
+    const payload = envelope.payload as EdgeLogPayload
+    const rawLevel = payload.level.toUpperCase()
+    const level: LogEntry['level'] = rawLevel === 'ERROR' || rawLevel === 'WARN' || rawLevel === 'DEBUG' ? rawLevel : 'INFO'
+    const entry: LogEntry = {
+      id: `${envelope.source}-${payload.recorded_at}-${payload.message}`,
+      timestamp: new Date(payload.recorded_at).toLocaleString(),
+      level,
+      component: payload.logger,
+      node: payload.device_id ?? envelope.source,
+      message: payload.exception ? `${payload.message} - ${payload.exception}` : payload.message,
+    }
+    setLogs((current) => [...current.slice(-499), entry])
+  }, [autoTail])
+
+  useRealtimeChannel('logs', handleRealtimeLog)
 
   const filtered = logs.filter((l) => {
     const matchSearch =
@@ -35,7 +64,7 @@ export default function LogsPage() {
   }
 
   function handleReset() {
-    setLogs(mockLogs)
+    observabilityService.listLogs().then(setLogs).catch(() => setLogs([]))
   }
 
   return (

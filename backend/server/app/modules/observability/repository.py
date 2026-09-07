@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from dqh.svc_core.http import PaginationParams as PageParams
+from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy import cast, func, select
 from sqlalchemy.types import Date
 

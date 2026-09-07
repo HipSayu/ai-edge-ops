@@ -10,7 +10,7 @@ async def test_health(client):
 async def test_violation_flow_creates_alert_and_shows_in_analytics(client):
     device = (
         await client.post(
-            "fleet/devices",
+            "agent/devices",
             json={"name": "cam-01", "site": "Plant A", "hardware": "Jetson Orin Nano"},
         )
     ).json()["data"]
@@ -38,8 +38,35 @@ async def test_violation_flow_creates_alert_and_shows_in_analytics(client):
 
 
 async def test_not_found_is_enveloped(client):
-    resp = await client.get("fleet/devices/999999")
+    resp = await client.get("agent/devices/999999")
     assert resp.status_code == 404
     body = resp.json()
     assert body["success"] is False
     assert body["error"]["code"] == "NOT_FOUND"
+
+
+async def test_camera_system_and_assistant_endpoints_persist_data(client):
+    camera = (
+        await client.post(
+            "agent/cameras",
+            json={"name": "demo-camera", "source": "/media/demo.mp4", "zone": "test"},
+        )
+    ).json()["data"]
+    cameras = (await client.get("agent/cameras")).json()["data"]
+    assert cameras[0]["id"] == camera["id"]
+    assert cameras[0]["source"] == "/media/demo.mp4"
+
+    user = (
+        await client.post(
+            "users",
+            json={"name": "Test Operator", "email": "test@example.com", "role": "operator"},
+        )
+    ).json()["data"]
+    assert (await client.get(f"users/{user['id']}" )).json()["data"]["email"] == "test@example.com"
+
+    settings = (await client.patch("system/settings", json={"confidence_threshold": 0.5})).json()["data"]
+    assert settings["confidence_threshold"]["value"]["value"] == 0.5
+
+    message = (await client.post("assistant/messages", json={"text": "Show system status"})).json()["data"]
+    assert message["role"] == "user"
+    assert (await client.get("assistant/messages")).json()["data"][0]["text"] == "Show system status"

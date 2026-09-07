@@ -1,19 +1,17 @@
-import { useState } from 'react'
-import { Bot, Send, Sparkles, User } from 'lucide-react'
-import { initialChat, suggestedQuestions, type ChatMessage } from '@/modules/observability/mock/incidents'
-
-const CANNED_REPLY =
-  'Based on real-time telemetry across the past 30 minutes, CAM-03 (Main Factory Floor) logged the highest violation frequency — primarily missing hard hats and protective gloves in Sector C, Bays 2–4. Facility-wide PPE compliance is currently holding at 90.3%.'
+import { useEffect, useState } from 'react'
+import { Bot, Send, User } from 'lucide-react'
+import type { ChatMessage } from '@/modules/observability/types'
+import { assistantService } from '@/shared/api/services/assistant'
 
 export default function AiAssistantChat({ floating }: { floating?: boolean }) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialChat)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
+
+  useEffect(() => { assistantService.listMessages().then(setMessages).catch(() => setMessages([])) }, [])
 
   function send(text: string) {
     if (!text.trim()) return
-    const userMsg: ChatMessage = { id: Date.now(), role: 'user', text }
-    const aiMsg: ChatMessage = { id: Date.now() + 1, role: 'assistant', text: CANNED_REPLY }
-    setMessages((prev) => [...prev, userMsg, aiMsg])
+    assistantService.sendMessage(text).then((message) => setMessages((prev) => [...prev, message])).catch(() => undefined)
     setInput('')
   }
 
@@ -45,15 +43,6 @@ export default function AiAssistantChat({ floating }: { floating?: boolean }) {
             </span>
             <p>{m.text}</p>
           </div>
-        ))}
-      </div>
-
-      <div className="av-suggested-row">
-        {suggestedQuestions.map((q) => (
-          <button key={q} className="av-suggested-chip" onClick={() => send(q)}>
-            <Sparkles size={12} color="var(--accent)" />
-            <span>{q}</span>
-          </button>
         ))}
       </div>
 

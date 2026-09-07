@@ -16,6 +16,7 @@ from app.core.database import Base
 from app.core.events import event_bus
 from app.main import create_app
 from app.modules import register_event_handlers
+from app.modules.agent import telemetry_relay as agent_ws_relay
 
 
 @pytest_asyncio.fixture
@@ -33,6 +34,7 @@ async def _engine() -> AsyncGenerator[object, None]:
     database.async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     event_bus.clear()
+    agent_ws_relay.reset_cache()
     modules._HANDLERS_REGISTERED = False
     register_event_handlers()
 
@@ -40,6 +42,7 @@ async def _engine() -> AsyncGenerator[object, None]:
 
     database.engine, database.async_session = prev_engine, prev_factory
     event_bus.clear()
+    agent_ws_relay.reset_cache()
     modules._HANDLERS_REGISTERED = False
     await engine.dispose()
 

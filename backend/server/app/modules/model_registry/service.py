@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dqh.svc_core.errors import BadRequestError as BusinessRuleError
-from dqh.svc_core.errors import ConflictError, NotFoundError
-from dqh.svc_core.http import Page
-from dqh.svc_core.http import PaginationParams as PageParams
+from dqh.svc_core.contracts.errors import BadRequestError as BusinessRuleError
+from dqh.svc_core.contracts.errors import ConflictError, NotFoundError
+from dqh.svc_core.transports.http import Page
+from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.model_registry.domain import ModelTask, ModelVersionStatus

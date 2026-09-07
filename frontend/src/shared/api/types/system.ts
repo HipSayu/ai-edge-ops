@@ -1,0 +1,1 @@
+export interface AuditLog { id: string; timestamp: string; actor: string; actorEmail: string; action: string; category: 'Deployment' | 'Hardware' | 'Security' | 'Config' | 'Triage'; targetResource: string; ipAddress: string; status: 'SUCCESS' | 'FAILED' | 'DENIED'; detail: string }

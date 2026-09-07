@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from dqh.svc_core.http.adapters.fastapi import create_app as svc_create_app
+from dqh.svc_core.transports.http.fastapi import create_app as svc_create_app
 from fastapi import FastAPI
 from sqlalchemy import text
 
@@ -15,6 +15,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import init_db, session_scope
 from app.core.logging import configure_logging
+from app.core.ws import ws_hub
 from app.edge.runtime import EdgePlane
 from app.modules import register_event_handlers
 
@@ -22,8 +23,13 @@ from app.modules import register_event_handlers
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging(settings.log_level)
+    if settings.environment == "production" and (
+        settings.jwt_secret == "change-this-in-production" or len(settings.jwt_secret) < 32
+    ):
+        raise RuntimeError("JWT_SECRET must be a random value of at least 32 characters in production")
     register_event_handlers()
     await init_db()
+    await ws_hub.connect()
     edge = EdgePlane()
     await edge.start()
     app.state.edge = edge
@@ -31,6 +37,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await edge.stop()
+        await ws_hub.aclose()
 
 
 async def _db_check() -> bool:

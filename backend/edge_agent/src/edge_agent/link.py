@@ -5,30 +5,18 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
+import traceback
 from collections.abc import Awaitable, Callable
 
 import edge_protocol as p
-import psutil
 from dqh.svc_core.messaging import Envelope, MessageBus
+from dqh.svc_core.messaging.rpc import RpcClient
+
+from edge_agent.helpers.metrics import collect_metrics
 
 logger = logging.getLogger("edge_agent.link")
 
 CommandHandler = Callable[[Envelope], Awaitable[p.CommandAckPayload]]
-
-
-def _now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.timezone.utc)
-
-
-def collect_metrics() -> p.HeartbeatPayload:
-    temps = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
-    temp = next((s.current for group in temps.values() for s in group), None)
-    return p.HeartbeatPayload(
-        cpu_percent=psutil.cpu_percent(interval=None),
-        mem_percent=psutil.virtual_memory().percent,
-        temperature_c=temp,
-        recorded_at=_now(),
-    )
 
 
 class EdgeLink:
@@ -47,6 +35,7 @@ class EdgeLink:
         self._on_command = on_command
         self._heartbeat_extra = heartbeat_extra
         self._hb_task: asyncio.Task[None] | None = None
+        self._rpc = RpcClient(bus, source=device_id)
 
     async def start(self) -> None:
         if not self.bus.connected:
@@ -86,6 +75,33 @@ class EdgeLink:
             p.TOPIC_STATE.render(device_id=self.device_id), p.T_STATE_REPORT, payload
         )
 
+    async def send_log(self, payload: p.LogPayload) -> None:
+        await self._publish(
+            p.TOPIC_LOGS.render(device_id=self.device_id), p.T_LOG, payload
+        )
+
+    async def send_bbox_frame(self, payload: p.BboxFramePayload) -> None:
+        await self._publish(
+            p.TOPIC_BBOX.render(device_id=self.device_id), p.T_BBOX_FRAME, payload
+        )
+
+    async def request_stream_token(
+        self, camera_id: int, *, timeout: float = 10.0
+    ) -> p.StreamTokenReplyPayload:
+        """Ask the server for a short-lived WHIP publish token, over MQTT.
+
+        Reuses this link's existing authentication (TLS client cert /
+        username-password on the broker) instead of a separate HTTP call —
+        the edge agent has no HTTP credential of its own.
+        """
+        env = await self._rpc.request(
+            p.TOPIC_STREAM_TOKEN.render(device_id=self.device_id),
+            p.StreamTokenRequestPayload(camera_id=camera_id).model_dump(mode="json"),
+            type=p.T_STREAM_TOKEN_REQUEST,
+            timeout=timeout,
+        )
+        return p.StreamTokenReplyPayload.model_validate(env.payload)
+
     # --- inbound ------------------------------------------------------
     async def _handle_command(self, env: Envelope) -> None:
         try:
@@ -111,3 +127,34 @@ class EdgeLink:
             except Exception:  # noqa: BLE001
                 logger.exception("heartbeat failed")
             await asyncio.sleep(self._interval)
+
+
+class MqttLogHandler(logging.Handler):
+    """Forward edge log records without blocking the logging caller."""
+
+    def __init__(self, link: EdgeLink) -> None:
+        super().__init__()
+        self.link = link
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            payload = p.LogPayload(
+                level=record.levelname,
+                logger=record.name,
+                message=record.getMessage(),
+                recorded_at=dt.datetime.now(dt.timezone.utc),
+                exception="".join(traceback.format_exception(*record.exc_info))
+                if record.exc_info
+                else None,
+            )
+            task = asyncio.create_task(self.link.send_log(payload))
+            task.add_done_callback(self._consume_task_error)
+        except Exception:
+            self.handleError(record)
+
+    @staticmethod
+    def _consume_task_error(task: asyncio.Task[None]) -> None:
+        try:
+            task.result()
+        except Exception:
+            pass

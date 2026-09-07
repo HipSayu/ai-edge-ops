@@ -25,8 +25,32 @@ $EDITOR .env                  # DOMAIN, POSTGRES_PASSWORD, MINIO_ROOT_*
 docker compose up -d
 ```
 
+Apply the reference schema after the database is healthy:
+
+```bash
+docker compose exec -T db psql -U ppe -d ai_edge_ops < /opt/ai-edge-ops/schema.sql
+```
+
+Run this explicitly for every schema release. The server's `init_db()` is only
+intended for local/test startup and does not alter existing tables.
+
 DNS: point `DOMAIN` A/AAAA at the host. Open `80`, `443`, and `8883` (MQTT TLS for
 edge devices). Keep `5432`/`6379`/`9000`/`18083` closed to the internet.
+
+### MQTT mTLS and per-device ACL
+
+The server and each edge device connect to MQTT over TLS on port `8883`.
+Mount the certificates read-only using this layout:
+
+```text
+server secrets/server-mqtt/: ca.crt, server.crt, server.key
+edge   certs/:              ca.crt, client.crt, client.key
+```
+
+Issue a unique client certificate for every `DEVICE_ID`. Configure EMQX ACLs so
+each device can subscribe only to `agent/devices/{device_id}/cmd` and publish
+only to its own `state`, `events`, `telemetry`, and `ack` topics. Do not share
+one client certificate across devices.
 
 ## GitHub secrets / variables
 

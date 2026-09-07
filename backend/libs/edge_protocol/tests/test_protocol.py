@@ -7,7 +7,7 @@ import edge_protocol as p
 
 def test_topic_render_and_wildcard():
     topic = p.TOPIC_STATE.render(device_id="dev-1")
-    assert topic == "fleet/devices/dev-1/state"
+    assert topic == "agent/devices/dev-1/state"
     assert topic_matches(p.SUB_STATE, topic)
     assert p.TOPIC_STATE.parse(topic) == {"device_id": "dev-1"}
 

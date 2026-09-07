@@ -4,10 +4,10 @@ import pytest
 from dqh.svc_core.messaging import Envelope, InMemoryMessageBus
 
 import edge_protocol as protocol
-from app.edge.gateway import FleetGateway
-from app.modules.fleet.domain import DeviceStatus
-from app.modules.fleet.schemas import DeviceCreate
-from app.modules.fleet.service import FleetService
+from app.edge.gateway import AgentGateway
+from app.modules.agent.domain import DeviceStatus
+from app.modules.agent.schemas import DeviceCreate
+from app.modules.agent.service import AgentService
 from app.modules.observability.repository import AlertRepository, ViolationRepository
 
 
@@ -15,14 +15,14 @@ from app.modules.observability.repository import AlertRepository, ViolationRepos
 async def gateway(_engine):
     bus = InMemoryMessageBus()
     await bus.connect()
-    gw = FleetGateway(bus)
+    gw = AgentGateway(bus)
     await gw.start()
     yield gw
     await gw.stop()
 
 
 async def _new_device(session) -> int:
-    device = await FleetService(session).register_device(
+    device = await AgentService(session).register_device(
         DeviceCreate(name="cam-01", site="Plant A", hardware="Jetson Orin Nano")
     )
     return device.id
@@ -41,7 +41,7 @@ async def test_heartbeat_over_bus_updates_device_and_presence(gateway, session):
     )
 
     session.expire_all()  # gateway committed on its own session
-    device = await FleetService(session).get_device(device_id)
+    device = await AgentService(session).get_device(device_id)
     assert device.status is DeviceStatus.ONLINE
     assert device.last_seen_at is not None
     assert str(gateway.presence.status(str(device_id))) == "online"

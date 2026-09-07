@@ -1,5 +1,5 @@
 import { X, CheckCircle2, AlertTriangle, Video, Sparkles, Shield } from 'lucide-react'
-import { SEVERITY_LABEL, STATUS_LABEL, type Incident } from '@/modules/observability/mock/incidents'
+import { SEVERITY_LABEL, STATUS_LABEL, type Incident } from '@/modules/observability/types'
 
 interface Props {
   incident: Incident
@@ -23,7 +23,7 @@ export default function IncidentModal({ incident, onClose, onMarkReviewed, onEsc
             style={{ top: '18%', left: '30%', width: '26%', height: '62%' }}
           >
             <span className="av-detect-tag violation">
-              {incident.event.toUpperCase()} {incident.confidence}%
+              {incident.event} {incident.confidence}%
             </span>
           </div>
           <div className="av-overlay-topbar">

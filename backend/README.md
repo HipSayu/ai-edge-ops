@@ -7,7 +7,7 @@ Everything server-side lives here; the repo splits cleanly into `frontend/` and
 backend/
 ├── packages/svc_core/     dqh.svc_core — generic: messaging, config, http, presence, reconcile, errors
 ├── libs/edge_protocol/    edge_protocol — the server<->edge wire contract (payloads + topics)
-├── server/                control plane: FastAPI + Postgres, operator API, FleetGateway
+├── server/                control plane: FastAPI + Postgres, operator API, AgentGateway
 ├── edge_agent/            runs on each edge device (Jetson): MQTT link, runtime, camera pipeline, local API
 └── deploy/
     ├── server/docker-compose.yml   db + emqx + minio + redis + server

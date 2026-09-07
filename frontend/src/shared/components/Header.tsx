@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Bell, Moon, Sun, Radio, Activity, Menu, X } from 'lucide-react'
-import { mockCameras } from '@/modules/fleet/mock/cameras'
+import { agentService } from '@/shared/api/services/agent'
 
 interface Props {
   theme?: 'dark' | 'light'
@@ -17,6 +17,13 @@ export default function Header({
 }: Props) {
   const [now, setNow] = useState(new Date())
   const [isScrolled, setIsScrolled] = useState(false)
+  const [cameraCounts, setCameraCounts] = useState({ online: 0, total: 0 })
+
+  useEffect(() => {
+    agentService.listCameras().then((cameras) => {
+      setCameraCounts({ online: cameras.filter((camera) => camera.online).length, total: cameras.length })
+    }).catch(() => setCameraCounts({ online: 0, total: 0 }))
+  }, [])
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -42,8 +49,6 @@ export default function Header({
       bodyEl?.removeEventListener('scroll', handleScroll)
     }
   }, [])
-
-  const onlineCount = mockCameras.filter((c) => c.online).length
 
   return (
     <header className={`av-header ${isScrolled ? 'scrolled' : ''}`}>
@@ -83,7 +88,7 @@ export default function Header({
           <div className="av-header-stat">
             <Radio size={14} color="var(--good)" />
             <span>
-              <strong>{onlineCount}</strong> / {mockCameras.length} Online
+              <strong>{cameraCounts.online}</strong> / {cameraCounts.total} Online
             </span>
           </div>
           <div className="av-header-divider" />

@@ -21,6 +21,24 @@ export default function MiniTimeSeries({ title, data, color, unit = '' }: Props)
   const [hovered, setHovered] = useState<number | null>(null)
   const gradId = useId()
 
+  if (data.length === 0) {
+    return (
+      <div className="av-mini-chart">
+        <div className="av-mini-chart-header">
+          <span>{title}</span>
+          <span className="av-mono av-mini-chart-value" style={{ color }}>
+            —{unit}
+          </span>
+        </div>
+        <svg width="100%" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={title} />
+        <div className="av-mini-chart-axis">
+          <span>—</span>
+          <span>—</span>
+        </div>
+      </div>
+    )
+  }
+
   const max = Math.max(...data.map((d) => d.value), 1)
   const min = Math.min(...data.map((d) => d.value), 0)
   const range = Math.max(max - min, 1)

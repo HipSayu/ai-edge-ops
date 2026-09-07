@@ -1,10 +1,10 @@
-"""Logging setup — thin wrapper over dqh.svc_core.logging."""
+"""Application logging setup using svc_core middleware helpers."""
 
 from __future__ import annotations
 
 import logging
 
-from dqh.svc_core.logging import DEFAULT_FORMAT, install_request_id_log_filter
+from dqh.svc_core.middleware.logging import DEFAULT_FORMAT, install_request_id_log_filter
 
 _CONFIGURED = False
 

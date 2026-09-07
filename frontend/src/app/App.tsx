@@ -3,11 +3,11 @@ import Layout from '@/app/pages/Layout'
 import Overview from '@/modules/overview/pages/Overview'
 import ChatPage from '@/modules/assistant/pages/ChatPage'
 
-// FLEET
-import DevicesPage from '@/modules/fleet/pages/DevicesPage'
-import CamerasPage from '@/modules/fleet/pages/CamerasPage'
-import SnapshotsPage from '@/modules/fleet/pages/SnapshotsPage'
-import CameraGroupsPage from '@/modules/fleet/pages/CameraGroupsPage'
+// AGENT
+import DevicesPage from '@/modules/agent/pages/DevicesPage'
+import CamerasPage from '@/modules/agent/pages/CamerasPage'
+import SnapshotsPage from '@/modules/agent/pages/SnapshotsPage'
+import CameraGroupsPage from '@/modules/agent/pages/CameraGroupsPage'
 
 // AI
 import ModelsPage from '@/modules/ai/pages/ModelsPage'
@@ -28,17 +28,19 @@ import AuditLogsPage from '@/modules/system/pages/AuditLogsPage'
 
 import '@/app/styles/theme.css'
 import '@/app/styles/layout-extras.css'
+import { RealtimeProvider } from '@/shared/contexts/RealtimeContext'
 
 function App() {
   return (
-    <HashRouter>
-      <Routes>
+    <RealtimeProvider>
+      <HashRouter>
+        <Routes>
         <Route element={<Layout />}>
           <Route index element={<Overview />} />
           <Route path="chat" element={<ChatPage />} />
 
-          {/* FLEET */}
-          <Route path="fleet">
+          {/* AGENT */}
+          <Route path="agent">
             <Route path="devices" element={<DevicesPage />} />
             <Route path="cameras" element={<CamerasPage />} />
             <Route path="snapshots" element={<SnapshotsPage />} />
@@ -70,15 +72,16 @@ function App() {
 
           {/* Legacy route redirects */}
           <Route path="live" element={<Navigate to="/ai/inference" replace />} />
-          <Route path="cameras" element={<Navigate to="/fleet/cameras" replace />} />
+          <Route path="cameras" element={<Navigate to="/agent/cameras" replace />} />
           <Route path="incidents" element={<Navigate to="/observability/alerts" replace />} />
           <Route path="analytics" element={<Navigate to="/observability/monitoring" replace />} />
-          <Route path="edge-devices" element={<Navigate to="/fleet/devices" replace />} />
+          <Route path="edge-devices" element={<Navigate to="/agent/devices" replace />} />
           <Route path="settings" element={<Navigate to="/system/settings" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-      </Routes>
-    </HashRouter>
+        </Routes>
+      </HashRouter>
+    </RealtimeProvider>
   )
 }
 

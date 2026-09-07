@@ -5,9 +5,17 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
 
 from edge_agent.runtime.base import Detection, InferenceRuntime
+
+# Prefer the vendored ultralytics shipped under edge_agent/package/ultralytics
+# over any globally installed copy.
+_VENDORED = Path(__file__).resolve().parents[3] / "package" / "ultralytics"
+if _VENDORED.is_dir() and str(_VENDORED) not in sys.path:
+    sys.path.insert(0, str(_VENDORED))
 
 try:
     from ultralytics import YOLO

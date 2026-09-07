@@ -1,11 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import KpiCard from '@/shared/components/KpiCard'
 import { TrendingUp, ShieldCheck, AlertCircle, Clock } from 'lucide-react'
-import { analyticsTimeline } from '@/modules/observability/mock/incidents'
+import type { AnalyticsPoint } from '@/modules/observability/types'
+import { observabilityService } from '@/shared/api/services/observability'
 import AnalyticsChart from '@/shared/components/AnalyticsChart'
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('2h')
+  const [timeline, setTimeline] = useState<AnalyticsPoint[]>([])
+  const [categories, setCategories] = useState<{ label: string; count: number }[]>([])
+  useEffect(() => {
+    observabilityService.getViolationTimeseries().then((rows) => setTimeline(rows.map((row) => ({ time: row.bucket, violations: row.count, people: 0, complianceRate: 0 })))).catch(() => setTimeline([]))
+    observabilityService.getViolationsByType().then(setCategories).catch(() => setCategories([]))
+  }, [])
 
   return (
     <div className="av-page-layout">
@@ -19,7 +26,7 @@ export default function AnalyticsPage() {
               className={`av-layout-btn${timeRange === range ? ' active' : ''}`}
               onClick={() => setTimeRange(range)}
             >
-              {range.toUpperCase()}
+              {range}
             </button>
           ))}
         </div>
@@ -78,16 +85,15 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="av-page-content">
-        <AnalyticsChart data={analyticsTimeline} />
+        <AnalyticsChart data={timeline} />
 
       
 
       <div className="av-panel" style={{ padding: 22 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <CategoryBar label="Missing Hard Hat" count={48} percentage={45} color="var(--critical)" />
-          <CategoryBar label="Missing High-Vis Vest" count={32} percentage={30} color="var(--warning)" />
-          <CategoryBar label="Missing Protective Gloves" count={18} percentage={17} color="var(--accent)" />
-          <CategoryBar label="Restricted Zone Breach" count={8} percentage={8} color="var(--info)" />
+          {categories.map((category) => (
+            <CategoryBar key={category.label} label={category.label} count={category.count} percentage={0} color="var(--accent)" />
+          ))}
         </div>
       </div>
       </div>

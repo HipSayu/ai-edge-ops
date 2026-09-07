@@ -2,21 +2,14 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from pathlib import Path
 
 import httpx
 
+from edge_agent.helpers.hashing import sha256_file
+
 logger = logging.getLogger("edge_agent.artifacts")
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 async def fetch_artifact(
@@ -48,7 +41,7 @@ async def fetch_artifact(
             async for chunk in resp.aiter_bytes():
                 fh.write(chunk)
 
-    if checksum_sha256 and _sha256(tmp) != checksum_sha256:
+    if checksum_sha256 and sha256_file(tmp) != checksum_sha256:
         tmp.unlink(missing_ok=True)
         raise ValueError("artifact checksum mismatch")
 

@@ -1,5 +1,5 @@
 import { BarChart3 } from 'lucide-react'
-import type { AnalyticsPoint } from '@/modules/observability/mock/incidents'
+import type { AnalyticsPoint } from '@/modules/observability/types'
 import MiniTimeSeries from '@/shared/components/MiniTimeSeries'
 
 interface Props {
@@ -16,7 +16,7 @@ export default function AnalyticsChart({ data, compact }: Props) {
           <span>Detection & Compliance Trends</span>
         </span>
         <span className="av-panel-sub av-mono">
-          {data[0].time} → {data[data.length - 1].time} (2h Window)
+          {data.length ? `${data[0].time} → ${data[data.length - 1].time} (2h Window)` : 'No data'}
         </span>
       </div>
       <div className={`av-mini-chart-grid${compact ? ' compact' : ''}`}>

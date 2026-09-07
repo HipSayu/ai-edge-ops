@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Search,
   ChevronDown,
@@ -12,8 +12,9 @@ import {
   type Incident,
   type IncidentStatus,
   type Severity,
-} from '@/modules/observability/mock/incidents'
-import { mockCameras } from '@/modules/fleet/mock/cameras'
+} from '@/modules/observability/types'
+import { agentService } from '@/shared/api/services/agent'
+import type { Camera } from '@/modules/agent/types'
 
 type SortKey = 'time' | 'confidence' | 'severity'
 
@@ -32,6 +33,11 @@ export default function IncidentsTable({ data, onSelect }: Props) {
   const [status, setStatus] = useState('all')
   const [sortKey, setSortKey] = useState<SortKey>('time')
   const [sortDesc, setSortDesc] = useState(true)
+  const [cameras, setCameras] = useState<Camera[]>([])
+
+  useEffect(() => {
+    agentService.listCameras().then(setCameras).catch(() => setCameras([]))
+  }, [])
 
   const eventTypes = useMemo(() => [...new Set(data.map((d) => d.event))], [data])
 
@@ -94,7 +100,7 @@ export default function IncidentsTable({ data, onSelect }: Props) {
 
         <select value={camera} onChange={(e) => setCamera(e.target.value)}>
           <option value="all">All Cameras</option>
-          {mockCameras.map((c) => (
+          {cameras.map((c) => (
             <option key={c.id} value={c.id}>
               {c.id} — {c.name}
             </option>

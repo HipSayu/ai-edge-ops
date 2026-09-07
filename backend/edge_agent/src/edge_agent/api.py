@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dqh.svc_core.http import ok
-from dqh.svc_core.http.adapters.fastapi import create_app
+from dqh.svc_core.transports.http import ok
+from dqh.svc_core.transports.http.fastapi import create_app
 from fastapi import APIRouter, FastAPI, Request
 
 from edge_agent.agent import Agent

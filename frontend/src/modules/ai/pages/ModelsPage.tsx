@@ -1,14 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
-import { mockModels, type ModelArtifact } from '@/modules/ai/mock/ai'
+import type { ModelArtifact } from '@/modules/ai/types'
+import { aiService } from '@/shared/api/services/ai'
 
 export default function ModelsPage() {
   const [search, setSearch] = useState('')
   const [formatFilter, setFormatFilter] = useState('all')
-  const [models, setModels] = useState<ModelArtifact[]>(mockModels)
+  const [models, setModels] = useState<ModelArtifact[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [newModelName, setNewModelName] = useState('')
   const [newModelVersion, setNewModelVersion] = useState('')
+
+  useEffect(() => {
+    aiService.listModels()
+      .then(setModels)
+      .catch(() => setLoadError('Unable to load models from the backend.'))
+      .finally(() => setIsLoading(false))
+  }, [])
 
   const filtered = models.filter((m) => {
     const matchSearch =
@@ -82,6 +92,8 @@ export default function ModelsPage() {
 
       {/* Models Grid */}
       <div className="av-page-content">
+        {loadError && <div className="av-panel" style={{ marginBottom: 16 }}>{loadError}</div>}
+        {isLoading && <div className="av-panel" style={{ marginBottom: 16 }}>Loading models...</div>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
           {filtered.map((model) => (
           <div
@@ -106,7 +118,7 @@ export default function ModelsPage() {
                     model.status === 'production' ? 'reviewed' : model.status === 'staging' ? 'new' : 'escalated'
                   }`}
                 >
-                  {model.status.toUpperCase()}
+                  {model.status}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>

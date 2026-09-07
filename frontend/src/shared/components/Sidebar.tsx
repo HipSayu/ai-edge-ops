@@ -45,12 +45,12 @@ const NAVIGATION_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: 'FLEET',
+    title: 'AGENT',
     items: [
-      { to: '/fleet/devices', label: 'Devices', icon: Cpu, badge: '5', dotColor: 'amber' },
-      { to: '/fleet/cameras', label: 'Cameras', icon: Camera, badge: 'LIVE', dotColor: 'red' },
-      { to: '/fleet/snapshots', label: 'Gallery', icon: ImageIcon },
-      { to: '/fleet/camera-groups', label: 'Camera Groups', icon: FolderTree },
+      { to: '/agent/devices', label: 'Devices', icon: Cpu, badge: '5', dotColor: 'amber' },
+      { to: '/agent/cameras', label: 'Cameras', icon: Camera, badge: 'LIVE', dotColor: 'red' },
+      { to: '/agent/snapshots', label: 'Gallery', icon: ImageIcon },
+      { to: '/agent/camera-groups', label: 'Camera Groups', icon: FolderTree },
     ],
   },
   {
@@ -97,13 +97,13 @@ export default function Sidebar({ collapsed: _collapsed, onToggle, mobileOpen, o
       {/* Sidebar Header with Brand & Circular Toggle Button */}
       <div className="av-sidebar-top">
         <div className="av-sidebar-brand-wrapper">
-          <div className="av-logo-mark" title="AI EDGE OPS Fleet Control">
+          <div className="av-logo-mark" title="AI EDGE OPS Agent Control">
             <ShieldAlert size={19} />
           </div>
           {!collapsed && (
             <div className="av-logo-brand">
               <span className="av-logo-title">AI EDGE OPS</span>
-              <span className="av-logo-subtitle">Fleet & AI Control</span>
+              <span className="av-logo-subtitle">Agent & AI Control</span>
             </div>
           )}
         </div>

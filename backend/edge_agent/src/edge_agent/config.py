@@ -19,12 +19,23 @@ class CameraConfig(BaseModel):
     zone: str = "default"
     enabled: bool = True
     fps_limit: float = 10.0
+    loop: bool = False          # replay a video file when it reaches EOF
+    # app.modules.camera.Camera.id (server DB row) this local camera maps to.
+    # Required only if streaming.enabled — see EdgeLink.request_stream_token.
+    camera_id: int | None = None
 
 
 class ServerConfig(BaseModel):
     base_url: str = "http://localhost:8000/api/v1"
     enroll_token: str | None = None
     request_timeout_s: float = 15.0
+
+
+class StreamingConfig(BaseModel):
+    enabled: bool = False
+    kind: str = "ffmpeg"  # ffmpeg | null
+    encoder: str = "auto"  # auto | v4l2m2m | vaapi | nvenc | <raw ffmpeg encoder name>
+    bitrate_kbps: int = 2000
 
 
 class InferenceConfig(BaseModel):
@@ -54,6 +65,7 @@ class AgentSettings(BaseAppSettings):
     s3: S3Config = Field(default_factory=S3Config)
     server: ServerConfig = Field(default_factory=ServerConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
+    streaming: StreamingConfig = Field(default_factory=StreamingConfig)
     cameras: list[CameraConfig] = Field(default_factory=list)
 
 

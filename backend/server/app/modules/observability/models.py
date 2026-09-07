@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 from app.modules.observability.domain import AlertSeverity, AlertStatus, AlertType
-from app.shared.enum import db_enum
+from app.shared.helpers.database import db_enum
 from app.shared.models import TimestampMixin
 
 

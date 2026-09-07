@@ -1,18 +1,14 @@
-"""Deployment domain: status model, events, transition rules."""
+"""Deployment status model and transition rules."""
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-
-from app.shared.enum import StrEnum
+from app.shared.helpers.enums import StrEnum
 
 
 class DeploymentStatus(StrEnum):
-    PENDING = "pending"  # created, not yet rolled out to the device
-    ACTIVE = "active"  # currently serving on the device
-    FAILED = "failed"  # rollout failed
+    PENDING = "pending"
+    ACTIVE = "active"
+    FAILED = "failed"
     ROLLED_BACK = "rolled_back"
-    SUPERSEDED = "superseded"  # replaced by a newer deployment on the same device
+    SUPERSEDED = "superseded"
 
 
 ACTIVE_STATUSES = frozenset({DeploymentStatus.ACTIVE})
@@ -28,17 +24,3 @@ _FLOW: dict[DeploymentStatus, set[DeploymentStatus]] = {
 
 def can_transition(current: DeploymentStatus, target: DeploymentStatus) -> bool:
     return target in _FLOW[current]
-
-
-@dataclass(frozen=True)
-class DeploymentActivated:
-    deployment_id: int
-    device_id: int
-    model_version_id: int
-
-
-@dataclass(frozen=True)
-class DeploymentFailed:
-    deployment_id: int
-    device_id: int
-    reason: str

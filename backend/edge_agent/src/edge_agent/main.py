@@ -13,15 +13,17 @@ import edge_protocol as p
 import uvicorn
 from dqh.svc_core.config import MqttConfig
 from dqh.svc_core.messaging import InMemoryMessageBus, MessageBus
-from dqh.svc_core.messaging.transports.mqtt import MqttMessageBus
+from dqh.svc_core.transports.event_driven.mqtt import MqttMessageBus
 
 from edge_agent.agent import Agent
 from edge_agent.api import build_api
-from edge_agent.config import AgentSettings, load_settings
-from edge_agent.link import EdgeLink
+from edge_agent.config import AgentSettings, CameraConfig, load_settings
+from edge_agent.evidence import HttpEvidenceUploader
+from edge_agent.link import EdgeLink, MqttLogHandler
 from edge_agent.pipeline import CameraPipeline
 from edge_agent.runtime import build_runtime
 from edge_agent.state import StateStore
+from edge_agent.streaming import VideoPublisher, build_publisher
 
 logger = logging.getLogger("edge_agent")
 
@@ -58,18 +60,33 @@ async def run(settings: AgentSettings | None = None) -> None:
         on_command=agent.handle_command,
     )
     agent.link = link
+    evidence_uploader = HttpEvidenceUploader(
+        settings.server.base_url,
+        token=settings.server.enroll_token,
+        timeout_s=settings.server.request_timeout_s,
+    )
 
     pipelines = [
         CameraPipeline(
-            cam, runtime=runtime, inference=settings.inference, on_violation=link.send_violation
+            cam,
+            runtime=runtime,
+            inference=settings.inference,
+            on_violation=link.send_violation,
+            device_id=settings.device_id,
+            evidence_uploader=evidence_uploader,
+            on_bbox_frame=link.send_bbox_frame,
         )
         for cam in settings.cameras
         if cam.enabled
     ]
 
     await link.start()
+    log_handler = MqttLogHandler(link)
+    logging.getLogger("edge_agent").addHandler(log_handler)
     for pl in pipelines:
         pl.start()
+
+    publishers = await _start_camera_streams(settings, link)
 
     async def reconcile_loop() -> None:
         while True:
@@ -85,9 +102,57 @@ async def run(settings: AgentSettings | None = None) -> None:
     try:
         await asyncio.gather(api_server.serve(), reconcile_loop())
     finally:
+        for pub in publishers:
+            await pub.stop()
         for pl in pipelines:
             await pl.stop()
+        logging.getLogger("edge_agent").removeHandler(log_handler)
         await link.stop()
+
+
+async def _start_camera_streams(settings: AgentSettings, link: EdgeLink) -> list[VideoPublisher]:
+    """Dial each enabled, mapped camera out to MediaMTX over WHIP.
+
+    This is a raw ffmpeg process per camera reading straight from the device
+    — independent of the inference pipeline's own frame loop. Best-effort: a
+    camera that fails to start streaming doesn't stop inference/violation
+    reporting for it. The publish token is requested over the existing MQTT
+    link (see ``EdgeLink.request_stream_token``), not a new HTTP call — the
+    edge device has no HTTP credential of its own, but the MQTT link is
+    already authenticated (TLS client cert / username-password).
+    """
+    if not settings.streaming.enabled:
+        return []
+    publishers: list[VideoPublisher] = []
+    for cam in settings.cameras:
+        if not cam.enabled:
+            continue
+        if cam.camera_id is None:
+            logger.warning("camera %s has no camera_id mapped; skipping stream", cam.id)
+            continue
+        try:
+            await _start_one_stream(cam, settings, publishers, link)
+        except Exception:  # noqa: BLE001 - one bad camera shouldn't block the rest
+            logger.exception("could not start stream for camera %s", cam.id)
+    return publishers
+
+
+async def _start_one_stream(
+    cam: CameraConfig,
+    settings: AgentSettings,
+    publishers: list[VideoPublisher],
+    link: EdgeLink,
+) -> None:
+    token = await link.request_stream_token(cam.camera_id, timeout=settings.server.request_timeout_s)
+    publisher = build_publisher(
+        settings.streaming.kind,
+        encoder=settings.streaming.encoder,
+        bitrate_kbps=settings.streaming.bitrate_kbps,
+    )
+    await publisher.start(
+        source=cam.source, whip_url=token.url, token=token.token, loop=cam.loop
+    )
+    publishers.append(publisher)
 
 
 def main() -> None:

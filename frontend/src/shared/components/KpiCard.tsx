@@ -27,9 +27,10 @@ export default function KpiCard({
   isUp = true,
   chartType = 'sparkline',
   chartColor,
-  chartData = [12, 18, 14, 24, 20, 29, 24, 32],
+  chartData: chartDataProp = [12, 18, 14, 24, 20, 29, 24, 32],
 }: KpiCardProps) {
   const gradId = useId()
+  const chartData = chartDataProp.length ? chartDataProp : [0, 0]
 
   const WIDTH = 84
   const HEIGHT = 28
@@ -38,7 +39,7 @@ export default function KpiCard({
   const max = Math.max(...chartData, 1)
   const min = Math.min(...chartData, 0)
   const range = Math.max(max - min, 1)
-  const stepX = WIDTH / (chartData.length - 1)
+  const stepX = WIDTH / Math.max(chartData.length - 1, 1)
 
   const points = chartData.map((val, i) => {
     const x = i * stepX

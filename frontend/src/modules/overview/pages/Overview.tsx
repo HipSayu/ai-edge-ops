@@ -15,93 +15,47 @@ import {
   Heart,
 } from 'lucide-react'
 import KpiCard from '@/shared/components/KpiCard'
-import { mockDevices, type EdgeDevice } from '@/modules/fleet/mock/fleet'
-import { mockCameras } from '@/modules/fleet/mock/cameras'
-import { mockDeployments } from '@/modules/ai/mock/ai'
-import { mockIncidents } from '@/modules/observability/mock/incidents'
-
-// Initial seed data for rolling telemetry (16 points)
-const INITIAL_POINTS = Array.from({ length: 16 }, (_, i) => {
-  const d = new Date(Date.now() - (15 - i) * 2000)
-  const time = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  return {
-    time,
-    fps: Number((119 + Math.sin(i * 0.8) * 3 + (Math.random() * 2 - 1)).toFixed(1)),
-    latency: Number((32 + Math.cos(i * 0.7) * 3 + (Math.random() * 1.5 - 0.75)).toFixed(1)),
-    detections: Math.floor(46 + Math.sin(i * 0.6) * 8 + Math.random() * 4),
-  }
-})
+import type { EdgeDevice } from '@/modules/agent/types'
+import { agentService } from '@/shared/api/services/agent'
+import { aiService } from '@/shared/api/services/ai'
+import { observabilityService } from '@/shared/api/services/observability'
+import type { AnalyticsOverview } from '@/shared/api/types/observability'
 
 type ChartMetric = 'fps' | 'latency' | 'detections'
 
-const DETECTION_CLASSES = [
-  { name: 'Person / Worker', pct: 42, count: 6254, color: '#ee0033' },
-  { name: 'Safety Vest', pct: 24, count: 3574, color: '#10b981' },
-  { name: 'Hard Hat', pct: 18, count: 2680, color: '#f59e0b' },
-  { name: 'Forklift / Machinery', pct: 10, count: 1489, color: '#8b5cf6' },
-  { name: 'Zone Intrusion', pct: 6, count: 895, color: '#b91c1c' },
-]
+const DETECTION_CLASSES: { name: string; pct: number; count: number; color: string }[] = []
 
 export default function Overview() {
-  const isLive = true
   const [activeMetric, setActiveMetric] = useState<ChartMetric>('fps')
-  const [telemetry, setTelemetry] = useState(INITIAL_POINTS)
-  const [totalDetections, setTotalDetections] = useState(14892)
+  const [telemetry] = useState<{ time: string; fps: number; latency: number; detections: number }[]>([])
+  const [totalDetections] = useState(0)
+  const [analyticsOverview, setAnalyticsOverview] = useState<AnalyticsOverview | null>(null)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [hoveredClass, setHoveredClass] = useState<number | null>(null)
-  const [deviceStats, setDeviceStats] = useState<EdgeDevice[]>(mockDevices)
+  const [deviceStats, setDeviceStats] = useState<EdgeDevice[]>([])
+  const [cameras, setCameras] = useState<import('@/modules/agent/types').Camera[]>([])
+  const [deployments, setDeployments] = useState<import('@/modules/ai/types').Deployment[]>([])
+  const [incidents, setIncidents] = useState<import('@/modules/observability/types').Incident[]>([])
 
   const gradId = useId()
 
-  // Real-time telemetry simulation interval
   useEffect(() => {
-    if (!isLive) return
-
-    const timer = setInterval(() => {
-      const now = new Date()
-      const timeStr = now.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-
-      const newFps = Number((120.5 + (Math.random() * 4 - 2)).toFixed(1))
-      const newLatency = Number((31.2 + (Math.random() * 3 - 1.5)).toFixed(1))
-      const newDetections = Math.floor(48 + Math.random() * 8)
-
-      setTelemetry((prev) => {
-        const next = [...prev.slice(1), { time: timeStr, fps: newFps, latency: newLatency, detections: newDetections }]
-        return next
-      })
-
-      setTotalDetections((prev) => prev + Math.floor(Math.random() * 3 + 1))
-
-      // Subtle real-time fluctuation in device GPU/CPU load
-      setDeviceStats((prev) =>
-        prev.map((d) => {
-          const deltaGpu = Math.floor(Math.random() * 3 - 1)
-          const deltaCpu = Math.floor(Math.random() * 3 - 1)
-          return {
-            ...d,
-            gpuUsage: Math.min(96, Math.max(30, d.gpuUsage + deltaGpu)),
-            cpuUsage: Math.min(92, Math.max(20, d.cpuUsage + deltaCpu)),
-          }
-        })
-      )
-    }, 1600)
-
-    return () => clearInterval(timer)
-  }, [isLive])
+    agentService.listDevices().then(setDeviceStats).catch(() => setDeviceStats([]))
+    agentService.listCameras().then(setCameras).catch(() => setCameras([]))
+    aiService.listDeployments().then(setDeployments).catch(() => setDeployments([]))
+    observabilityService.listIncidents().then(setIncidents).catch(() => setIncidents([]))
+    observabilityService.getAnalyticsOverview().then(setAnalyticsOverview).catch(() => setAnalyticsOverview(null))
+  }, [])
 
   // Compute metrics for the active stream
-  const currentMetricValues = telemetry.map((p) => p[activeMetric])
+  const chartTelemetry = telemetry.length ? telemetry : [{ time: 'No data', fps: 0, latency: 0, detections: 0 }]
+  const currentMetricValues = chartTelemetry.map((p) => p[activeMetric])
   const minVal = Math.min(...currentMetricValues)
   const maxVal = Math.max(...currentMetricValues)
   const avgVal = Number((currentMetricValues.reduce((a, b) => a + b, 0) / currentMetricValues.length).toFixed(1))
 
   const metricMeta = {
-    fps: { label: 'Fleet Throughput', unit: 'FPS', color: '#ee0033', secondary: '#f87171' },
+    fps: { label: 'Agent Throughput', unit: 'FPS', color: '#ee0033', secondary: '#f87171' },
     latency: { label: 'AI Inference Latency', unit: 'ms', color: '#10b981', secondary: '#34d399' },
     detections: { label: 'Detection Velocity', unit: 'objs/s', color: '#8b5cf6', secondary: '#a78bfa' },
   }[activeMetric]
@@ -115,9 +69,9 @@ export default function Overview() {
   const PAD_B = 34
 
   const range = Math.max(maxVal - minVal, 1)
-  const stepX = (SVG_W - PAD_L - PAD_R) / (telemetry.length - 1)
+  const stepX = (SVG_W - PAD_L - PAD_R) / Math.max(chartTelemetry.length - 1, 1)
 
-  const points = telemetry.map((pt, i) => {
+  const points = chartTelemetry.map((pt, i) => {
     const val = pt[activeMetric]
     const x = PAD_L + i * stepX
     const y = SVG_H - PAD_B - ((val - minVal) / range) * (SVG_H - PAD_T - PAD_B)
@@ -156,8 +110,8 @@ export default function Overview() {
   })
 
   const onlineDevices = deviceStats.filter((d) => d.status === 'online').length
-  const onlineCameras = mockCameras.filter((c) => c.online).length
-  const criticalAlerts = mockIncidents.filter((i) => i.severity === 'critical').length
+  const onlineCameras = cameras.filter((c) => c.online).length
+  const criticalAlerts = incidents.filter((i) => i.severity === 'critical').length
 
   return (
     <div>
@@ -165,7 +119,7 @@ export default function Overview() {
       <div className="av-kpi-row">
         <KpiCard
           label="Total Detections"
-          value={totalDetections.toLocaleString()}
+          value={(analyticsOverview?.violations_24h ?? totalDetections).toLocaleString()}
           sub="Real-time Stream"
           icon={<Activity size={22} />}
           iconBg="rgba(59, 130, 246, 0.12)"
@@ -177,7 +131,7 @@ export default function Overview() {
           chartData={[12, 16, 14, 22, 18, 28, 22, 30]}
         />
         <KpiCard
-          label="Edge Fleet"
+          label="Edge Agent"
           value={`${onlineDevices} / ${deviceStats.length}`}
           sub="Nodes Active"
           icon={<Truck size={22} />}
@@ -191,7 +145,7 @@ export default function Overview() {
         />
         <KpiCard
           label="Live Cameras"
-          value={`${onlineCameras} / ${mockCameras.length}`}
+          value={`${onlineCameras} / ${cameras.length}`}
           sub="30 FPS avg"
           icon={<Camera size={22} />}
           iconBg="rgba(168, 85, 247, 0.12)"
@@ -204,7 +158,7 @@ export default function Overview() {
         />
         <KpiCard
           label="Inference Latency"
-          value={`${telemetry[telemetry.length - 1].latency} ms`}
+          value={analyticsOverview?.avg_inference_latency_ms != null ? `${analyticsOverview.avg_inference_latency_ms.toFixed(1)} ms` : '—'}
           sub="TensorRT FP16"
           icon={<Zap size={22} />}
           iconBg="rgba(245, 158, 11, 0.14)"
@@ -217,7 +171,7 @@ export default function Overview() {
         />
         <KpiCard
           label="Security Incidents"
-          value={String(mockIncidents.length)}
+          value={String(incidents.length)}
           badge={`${criticalAlerts} critical`}
           sub="Facility Safety"
           icon={<ShieldAlert size={22} />}
@@ -230,7 +184,7 @@ export default function Overview() {
           chartData={[6, 12, 18, 10, 16, 26, 22]}
         />
         <KpiCard
-          label="Fleet Health"
+          label="Agent Health"
           value="99.4%"
           sub="Optimal Status"
           icon={<Heart size={22} />}
@@ -278,10 +232,10 @@ export default function Overview() {
             <div>
               <span className="av-panel-title">
                 <Activity size={16} />
-                <span>Real-Time Fleet Telemetry Stream</span>
+                <span>Real-Time Agent Telemetry Stream</span>
               </span>
               <div style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 2 }}>
-                Live time-series window ({telemetry[0].time} → {lastPt.time})
+                Live time-series window ({chartTelemetry[0].time} → {lastPt.time})
               </div>
             </div>
 
@@ -390,7 +344,7 @@ export default function Overview() {
                 />
 
                 {/* Pulsing latest real-time dot */}
-                {isLive && (
+                {telemetry.length > 0 && (
                   <>
                     <circle
                       cx={lastPt.x}
@@ -595,7 +549,7 @@ export default function Overview() {
         </section>
       </div>
 
-      {/* Middle Grid: Edge Fleet Real-Time Load Meters & Live Cameras Matrix */}
+      {/* Middle Grid: Edge Agent Real-Time Load Meters & Live Cameras Matrix */}
       <div className="av-overview-split" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20, marginBottom: 24 }}>
         {/* Real-Time Edge Devices Compute Meters */}
         <section className="av-panel">
@@ -604,8 +558,8 @@ export default function Overview() {
               <Cpu size={16} />
               <span>Edge Hardware Live Telemetry</span>
             </span>
-            <Link to="/fleet/devices" className="av-link-action" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span>Fleet View</span>
+            <Link to="/agent/devices" className="av-link-action" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>Agent View</span>
               <ArrowRight size={13} />
             </Link>
           </div>
@@ -624,7 +578,7 @@ export default function Overview() {
                         </div>
                       </div>
                       <span className={`av-status-pill ${dev.status === 'online' ? 'reviewed' : isDegraded ? 'in-progress' : 'escalated'}`}>
-                        {dev.status.toUpperCase()}
+                        {dev.status}
                       </span>
                     </div>
 
@@ -686,16 +640,16 @@ export default function Overview() {
           <div className="av-panel-header">
             <span className="av-panel-title">
               <Camera size={16} />
-              <span>Camera Fleet Real-Time Streams</span>
+              <span>Camera Agent Real-Time Streams</span>
             </span>
-            <Link to="/fleet/cameras" className="av-link-action" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span>View All ({mockCameras.length})</span>
+            <Link to="/agent/cameras" className="av-link-action" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>View All ({cameras.length})</span>
               <ArrowRight size={13} />
             </Link>
           </div>
           <div className="av-panel-body">
             <div className="av-camera-matrix-grid">
-              {mockCameras.slice(0, 4).map((cam) => (
+              {cameras.slice(0, 4).map((cam) => (
                 <div key={cam.id} className="av-camera-hud-card">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -742,7 +696,7 @@ export default function Overview() {
             </Link>
           </div>
           <div className="av-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {mockDeployments.map((dep) => (
+            {deployments.map((dep) => (
               <div key={dep.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600 }}>
                   <span>
@@ -780,7 +734,7 @@ export default function Overview() {
             </Link>
           </div>
           <div className="av-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {mockIncidents.slice(0, 4).map((inc) => (
+            {incidents.slice(0, 4).map((inc) => (
               <div
                 key={inc.id}
                 style={{

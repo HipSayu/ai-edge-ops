@@ -5,6 +5,7 @@ name: ai-edge-ops
 
 services:
   caddy:
+    container_name: ai-edge-ops-prod-caddy
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
@@ -19,12 +20,15 @@ services:
     depends_on:
       - server
       - frontend
+      - mediamtx
 
   frontend:
+    container_name: ai-edge-ops-prod-frontend
     image: ${IMAGE_PREFIX:-ghcr.io/hopquangdo/ai-edge-ops}-frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
   server:
+    container_name: ai-edge-ops-prod-server
     image: ${IMAGE_PREFIX:-ghcr.io/hopquangdo/ai-edge-ops}-server:${IMAGE_TAG:-latest}
     restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -33,20 +37,46 @@ services:
       EDGE_TRANSPORT: mqtt
       DB__URL: postgresql+asyncpg://ppe:${POSTGRES_PASSWORD}@db:5432/ai_edge_ops
       CORS_ORIGINS: '["https://${DOMAIN}"]'
+      JWT_SECRET: ${JWT_SECRET}
+      ACCESS_TOKEN_MINUTES: "15"
+      REFRESH_TOKEN_DAYS: "30"
       MQTT__HOST: mqtt
-      MQTT__PORT: "1883"
+      MQTT__PORT: "8883"
+      MQTT__CLIENT_ID: ai-edge-ops-server
+      MQTT__TLS: "true"
+      MQTT__TLS_CA_FILE: /run/secrets/mqtt/ca.crt
+      MQTT__TLS_CERT_FILE: /run/secrets/mqtt/server.crt
+      MQTT__TLS_KEY_FILE: /run/secrets/mqtt/server.key
+      MQTT__USERNAME: ${MQTT_USERNAME}
+      MQTT__PASSWORD: ${MQTT_PASSWORD}
       S3__ENDPOINT_URL: http://minio:9000
       S3__ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       S3__SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
       S3__BUCKET: artifacts
       REDIS__URL: redis://redis:6379/0
+      MEDIAMTX_WHIP_URL: https://${DOMAIN}
+      MEDIAMTX_WHEP_URL: https://${DOMAIN}
+    volumes:
+      - ./secrets/server-mqtt:/run/secrets/mqtt:ro
     depends_on:
       db:
         condition: service_healthy
       mqtt:
         condition: service_started
+      mediamtx:
+        condition: service_started
+
+  mediamtx:
+    container_name: ai-edge-ops-prod-mediamtx
+    image: bluenviron/mediamtx:1.9.3
+    restart: unless-stopped
+    ports:
+      - "8189:8189/udp" # WebRTC/ICE — HTTP signaling goes through Caddy
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
 
   db:
+    container_name: ai-edge-ops-prod-db
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -62,6 +92,7 @@ services:
       retries: 10
 
   mqtt:
+    container_name: ai-edge-ops-prod-mqtt
     image: emqx/emqx:5.8
     restart: unless-stopped
     ports:
@@ -72,6 +103,7 @@ services:
       - emqx_etc:/opt/emqx/etc
 
   minio:
+    container_name: ai-edge-ops-prod-minio
     image: minio/minio:latest
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -82,6 +114,7 @@ services:
       - miniodata:/data
 
   redis:
+    container_name: ai-edge-ops-prod-redis
     image: redis:7-alpine
     restart: unless-stopped
     volumes:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from dqh.svc_core.http.adapters.fastapi import Pagination as Pagination
+from dqh.svc_core.transports.http.fastapi import Pagination as Pagination
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
