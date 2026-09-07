@@ -9,7 +9,8 @@ GitHub push to main
    └─ Deploy (.github/workflows/deploy.yml)
         ├─ build ghcr.io/<owner>/ai-edge-ops-server:<sha>   (context: backend/, needs the submodule)
         ├─ build ghcr.io/<owner>/ai-edge-ops-frontend:<sha> (context: frontend/, nginx SPA)
-        └─ ssh to $DEPLOY_HOST → docker compose pull && up -d   (this folder's compose)
+        └─ ssh to $DEPLOY_HOST → scp docker-compose.prod.yml + Caddyfile +
+           mediamtx.prod.yml to /opt/ai-edge-ops, then docker compose pull && up -d
 ```
 
 Caddy terminates TLS and routes `/api/*` → `server:8000`, everything else →
@@ -19,10 +20,12 @@ Caddy terminates TLS and routes `/api/*` → `server:8000`, everything else →
 
 ```bash
 sudo mkdir -p /opt/ai-edge-ops && cd /opt/ai-edge-ops
-# put docker-compose.yml + Caddyfile here (CI scp's them on every deploy, or copy once)
-cp .env.example .env         # from backend/deploy/prod/
+# CI scp's docker-compose.prod.yml + Caddyfile + mediamtx.prod.yml here on every
+# deploy (and symlinks docker-compose.yml -> docker-compose.prod.yml). Copy once for
+# the first run.
+cp .env.prod.example .env     # from the repo root
 $EDITOR .env                  # DOMAIN, POSTGRES_PASSWORD, MINIO_ROOT_*
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Apply the reference schema after the database is healthy:

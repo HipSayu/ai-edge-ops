@@ -1,0 +1,45 @@
+# Control-plane service. Pulled into the root stack via `include:` — run from app/:
+#   docker compose up --build server
+# Infra (db / mqtt / minio / redis / mediamtx) lives in app/docker-compose.yml.
+services:
+  server:
+    container_name: ai-edge-ops-dev-server
+    image: ai-edge-ops/server:dev
+    build:
+      context: ..                 # = backend/
+      dockerfile: server/Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - path: ../../.env           # shared infra creds (optional)
+        required: false
+      - path: .env                 # server config
+        required: false
+    environment:
+      # container-network overrides (win over env_file)
+      ENVIRONMENT: local
+      EDGE_TRANSPORT: mqtt
+      DB__URL: postgresql+asyncpg://ppe:ppe@db:5432/ai_edge_ops
+      CORS_ORIGINS: '["http://localhost:5173"]'
+      EVIDENCE_DIR: /var/lib/ai-edge-ops/evidence
+      MQTT__HOST: mqtt
+      MQTT__PORT: "1883"
+      MQTT__TLS: "false"
+      S3__ENDPOINT_URL: http://minio:9000
+      S3__ACCESS_KEY_ID: minioadmin
+      S3__SECRET_ACCESS_KEY: minioadmin
+      S3__BUCKET: artifacts
+      REDIS__URL: redis://redis:6379/0
+      MEDIAMTX_WHIP_URL: http://localhost:8889
+      MEDIAMTX_WHEP_URL: http://localhost:8889
+    volumes:
+      - ./:/srv/server
+      - evidencedata:/var/lib/ai-edge-ops/evidence
+    ports: ["8000:8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_healthy
+
+volumes:
+  evidencedata:

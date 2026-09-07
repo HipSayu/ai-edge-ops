@@ -1,0 +1,37 @@
+# Edge-node service. Pulled into the root stack via `include:` under the `edge`
+# profile — for a local end-to-end demo alongside the server:
+#   docker compose --profile edge up --build edge-agent
+#
+# On a real device (Jetson) run this file standalone, pointing at a central broker:
+#   cd backend/edge_agent && DEVICE_ID=1 MQTT__HOST=<broker> docker compose up -d
+services:
+  edge-agent:
+    container_name: ai-edge-ops-edge-agent-${DEVICE_ID:-edge-dev-1}
+    image: ai-edge-ops/edge-agent:dev
+    profiles: ["edge"]
+    build:
+      context: ..                 # = backend/
+      dockerfile: edge_agent/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # local-demo overrides (win over env_file); drop these on a real device
+      DEVICE_ID: ${DEVICE_ID:-edge-dev-1}
+      TRANSPORT: mqtt
+      MQTT__HOST: ${MQTT__HOST:-mqtt}
+      MQTT__PORT: ${MQTT__PORT:-1883}
+      MQTT__TLS: ${MQTT__TLS:-false}
+      SERVER__BASE_URL: ${SERVER__BASE_URL:-http://server:8000/api/v1}
+      INFERENCE__WEIGHTS_DIR: /var/lib/edge-agent/models
+    volumes:
+      - edge_state:/var/lib/edge-agent
+      - ./weights:/var/lib/edge-agent/models:ro
+    ports: ["9100:9100"]
+    restart: unless-stopped
+    # Jetson: uncomment for GPU + camera passthrough
+    # runtime: nvidia
+    # devices: ["/dev/video0:/dev/video0"]
+
+volumes:
+  edge_state:

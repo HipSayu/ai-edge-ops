@@ -99,9 +99,8 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "backend/deploy/prod/docker-compose.yml,backend/deploy/prod/Caddyfile"
+          source: "docker-compose.prod.yml,Caddyfile,mediamtx.prod.yml"
           target: "/opt/ai-edge-ops"
-          strip_components: 3
 
       - name: Pull new images and roll
         uses: appleboy/ssh-action@v1
@@ -112,6 +111,7 @@ jobs:
           script: |
             set -e
             cd /opt/ai-edge-ops
+            ln -sf docker-compose.prod.yml docker-compose.yml
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             TAG=$(echo "${{ github.sha }}" | cut -c1-7)
             # .env on the host holds DOMAIN / POSTGRES_PASSWORD / MINIO_* (never in the repo)

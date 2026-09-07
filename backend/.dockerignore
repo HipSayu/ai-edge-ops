@@ -9,5 +9,6 @@
 **/*.egg-info/
 **/.env
 **/*.sqlite3
-deploy/
+**/weights/
+**/compose.yml
 frontend/

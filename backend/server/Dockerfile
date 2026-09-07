@@ -1,4 +1,4 @@
-# Build context = repo root (see docker-compose.yml).
+# Build context = backend/ (see server/compose.yml and .github/workflows/deploy.yml).
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \

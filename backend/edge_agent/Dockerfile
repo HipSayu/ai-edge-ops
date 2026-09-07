@@ -1,4 +1,4 @@
-# Build context = backend/ (see deploy/edge/docker-compose.yml).
+# Build context = backend/ (see edge_agent/compose.yml).
 # x86 dev/demo image. For Jetson, swap the base for an l4t-pytorch image and
 # install the [inference] extra.
 FROM python:3.12-slim

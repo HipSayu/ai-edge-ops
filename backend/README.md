@@ -8,11 +8,16 @@ backend/
 ├── packages/svc_core/     dqh.svc_core — generic: messaging, config, http, presence, reconcile, errors
 ├── libs/edge_protocol/    edge_protocol — the server<->edge wire contract (payloads + topics)
 ├── server/                control plane: FastAPI + Postgres, operator API, AgentGateway
-├── edge_agent/            runs on each edge device (Jetson): MQTT link, runtime, camera pipeline, local API
-└── deploy/
-    ├── server/docker-compose.yml   db + emqx + minio + redis + server
-    └── edge/docker-compose.yml     edge-agent (points at a central broker)
+│   ├── compose.yml        server service (pulled into ../../docker-compose.yml)
+│   └── mediamtx.yml       dev MediaMTX config
+└── edge_agent/            runs on each edge device (Jetson): MQTT link, runtime, camera pipeline, local API
+    └── compose.yml        edge-agent service (`edge` profile / standalone on a device)
 ```
+
+The dev stack lives at the repo root: `docker-compose.yml` holds the infra
+(db + emqx + minio + redis + mediamtx) and `include:`s the two package compose
+files. Prod: `docker-compose.prod.yml` + `Caddyfile` + `mediamtx.prod.yml` (see
+`DEPLOY.md`).
 
 `server` and `edge_agent` both depend on `dqh-svc-core` and `edge-protocol`
 (installed editable from `packages/` and `libs/`).
@@ -40,11 +45,11 @@ cd backend/edge_agent          && ../.venv/Scripts/python -m pytest -q      # 7
 ## Run
 
 ```bash
-# control plane
-cd backend/deploy/server && docker compose up --build      # http://localhost:8000/docs
+# infra + control plane (from the repo root)
+docker compose up --build                       # http://localhost:8000/docs
 
-# an edge node (see docs/run-edge-agent.md for the full guide)
-cd backend/deploy/edge && DEVICE_ID=1 MQTT_HOST=host.docker.internal docker compose up --build
+# + an edge node for an end-to-end demo (see docs/run-edge-agent.md)
+DEVICE_ID=1 docker compose --profile edge up --build
 ```
 
 ## The server

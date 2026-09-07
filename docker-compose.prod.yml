@@ -1,6 +1,7 @@
 # Production stack — runs on the deploy host. Images come from GHCR (pushed by CI).
-#   cp .env.example .env  &&  edit  &&  docker compose pull  &&  docker compose up -d
-# Caddy terminates TLS and routes: /api/* -> server, everything else -> frontend.
+#   cp .env.prod.example .env  &&  edit  &&  docker compose -f docker-compose.prod.yml pull && up -d
+# Caddy terminates TLS: /api/* -> server, /*/whip|whep -> mediamtx, else -> frontend.
+# CI ships this file + Caddyfile + mediamtx.prod.yml to /opt/ai-edge-ops (see .github/workflows/deploy.yml).
 name: ai-edge-ops
 
 services:
@@ -71,9 +72,9 @@ services:
     image: bluenviron/mediamtx:1.9.3
     restart: unless-stopped
     ports:
-      - "8189:8189/udp" # WebRTC/ICE — HTTP signaling goes through Caddy
+      - "8189:8189/udp"  # WebRTC/ICE — HTTP signaling goes through Caddy
     volumes:
-      - ./mediamtx.yml:/mediamtx.yml:ro
+      - ./mediamtx.prod.yml:/mediamtx.yml:ro
 
   db:
     container_name: ai-edge-ops-prod-db
@@ -96,8 +97,8 @@ services:
     image: emqx/emqx:5.8
     restart: unless-stopped
     ports:
-      - "1883:1883"       # plain MQTT (LAN / VPN)
-      - "8883:8883"       # MQTT over TLS (edge devices)
+      - "1883:1883"   # plain MQTT (LAN / VPN)
+      - "8883:8883"   # MQTT over TLS (edge devices)
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_etc:/opt/emqx/etc

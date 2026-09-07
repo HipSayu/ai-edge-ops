@@ -17,9 +17,10 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # Edge model weights
-/backend/deploy/edge/weights/*.pt
+/backend/edge_agent/weights/*.pt
 
 # Editors / OS
 .idea/
