@@ -5,16 +5,28 @@
 The edge agent performs inference locally. The current pipeline does **not** send raw video frames to the server.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px","clusterBkg":"#F2F2F2","clusterBorder":"#CCCCCC","tertiaryColor":"#FFFFFF"}}}%%
 flowchart LR
-    F[Frontend]
-    S[Backend Server]
-    M[MQTT Broker]
-    E[Edge Agent<br/>capture + inference]
+    subgraph EDGE["Edge"]
+        E["Edge Agent<br/>capture + inference"]
+    end
+    subgraph TRANSPORT["Transport"]
+        M["MQTT Broker"]
+    end
+    subgraph CLOUD["Server / Cloud"]
+        S["Backend Server"]
+    end
+    subgraph CLIENT["Client"]
+        F["Frontend"]
+    end
 
     E -->|device.violation| M
     M -->|event| S
     S -->|alert via WebSocket| F
     F -->|request evidence| S
+
+    classDef band fill:#F2F2F2,stroke:#CCCCCC,color:#000000
+    class EDGE,TRANSPORT,CLOUD,CLIENT band
 ```
 
 ### Current data path
@@ -49,6 +61,7 @@ Raw frames should not be sent through MQTT. A frame can be large, slow, and like
 Recommended flow:
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px","actorBkg":"#76B900","actorBorder":"#5C8F00","actorTextColor":"#000000","signalColor":"#333333","signalTextColor":"#000000","labelBoxBkg":"#F2F2F2","labelBoxBorderColor":"#CCCCCC"}}}%%
 sequenceDiagram
     participant F as Frontend
     participant S as Backend Server
@@ -70,24 +83,30 @@ sequenceDiagram
 
 ### Recommended responsibilities
 
-```text
-CameraPipeline
-    capture, inference, rule evaluation, cooldown
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"13px","clusterBkg":"#F2F2F2","clusterBorder":"#CCCCCC"}}}%%
+flowchart LR
+    subgraph EDGE["Edge Agent"]
+        direction LR
+        CP["CameraPipeline<br/>capture · inference<br/>rule eval · cooldown"]
+        ES["EvidenceStore<br/>upload bytes<br/>return image URI"]
+        EL["EdgeLink<br/>publish metadata<br/>via MessageBus"]
+    end
+    subgraph INFRA["Shared Infrastructure"]
+        direction LR
+        MQ["MQTT<br/>small JSON metadata<br/>not binary frames"]
+        OS["Object Storage<br/>JPEG / PNG<br/>evidence frames"]
+    end
+    subgraph SERVER["Server"]
+        SG["Server Gateway<br/>validate · persist<br/>expose signed URL"]
+    end
 
-EvidenceStore interface
-    upload image bytes and return a stable image URI
+    CP --> ES --> OS
+    CP --> EL --> MQ --> SG
+    OS --> SG
 
-EdgeLink
-    publish event metadata through MessageBus
-
-MQTT
-    carry small JSON event metadata, not binary image data
-
-Object storage
-    store JPEG/PNG evidence frames
-
-Server Gateway
-    validate event, persist metadata, expose image URL or signed URL
+    classDef band fill:#F2F2F2,stroke:#CCCCCC,color:#000000
+    class EDGE,INFRA,SERVER band
 ```
 
 A reusable interface can be introduced in the edge application:

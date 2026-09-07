@@ -100,6 +100,8 @@ class AgentService:
                 cpu_percent=hb.cpu_percent,
                 gpu_percent=hb.gpu_percent,
                 mem_percent=hb.mem_percent,
+                mem_used_mb=hb.mem_used_mb,
+                mem_total_mb=hb.mem_total_mb,
                 temperature_c=hb.temperature_c,
                 fps=hb.fps,
                 inference_latency_ms=hb.inference_latency_ms,

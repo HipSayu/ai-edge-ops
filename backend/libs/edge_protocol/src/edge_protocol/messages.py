@@ -8,14 +8,31 @@ from pydantic import BaseModel, Field
 
 
 # --- edge -> server --------------------------------------------------------
+class DeviceCapabilities(BaseModel):
+    """What the edge box can do — probed once at boot, sent with the heartbeat
+    so the control plane can pick a model artifact the device can actually load.
+    """
+
+    arch: str | None = None  # x86_64 | aarch64 | arm64
+    is_jetson: bool = False
+    accelerators: list[str] = Field(default_factory=list)  # cuda, mps, nvenc, vaapi...
+    backend: str | None = None  # composed | deepstream
+    device: str | None = None  # cpu | cuda:0 | mps
+    encoders: list[str] = Field(default_factory=list)
+    model_formats: list[str] = Field(default_factory=list)  # engine, onnx, tflite, pt
+
+
 class HeartbeatPayload(BaseModel):
     cpu_percent: float | None = None
     gpu_percent: float | None = None
     mem_percent: float | None = None
+    mem_used_mb: float | None = None
+    mem_total_mb: float | None = None
     temperature_c: float | None = None
     fps: float | None = None
     inference_latency_ms: float | None = None
     active_model_version_id: int | None = None
+    capabilities: DeviceCapabilities | None = None
     recorded_at: dt.datetime | None = None
 
 
@@ -113,6 +130,7 @@ class UpdateConfigPayload(BaseModel):
 __all__ = [
     "BboxFramePayload",
     "BboxPayload",
+    "DeviceCapabilities",
     "StreamTokenReplyPayload",
     "StreamTokenRequestPayload",
     "CommandAckPayload",

@@ -85,10 +85,20 @@ class AgentGateway:
                     cpu_percent=p.cpu_percent,
                     gpu_percent=p.gpu_percent,
                     mem_percent=p.mem_percent,
+                    mem_used_mb=p.mem_used_mb,
+                    mem_total_mb=p.mem_total_mb,
                     temperature_c=p.temperature_c,
                     fps=p.fps,
                     inference_latency_ms=p.inference_latency_ms,
                 ),
+            )
+        if p.capabilities is not None:
+            logger.debug(
+                "device %s capabilities: backend=%s device=%s formats=%s",
+                device_id,
+                p.capabilities.backend,
+                p.capabilities.device,
+                p.capabilities.model_formats,
             )
         self.presence.mark_seen(str(device_id))
 

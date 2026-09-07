@@ -3,15 +3,27 @@
 ## End-to-end communication
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px","clusterBkg":"#F2F2F2","clusterBorder":"#CCCCCC"}}}%%
 flowchart LR
-    F[Frontend]
-    S[Backend Server]
-    M[MQTT Broker]
-    E[Edge Agent]
+    subgraph CLIENT["Client"]
+        F["Frontend"]
+    end
+    subgraph CLOUD["Server / Cloud"]
+        S["Backend Server"]
+    end
+    subgraph TRANSPORT["Transport"]
+        M["MQTT Broker"]
+    end
+    subgraph EDGE["Edge"]
+        E["Edge Agent"]
+    end
 
     F <-->|REST / WebSocket| S
     S <-->|Publish / Subscribe| M
     E <-->|Publish / Subscribe| M
+
+    classDef band fill:#F2F2F2,stroke:#CCCCCC,color:#000000
+    class CLIENT,CLOUD,TRANSPORT,EDGE band
 ```
 
 The system has four communication actors only:
@@ -43,6 +55,7 @@ persists the edge message first, publishes an application event, and then a rela
 converts that event into a WebSocket envelope.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px","actorBkg":"#76B900","actorBorder":"#5C8F00","actorTextColor":"#000000","signalColor":"#333333","signalTextColor":"#000000","labelBoxBkg":"#F2F2F2","labelBoxBorderColor":"#CCCCCC"}}}%%
 sequenceDiagram
     participant F as Frontend
     participant S as Backend Server
@@ -85,6 +98,7 @@ frontend can parse `event.data` directly.
 ## Heartbeat flow
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px","actorBkg":"#76B900","actorBorder":"#5C8F00","actorTextColor":"#000000","signalColor":"#333333","signalTextColor":"#000000","labelBoxBkg":"#F2F2F2","labelBoxBorderColor":"#CCCCCC"}}}%%
 sequenceDiagram
     participant F as Frontend
     participant S as Backend Server
@@ -103,6 +117,7 @@ sequenceDiagram
 ## Deployment command flow
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px","actorBkg":"#76B900","actorBorder":"#5C8F00","actorTextColor":"#000000","signalColor":"#333333","signalTextColor":"#000000","labelBoxBkg":"#F2F2F2","labelBoxBorderColor":"#CCCCCC"}}}%%
 sequenceDiagram
     participant F as Frontend
     participant S as Backend Server
@@ -130,6 +145,7 @@ sequenceDiagram
 ## Recommended command state machine
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
 stateDiagram-v2
     [*] --> Pending
     Pending --> Sent: publish command
@@ -148,6 +164,7 @@ stateDiagram-v2
 ## Complete inference-to-dashboard flow
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#76B900","primaryTextColor":"#000000","primaryBorderColor":"#5C8F00","lineColor":"#333333","fontFamily":"Helvetica, Arial, sans-serif","fontSize":"14px","actorBkg":"#76B900","actorBorder":"#5C8F00","actorTextColor":"#000000","signalColor":"#333333","signalTextColor":"#000000","labelBoxBkg":"#F2F2F2","labelBoxBorderColor":"#CCCCCC"}}}%%
 sequenceDiagram
     participant F as Frontend
     participant S as Backend Server

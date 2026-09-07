@@ -43,6 +43,8 @@ class HeartbeatIn(BaseModel):
     cpu_percent: float | None = Field(default=None, ge=0, le=100)
     gpu_percent: float | None = Field(default=None, ge=0, le=100)
     mem_percent: float | None = Field(default=None, ge=0, le=100)
+    mem_used_mb: float | None = Field(default=None, ge=0)
+    mem_total_mb: float | None = Field(default=None, ge=0)
     temperature_c: float | None = None
     fps: float | None = Field(default=None, ge=0)
     inference_latency_ms: float | None = Field(default=None, ge=0)
@@ -55,6 +57,8 @@ class MetricSampleOut(ORMSchema):
     cpu_percent: float | None
     gpu_percent: float | None
     mem_percent: float | None
+    mem_used_mb: float | None
+    mem_total_mb: float | None
     temperature_c: float | None
     fps: float | None
     inference_latency_ms: float | None

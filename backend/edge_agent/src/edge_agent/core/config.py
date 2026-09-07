@@ -38,6 +38,18 @@ class StreamingConfig(BaseModel):
     bitrate_kbps: int = 2000
 
 
+class VisionConfig(BaseModel):
+    """How this device turns cameras into detections + published video.
+
+    Both fields accept ``auto`` (probe the host — see
+    ``edge_agent.core.hardware.detect_hardware``) or an explicit override.
+    """
+
+    backend: str = "auto"  # auto | composed | deepstream
+    device: str = "auto"   # auto | cpu | cuda:0 | mps
+    runtime: str = "auto"  # auto (yolo if installed, else dummy) | yolo | dummy
+
+
 class InferenceConfig(BaseModel):
     weights_dir: str = "/var/lib/edge-agent/models"
     conf_threshold: float = 0.25
@@ -65,6 +77,7 @@ class AgentSettings(BaseAppSettings):
     s3: S3Config = Field(default_factory=S3Config)
     server: ServerConfig = Field(default_factory=ServerConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
+    vision: VisionConfig = Field(default_factory=VisionConfig)
     streaming: StreamingConfig = Field(default_factory=StreamingConfig)
     cameras: list[CameraConfig] = Field(default_factory=list)
 

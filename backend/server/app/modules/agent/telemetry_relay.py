@@ -29,6 +29,8 @@ async def _on_heartbeat(event: HeartbeatRecorded) -> None:
                 "cpu_percent": event.cpu_percent,
                 "gpu_percent": event.gpu_percent,
                 "mem_percent": event.mem_percent,
+                "mem_used_mb": event.mem_used_mb,
+                "mem_total_mb": event.mem_total_mb,
                 "temperature_c": event.temperature_c,
                 "fps": event.fps,
                 "inference_latency_ms": event.inference_latency_ms,

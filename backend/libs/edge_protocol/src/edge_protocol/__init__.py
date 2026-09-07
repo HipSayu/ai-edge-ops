@@ -12,6 +12,7 @@ from edge_protocol.messages import (
     BboxPayload,
     CommandAckPayload,
     DeployModelPayload,
+    DeviceCapabilities,
     HeartbeatPayload,
     LogPayload,
     StateReportPayload,
@@ -94,6 +95,7 @@ __all__ = [
     "StreamTokenRequestPayload",
     "CommandAckPayload",
     "DeployModelPayload",
+    "DeviceCapabilities",
     # payloads
     "HeartbeatPayload",
     "LogPayload",

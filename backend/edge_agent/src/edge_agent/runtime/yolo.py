@@ -26,9 +26,10 @@ except ModuleNotFoundError as exc:  # pragma: no cover
 
 
 class YoloRuntime(InferenceRuntime):
-    def __init__(self) -> None:
+    def __init__(self, *, device: str = "cpu") -> None:
         self._model: YOLO | None = None
         self._mv_id: int | None = None
+        self._device = device
         self._conf = 0.25
         self._iou = 0.5
         self._imgsz = 640
@@ -51,7 +52,12 @@ class YoloRuntime(InferenceRuntime):
     async def infer(self, frame: Any) -> list[Detection]:
         assert self._model is not None
         results = self._model.predict(
-            frame, conf=self._conf, iou=self._iou, imgsz=self._imgsz, verbose=False
+            frame,
+            conf=self._conf,
+            iou=self._iou,
+            imgsz=self._imgsz,
+            device=self._device,
+            verbose=False,
         )
         out: list[Detection] = []
         for r in results:

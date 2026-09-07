@@ -43,6 +43,8 @@ class MetricSample(Base):
     cpu_percent: Mapped[float | None] = mapped_column(Float, default=None)
     gpu_percent: Mapped[float | None] = mapped_column(Float, default=None)
     mem_percent: Mapped[float | None] = mapped_column(Float, default=None)
+    mem_used_mb: Mapped[float | None] = mapped_column(Float, default=None)
+    mem_total_mb: Mapped[float | None] = mapped_column(Float, default=None)
     temperature_c: Mapped[float | None] = mapped_column(Float, default=None)
     fps: Mapped[float | None] = mapped_column(Float, default=None)
     inference_latency_ms: Mapped[float | None] = mapped_column(Float, default=None)
