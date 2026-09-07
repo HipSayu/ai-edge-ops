@@ -9,13 +9,13 @@ from collections.abc import Awaitable, Callable
 
 import edge_protocol as p
 
-from edge_agent.config import CameraConfig, InferenceConfig
-from edge_agent.evidence import EvidenceUploader
-from edge_agent.helpers.ppe import evaluate_ppe
-from edge_agent.helpers.video import frames
+from edge_agent.analytics.ppe import evaluate_ppe
+from edge_agent.core.config import CameraConfig, InferenceConfig
 from edge_agent.runtime import Detection, InferenceRuntime
+from edge_agent.services.evidence import EvidenceUploader
+from edge_agent.utils.video import frames
 
-logger = logging.getLogger("edge_agent.pipeline")
+logger = logging.getLogger("edge_agent.services.pipeline")
 
 ViolationSink = Callable[[p.ViolationPayload], Awaitable[None]]
 BboxSink = Callable[[p.BboxFramePayload], Awaitable[None]]

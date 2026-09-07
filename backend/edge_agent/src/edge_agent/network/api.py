@@ -6,7 +6,7 @@ from dqh.svc_core.transports.http import ok
 from dqh.svc_core.transports.http.fastapi import create_app
 from fastapi import APIRouter, FastAPI, Request
 
-from edge_agent.agent import Agent
+from edge_agent.services.agent import Agent
 
 router = APIRouter(tags=["agent"])
 

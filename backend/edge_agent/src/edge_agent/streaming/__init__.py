@@ -13,7 +13,9 @@ from edge_agent.streaming.base import VideoPublisher
 from edge_agent.streaming.null import NullPublisher
 
 
-def build_publisher(kind: str = "ffmpeg", *, encoder: str = "auto", bitrate_kbps: int = 2000) -> VideoPublisher:
+def build_publisher(
+    kind: str = "ffmpeg", *, encoder: str = "auto", bitrate_kbps: int = 2000
+) -> VideoPublisher:
     if kind == "ffmpeg":
         from edge_agent.streaming.ffmpeg_whip import FfmpegWhipPublisher
 

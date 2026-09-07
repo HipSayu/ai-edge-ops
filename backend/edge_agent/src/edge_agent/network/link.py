@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime as dt
 import logging
 import traceback
@@ -12,9 +13,9 @@ import edge_protocol as p
 from dqh.svc_core.messaging import Envelope, MessageBus
 from dqh.svc_core.messaging.rpc import RpcClient
 
-from edge_agent.helpers.metrics import collect_metrics
+from edge_agent.utils.metrics import collect_metrics
 
-logger = logging.getLogger("edge_agent.link")
+logger = logging.getLogger("edge_agent.network.link")
 
 CommandHandler = Callable[[Envelope], Awaitable[p.CommandAckPayload]]
 
@@ -154,7 +155,5 @@ class MqttLogHandler(logging.Handler):
 
     @staticmethod
     def _consume_task_error(task: asyncio.Task[None]) -> None:
-        try:
+        with contextlib.suppress(Exception):
             task.result()
-        except Exception:
-            pass

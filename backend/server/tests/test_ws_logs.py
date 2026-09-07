@@ -22,7 +22,7 @@ async def test_edge_log_is_pushed_to_frontend(_engine):
                 payload={
                     "device_id": "edge-dev-1",
                     "level": "ERROR",
-                    "logger": "edge_agent.pipeline",
+                    "logger": "edge_agent.services.pipeline",
                     "message": "inference failed",
                     "recorded_at": "2026-09-05T10:00:00Z",
                     "exception": "RuntimeError: failed",

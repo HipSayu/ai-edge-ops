@@ -15,14 +15,14 @@ from dqh.svc_core.config import MqttConfig
 from dqh.svc_core.messaging import InMemoryMessageBus, MessageBus
 from dqh.svc_core.transports.event_driven.mqtt import MqttMessageBus
 
-from edge_agent.agent import Agent
-from edge_agent.api import build_api
-from edge_agent.config import AgentSettings, CameraConfig, load_settings
-from edge_agent.evidence import HttpEvidenceUploader
-from edge_agent.link import EdgeLink, MqttLogHandler
-from edge_agent.pipeline import CameraPipeline
+from edge_agent.core.config import AgentSettings, CameraConfig, load_settings
+from edge_agent.core.state import StateStore
+from edge_agent.network.api import build_api
+from edge_agent.network.link import EdgeLink, MqttLogHandler
 from edge_agent.runtime import build_runtime
-from edge_agent.state import StateStore
+from edge_agent.services.agent import Agent
+from edge_agent.services.evidence import HttpEvidenceUploader
+from edge_agent.services.pipeline import CameraPipeline
 from edge_agent.streaming import VideoPublisher, build_publisher
 
 logger = logging.getLogger("edge_agent")
@@ -143,7 +143,9 @@ async def _start_one_stream(
     publishers: list[VideoPublisher],
     link: EdgeLink,
 ) -> None:
-    token = await link.request_stream_token(cam.camera_id, timeout=settings.server.request_timeout_s)
+    token = await link.request_stream_token(
+        cam.camera_id, timeout=settings.server.request_timeout_s
+    )
     publisher = build_publisher(
         settings.streaming.kind,
         encoder=settings.streaming.encoder,

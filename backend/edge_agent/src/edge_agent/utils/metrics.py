@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import edge_protocol as p
 import psutil
-
 from dqh.svc_core.helpers.time import utcnow
 
 

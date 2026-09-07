@@ -7,9 +7,9 @@ from pathlib import Path
 
 import httpx
 
-from edge_agent.helpers.hashing import sha256_file
+from edge_agent.utils.hashing import sha256_file
 
-logger = logging.getLogger("edge_agent.artifacts")
+logger = logging.getLogger("edge_agent.services.artifacts")
 
 
 async def fetch_artifact(

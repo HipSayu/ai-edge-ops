@@ -4,7 +4,7 @@ A publisher owns one outbound WHIP connection for one camera: capture the
 camera's own source (not the inference loop's frames — this is a raw,
 separate ffmpeg process reading straight from the device) and push H264 to
 the URL/token the control plane issued. Bbox metadata never goes through
-here; see ``edge_agent.link.EdgeLink.send_bbox_frame`` for that.
+here; see ``edge_agent.network.link.EdgeLink.send_bbox_frame`` for that.
 """
 
 from __future__ import annotations

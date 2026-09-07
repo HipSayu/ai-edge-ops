@@ -6,11 +6,11 @@ import edge_protocol as p
 import pytest
 from dqh.svc_core.messaging import Envelope, InMemoryMessageBus
 
-from edge_agent.agent import Agent
-from edge_agent.config import AgentSettings, InferenceConfig
-from edge_agent.link import EdgeLink
+from edge_agent.core.config import AgentSettings, InferenceConfig
+from edge_agent.core.state import StateStore
+from edge_agent.network.link import EdgeLink
 from edge_agent.runtime.dummy import DummyRuntime
-from edge_agent.state import StateStore
+from edge_agent.services.agent import Agent
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ async def wired(tmp_path, monkeypatch):
         path.write_bytes(b"weights")
         return str(path)
 
-    monkeypatch.setattr("edge_agent.agent.fetch_artifact", _fake_fetch)
+    monkeypatch.setattr("edge_agent.services.agent.fetch_artifact", _fake_fetch)
 
     settings = AgentSettings(
         device_id="dev-1",

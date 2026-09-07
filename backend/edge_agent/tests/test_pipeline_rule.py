@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import sys
 
-from edge_agent.config import CameraConfig, InferenceConfig
-from edge_agent.pipeline import CameraPipeline
-from edge_agent.helpers.ppe import evaluate_ppe
-from edge_agent.helpers.video import frames
+from edge_agent.analytics.ppe import evaluate_ppe
+from edge_agent.core.config import CameraConfig, InferenceConfig
 from edge_agent.runtime.base import Detection
+from edge_agent.services.pipeline import CameraPipeline
+from edge_agent.utils.video import frames
 
 
 def _d(label: str) -> Detection:

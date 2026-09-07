@@ -56,7 +56,7 @@ class StreamTokenRequestPayload(BaseModel):
     """Edge -> server RPC request: "let me publish this camera over WHIP".
 
     Sent over the existing (already-authenticated) MQTT link — see
-    ``edge_agent.link.EdgeLink.request_stream_token`` — instead of a new HTTP
+    ``edge_agent.network.link.EdgeLink.request_stream_token`` — instead of a new HTTP
     call, since the edge device has no HTTP credential of its own.
     """
 

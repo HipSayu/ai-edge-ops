@@ -8,11 +8,11 @@ import logging
 import edge_protocol as p
 from dqh.svc_core.messaging import Envelope
 
-from edge_agent.artifacts import fetch_artifact
-from edge_agent.config import AgentSettings
-from edge_agent.link import EdgeLink
+from edge_agent.core.config import AgentSettings
+from edge_agent.core.state import StateStore
+from edge_agent.network.link import EdgeLink
 from edge_agent.runtime import InferenceRuntime
-from edge_agent.state import StateStore
+from edge_agent.services.artifacts import fetch_artifact
 
 logger = logging.getLogger("edge_agent")
 
