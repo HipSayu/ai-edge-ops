@@ -14,14 +14,12 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
-    { name = "argon2-cffi" },
     { name = "asyncpg" },
-    { name = "dqh-svc-core", extra = ["fastapi", "mqtt", "redis", "sqlalchemy"] },
+    { name = "dqh-svc-core", extra = ["fastapi", "mqtt", "redis", "security", "sqlalchemy"] },
     { name = "edge-protocol" },
     { name = "fastapi" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pyjwt" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -40,9 +38,8 @@ dev = [
 requires-dist = [
     { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.20" },
     { name = "alembic", specifier = ">=1.14" },
-    { name = "argon2-cffi", specifier = ">=23.1" },
     { name = "asyncpg", specifier = ">=0.30" },
-    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "redis", "sqlalchemy"], editable = "../packages/svc_core" },
+    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "redis", "sqlalchemy", "security"], editable = "../packages/svc_core" },
     { name = "edge-protocol", editable = "../libs/edge_protocol" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.26" },
     { name = "fastapi", specifier = ">=0.115" },
@@ -50,7 +47,6 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pydantic-settings", specifier = ">=2.6" },
-    { name = "pyjwt", specifier = ">=2.9" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7" },
@@ -470,7 +466,7 @@ wheels = [
 
 [[package]]
 name = "dqh-svc-core"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "../packages/svc_core" }
 dependencies = [
     { name = "pydantic" },
@@ -488,6 +484,10 @@ mqtt = [
 redis = [
     { name = "redis" },
 ]
+security = [
+    { name = "argon2-cffi" },
+    { name = "pyjwt" },
+]
 sqlalchemy = [
     { name = "sqlalchemy", extra = ["asyncio"] },
 ]
@@ -497,7 +497,8 @@ requires-dist = [
     { name = "aiokafka", marker = "extra == 'kafka'", specifier = ">=0.11" },
     { name = "aiomqtt", marker = "extra == 'mqtt'", specifier = ">=2" },
     { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.20" },
-    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "sqlalchemy"], marker = "extra == 'all'" },
+    { name = "argon2-cffi", marker = "extra == 'security'", specifier = ">=23.1" },
+    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "sqlalchemy", "security"], marker = "extra == 'all'" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.26" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.110" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
@@ -505,6 +506,7 @@ requires-dist = [
     { name = "nats-py", marker = "extra == 'nats'", specifier = ">=2.6" },
     { name = "pydantic", specifier = ">=2.5" },
     { name = "pydantic-settings", specifier = ">=2.0" },
+    { name = "pyjwt", marker = "extra == 'security'", specifier = ">=2.9" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "python-multipart", marker = "extra == 'fastapi'", specifier = ">=0.0.9" },
@@ -512,7 +514,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy'", specifier = ">=2.0" },
 ]
-provides-extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "sqlalchemy", "all", "dev"]
+provides-extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "sqlalchemy", "security", "all", "dev"]
 
 [[package]]
 name = "edge-protocol"

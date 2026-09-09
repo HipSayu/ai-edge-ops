@@ -6,7 +6,7 @@ from dqh.svc_core.contracts.errors import ConflictError, NotFoundError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import hash_password
+from app.core.password_hasher import hash_password
 from app.modules.user.models import User
 from app.modules.user.schemas import UserCreate, UserUpdate
 
