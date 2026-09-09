@@ -19,8 +19,8 @@ phần svc_core extract) và [model deploy = image](../deploy/compose.edge.yml).
 | ✅ | (S7) | `backend/schema.sql` regen; dọn `ARCHITECTURE.md` + flow |
 
 **Còn lại:**
-- S3.3 phần camera: gộp `cameras`/`camera_groups` vào `Device.cameras`
-  (streaming dùng `camera_id: int` → cần đổi trước). FE "Fleet defaults" page.
+- **camera-fold huỷ** (user): giữ `cameras`/`camera_groups` tables. Chỉ còn
+  FE "Fleet defaults" page.
 - MQTT retained `state` publish (cần `svc_core` MessageBus `publish(retain=)`);
   LWT set được ngay qua `MQTT__WILL_*`.
 - Prometheus remote-write (S6 nâng cấp).

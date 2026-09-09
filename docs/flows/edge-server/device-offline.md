@@ -1,5 +1,10 @@
 # Flow: device offline / presence
 
+> **Updated for the stateless refactor**: device liveness is computed from
+> `FleetRegistry` (in-memory, rebuilt from MQTT). `PresenceRegistry` and
+> `AgentService.sweep_offline` are gone; `AgentGateway.sweep_presence()` walks
+> `fleet.sweep()` and emits `DeviceWentOffline`.
+
 ## 1. Overview
 
 **Purpose:**

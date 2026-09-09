@@ -168,3 +168,25 @@ async def test_config_change_pushes_update_config(gateway, session):
     assert sent, "no T_UPDATE_CONFIG sent"
     p = protocol.UpdateConfigPayload.model_validate(sent[-1].payload)
     assert p.config == {"conf_threshold": 0.6}
+
+
+async def test_reported_failure_raises_deployment_failed(gateway, session):
+    from app.modules.deployment.event import DeploymentFailed
+
+    device_id = await _new_device(session)
+    got: list = []
+    from app.core.events import event_bus
+
+    event_bus.subscribe(DeploymentFailed, lambda e: got.append(e))
+    await gateway.bus.publish(
+        protocol.TOPIC_STATE.render(device_id=device_id),
+        Envelope(
+            type=protocol.T_STATE_REPORT,
+            source=device_id,
+            payload=protocol.StateReportPayload(
+                runtime_status="failed", detail="pull denied"
+            ).model_dump(mode="json"),
+        ),
+    )
+    await asyncio.sleep(0.02)
+    assert got and got[-1].reason == "pull denied"

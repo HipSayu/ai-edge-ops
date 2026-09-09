@@ -135,9 +135,15 @@ class AgentGateway:
             )
 
     async def _on_state_report(self, env: Envelope) -> None:
+        device_id = device_id_from_envelope(env)
         p = protocol.StateReportPayload.model_validate(env.payload)
-        fleet.record_state(device_id_from_envelope(env), p)
+        was_failed = (rs := fleet.get(device_id)) is not None and rs.runtime_status == "failed"
+        fleet.record_state(device_id, p)
         logger.debug("state report from %s: %s", env.source, p.runtime_status)
+        if p.runtime_status == "failed" and not was_failed:
+            await event_bus.publish(
+                DeploymentFailed(device_id=device_id, reason=p.detail or "deploy failed on the device")
+            )
 
     async def _on_bbox_frame(self, env: Envelope) -> None:
         """Forward detections to the frontend over WS, keyed by camera.

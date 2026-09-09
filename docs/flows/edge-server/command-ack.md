@@ -66,7 +66,7 @@ sequenceDiagram
 
 1. `reconcile_loop` in `edge_agent.main.run` calls `Agent.reconcile()` every `reconcile_interval_s` (default 30 s).
 2. `reconcile` returns early if `state.in_sync()`.
-3. Otherwise, if there is a `desired.artifact_uri` and `desired.model_version_id != runtime.model_version_id`, it re-runs `_deploy(...)` from the persisted desired state with `command_id = "reconcile"`.
+3. Otherwise, if `desired.image` is set and `desired.image != current image`, it re-runs `_deploy(...)` from the persisted desired state with `command_id = "reconcile"`.
 4. Also exposed on the local API: `POST /model/reconcile` on `:9100`.
 
 ---

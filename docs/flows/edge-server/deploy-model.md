@@ -1,197 +1,221 @@
 # Flow: deploy model
 
-> **Rewritten for the stateless refactor** (see [`REFACTOR_stateless.md`](../../REFACTOR_stateless.md)).
-> The mermaid diagrams further down still show the old `Deployment` row / variant
-> pick and are pending a redraw.
-
 ## 1. Overview
 
 **Purpose:**
-Push a model to an edge device remotely. Deploy is a **command, not a stored row**:
-`POST /deployments {device_id, image}` sets `Device.desired_image` and fires
-`DeployRequested`; everything after is asynchronous, reconciled by the agent.
+Push a model to an edge device remotely — nobody touches the box. Deploy is a
+**command, not a stored row**: `POST /deployments {device_id, image}` resolves
+the image, sets `Device.desired_image`, and fires `DeployRequested`. Everything
+after is asynchronous; the agent reconciles.
 
-The model is one **multi-arch OCI image** per version (`linux/amd64` + `linux/arm64`),
-published by a separate pipeline to GHCR with `ai.edge-ops.model.*` labels. The
-runtime picks CPU/GPU itself — the server sends one digest-pinned ref. The edge
-runs it as the `inference` compose service: rewrite `INFERENCE_IMAGE`,
-`docker compose pull`, `up -d --wait`, health-check, roll back on failure.
+The model is **one multi-arch OCI image per version** (`linux/amd64` +
+`linux/arm64`), published by a separate pipeline to GHCR with `ai.edge-ops.model.*`
+labels. The runtime picks CPU/GPU itself — the server sends one **digest-pinned**
+ref. The edge runs it as the `inference` compose service: rewrite
+`INFERENCE_IMAGE`, `compose pull`, `up -d --wait`, health-check, roll back on
+failure.
 
-**Config** sent with the command is resolved server-side:
-`model labels < app_settings["inference_policy"] < Device.inference`
-(`ConfigResolver`). Editing `Device.inference` later re-resolves and pushes
+**Effective config** is resolved server-side and shipped with the command
+(`ConfigResolver`):
+
+```
+model labels (ai.edge-ops.model.{conf,iou,imgsz,classes})
+  ⊲ app_settings["inference_policy"]   (fleet-wide)
+  ⊲ Device.inference                    (per-device operator overrides)   ← wins
+```
+
+Editing `Device.inference` later re-resolves and pushes a config-only
 `T_UPDATE_CONFIG` (no image re-pull).
 
-**Scope:** `DeployService.deploy()` → device reports `runtime_status: active|failed`
-(FleetRegistry). Progress is watched over the WS `ack` / `state` stream.
+**Scope:** `DeployService.deploy()` → device reports `runtime_status:
+active|failed` into the in-memory `FleetRegistry`. There is no `Deployment` row
+and no per-backend variant pick. Current state = `Device.desired_image` vs
+`FleetRegistry.active_image` (`in_sync`). Progress = poll `GET /deployments`.
 
 **Actors / Components:**
 
-* Frontend — `POST /deployments`, WS progress
-* Backend — `DeployService`, `ConfigResolver`, `ModelCatalog` (GHCR), `AgentGateway`
-* MQTT — `agent/devices/{id}/cmd` and `/state`
+* Frontend — `POST /deployments`, poll `GET /deployments`
+* Backend — `DeployService`, `ConfigResolver`, `ModelCatalog` (GHCR), `AgentGateway`, `FleetRegistry`
+* MQTT — `agent/devices/{id}/cmd` and `/state` + `/ack`
 * Edge Agent — `Agent._deploy`, `ComposeRunner`
-* Registry — GHCR `…/ai-edge-ops-model@sha256:…`
+* Registry — GHCR `ghcr.io/<owner>/ai-edge-ops-model@sha256:…`
 * Storage — Postgres (`Device.desired_image`, `audit_logs`), edge `state.json` + `.env.edge`
 
 ---
 
-## 2. High-Level Flow
+## 2. High-level flow
 
 ```mermaid
 flowchart LR
-    Frontend[Frontend]
-    Backend[Backend]
-    MQTT[MQTT]
-    Edge[Edge Agent]
-    Registry[(OCI Registry)]
-    Compose[docker compose]
+    FE[Frontend]
+    subgraph SRV[Backend]
+        DSV[DeployService]
+        CR[ConfigResolver]
+        MC[ModelCatalog]
+        GW[AgentGateway]
+        FR[(FleetRegistry<br/>in-memory)]
+    end
+    PG[(Postgres<br/>Device.desired_image<br/>audit_logs)]
+    GHCR[(GHCR)]
+    MQ[MQTT]
+    EA[Edge Agent]
+    CP[docker compose]
 
-    Frontend -->|POST activate| Backend
-    Backend -->|command.deploy_model image@digest| MQTT --> Edge
-    Edge -->|rewrite .env, compose pull/up| Compose
-    Compose -->|pull| Registry
-    Edge -->|device.state applying/active/failed| MQTT --> Backend
-    Frontend -->|poll GET /deployments/id| Backend
+    FE -->|POST /deployments device_id,image| DSV
+    DSV -->|get_model tag| MC --> GHCR
+    DSV --> CR
+    DSV -->|desired_image + audit row| PG
+    DSV -->|DeployRequested| GW
+    GW -->|T_DEPLOY_MODEL image@digest + config| MQ --> EA
+    EA -->|rewrite .env.edge, pull, up -d --wait| CP -->|pull| GHCR
+    EA -->|T_STATE_REPORT applying/active/failed + T_CMD_ACK| MQ --> GW
+    GW -->|record_state / record_heartbeat| FR
+    FE -->|poll GET /deployments| DSV
+    DSV -->|desired vs FleetRegistry.active_image| FR
 ```
 
 ---
 
-## 3. Sequence
+## 3. Sequence — deploy
 
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant S as Server
-    participant DB as DB
-    participant MQTT as MQTT
-    participant A as Edge Agent
-    participant C as docker compose
+    participant DS as DeployService
+    participant MC as ModelCatalog
+    participant PG as Postgres
+    participant EB as event_bus
+    participant GW as AgentGateway
+    participant MQ as MQTT
+    participant AG as Agent._deploy
+    participant CR as ComposeRunner
+    participant FR as FleetRegistry
 
-    FE->>S: POST activate deployment
-    S->>DB: supersede current ACTIVE, set this ACTIVE, commit
-    S->>DB: load device (backend), load model version (image_repo, image_*_digest)
-    S->>S: variant = gpu if device.backend == "deepstream" else cpu
-    S->>MQTT: command.deploy_model { image: repo@<digest>, model_version_id, config }
-    MQTT->>A: deliver
-    A->>A: persist desired.image, runtime_status="applying" -> device.state
-    A->>C: write .env INFERENCE_IMAGE=<image>; docker compose pull inference
-    A->>C: docker compose up -d --wait inference
+    FE->>DS: POST /deployments {device_id, image:"1.3.0"}
+    DS->>DS: AgentService.get_device(device_id)  (404 if unknown)
+    DS->>MC: get_model("1.3.0")  → ModelImage(pinned_ref, labels)
+    Note over MC: registry 404 → NotFoundError → HTTP 404
+    DS->>DS: ConfigResolver.resolve(image, device)  → effective config
+    DS->>PG: Device.desired_image = pinned_ref ; AuditLog(deploy.model) ; commit
+    DS->>EB: DeployRequested(device_id, pinned_ref, config)
+    DS-->>FE: 201 DeploymentView(desired_image, in_sync=false)
+
+    EB->>GW: _on_deploy_requested
+    GW->>MQ: T_DEPLOY_MODEL DeployModelPayload{command_id, image, config}
+
+    MQ->>AG: dispatch
+    AG->>AG: state.desired.image = image ; reported.runtime_status = "applying"
+    AG->>MQ: T_STATE_REPORT (applying)
+    AG->>CR: deploy(image)
+    CR->>CR: prev = INFERENCE_IMAGE from .env.edge
+    CR->>CR: set INFERENCE_IMAGE ; compose --env-file .env.edge pull inference
+    CR->>CR: compose up -d --wait inference   (blocks on healthcheck)
     alt healthy
-        A->>A: runtime_status="active", active_model_version_id set
-        A->>MQTT: device.state (active) + command.ack succeeded
-        A->>C: docker image prune -f
-    else pull/up failed or unhealthy
-        A->>C: restore .env to previous image; compose up -d
-        A->>MQTT: device.state (failed, detail) + command.ack failed
+        CR-->>AG: DeployResult(ok)
+        AG->>AG: reported.runtime_status = "active" ; reported.active_image = image
+        AG->>MQ: T_STATE_REPORT (active) + T_CMD_ACK (succeeded)
+        AG->>CR: docker image prune -f
+    else pull / up failed or unhealthy
+        CR->>CR: restore .env.edge=prev ; compose up -d inference
+        CR-->>AG: DeployResult(false, detail)
+        AG->>MQ: T_STATE_REPORT (failed, detail) + T_CMD_ACK (failed)
     end
-    MQTT->>S: device.state -> AgentGateway; DeploymentFailed -> observability alert
-    FE->>S: poll GET /deployments/{id}
+
+    MQ->>GW: T_STATE_REPORT
+    GW->>FR: record_state(device_id, {active_image, runtime_status})
+    GW->>EB: DeploymentFailed  (only if runtime_status == "failed")
+    FE->>DS: poll GET /deployments  → in_sync once active_image == desired_image
 ```
 
 ---
 
-## 4. Component Responsibilities
-
-| Component | Responsibility |
-| --- | --- |
-| Frontend | Trigger activation, poll status |
-| DeploymentService | Deployment state machine, one ACTIVE per device |
-| ModelRegistryService | Resolve `image_repo` + per-variant digest (or legacy `artifact_uri`) |
-| AgentService | Report `devices.backend` from heartbeat capabilities |
-| AgentGateway | Pick the variant by `device.backend`, build + send `command.deploy_model`, observe `device.state`; raise `DeploymentFailed` when no image/artifact is available |
-| Edge Agent (`Agent._deploy`) | Persist desired state, drive `ComposeRunner`, report outcome |
-| `ComposeRunner` | `.env` rewrite, `compose pull` / `up -d --wait`, rollback, image prune |
-| Registry | Immutable digest-addressed model images; signing (cosign, planned) |
-
----
-
-## 5. Detailed Service Flow
+## 4. Sequence — config change (no redeploy)
 
 ```mermaid
 sequenceDiagram
-    participant DS as DeploymentService.activate
-    participant DB as PostgreSQL
+    participant FE as Frontend
+    participant AS as AgentService.update_device
     participant EB as event_bus
-    participant G as AgentGateway._on_deployment_activated
-    participant MR as ModelRegistryService
-    participant AS as AgentService
-    participant M as MQTT cmd
-    participant AG as Agent._deploy
-    participant CR as ComposeRunner
-    participant ST as StateStore
+    participant SUB as deployment.subscribers
+    participant RES as ConfigResolver.resolve_update
+    participant GW as AgentGateway
+    participant MQ as MQTT
+    participant AG as Agent._update_config
 
-    DS->>DB: supersede + ACTIVE + commit
-    DS->>EB: DeploymentActivated(deployment_id, device_id, model_version_id, config)
-    EB->>G: handle
-    G->>AS: get_device(device_id) -> backend
-    G->>MR: get_version(model_version_id) -> image_repo, image_cpu_digest, image_gpu_digest, artifact_uri
-    G->>G: _select_model_image(version, backend) -> "repo@sha256:.." or None
-    alt image or legacy artifact present
-        G->>M: DeployModelPayload { image | artifact_uri, model_version_id, config }
-        M->>AG: dispatch
-        AG->>ST: desired.image=..., reported.runtime_status="applying", save
-        AG->>M: device.state (applying)
-        alt image path
-            AG->>CR: deploy(image)
-            CR->>CR: prev = current .env image
-            CR->>CR: set INFERENCE_IMAGE=image ; compose pull inference
-            CR->>CR: compose up -d --wait inference
-            CR-->>AG: DeployResult(ok) | DeployResult(false, detail) + rollback to prev
-        else legacy artifact path
-            AG->>AG: fetch_artifact(uri) ; runtime.load(...)
-        end
-        alt ok
-            AG->>ST: runtime_status="active", active_model_version_id, save
-            AG->>M: device.state (active) + command.ack succeeded
-        else failed
-            AG->>ST: runtime_status="failed", detail, save
-            AG->>M: device.state (failed) + command.ack failed
-        end
-    else nothing to deploy
-        G->>EB: DeploymentFailed(reason="no image for backend / no artifact_uri")
-    end
+    FE->>AS: PATCH /agent/devices/{id} {inference:{conf_threshold:0.6}}
+    AS->>AS: Device.inference = {...} ; commit
+    AS->>EB: DeviceConfigChanged(device_id)
+    EB->>SUB: _on_config_changed
+    SUB->>RES: resolve_update(device)   (inference_policy ⊲ Device.inference)
+    SUB->>EB: ConfigResolved(device_id, config)
+    EB->>GW: _on_config_resolved
+    GW->>MQ: T_UPDATE_CONFIG UpdateConfigPayload{command_id, config}
+    MQ->>AG: apply — no image pull
 ```
 
 ---
 
-## 6. Data Flow
+## 5. Component responsibilities
+
+| Component | Responsibility |
+| --- | --- |
+| Frontend | `POST /deployments`, poll `GET /deployments`; edit `Device.inference` via `PATCH /agent/devices/{id}` |
+| `DeployService.deploy` | Resolve tag → `ModelImage`, set `Device.desired_image`, write `audit_logs`, publish `DeployRequested`. **No row, no state machine.** |
+| `ModelCatalog` | Read the tag/manifest/labels from GHCR (v2 API, anon). 404 → `NotFoundError`. |
+| `ConfigResolver` | Merge model labels < `inference_policy` < `Device.inference` into the effective config. |
+| `AgentGateway` | `DeployRequested` → `T_DEPLOY_MODEL`; `ConfigResolved` → `T_UPDATE_CONFIG`; `T_STATE_REPORT`/heartbeat → `FleetRegistry`; emit `DeploymentFailed` on a reported failure. |
+| `FleetRegistry` | In-memory reported state — `active_image`, `runtime_status`, health. Not persisted. |
+| `Agent._deploy` | Persist `desired.image`, drive `ComposeRunner`, report `T_STATE_REPORT` + `T_CMD_ACK`. |
+| `ComposeRunner` | `.env.edge` rewrite of `INFERENCE_IMAGE`, `compose pull` / `up -d --wait`, rollback to last-known-good, prune. |
+| Registry (GHCR) | Immutable digest-addressed multi-arch images; cosign verify (planned). |
+
+---
+
+## 6. Data flow
 
 ```text
-Frontend ─POST activate─► DeploymentService.activate
-  ├── Deployment rows (SUPERSEDED / ACTIVE) ──► PostgreSQL
-  └── DeploymentActivated ─► AgentGateway
-        ├── AgentService.get_device      ──► devices.backend  ("composed" | "deepstream")
-        ├── ModelRegistryService.get_version ─► image_repo, image_{cpu,gpu}_digest
-        └── command.deploy_model { image: repo@digest }  ─MQTT cmd─►
+Frontend ─POST /deployments {device_id, image}─► DeployService.deploy
+  ├── ModelCatalog.get_model(tag) ──► GHCR v2 (manifest + config blob labels)
+  ├── ConfigResolver.resolve ──► effective = model.labels ⊲ inference_policy ⊲ Device.inference
+  ├── Device.desired_image = <ref>@sha256:… ─┐
+  ├── AuditLog(action="deploy.model")        ├─► Postgres
+  └── DeployRequested ─► AgentGateway
+        └── T_DEPLOY_MODEL { image, config } ─MQTT agent/devices/{id}/cmd─►
               Agent._deploy
                 ├── desired.image ──► state.json
-                ├── ComposeRunner ──► /project/.env (INFERENCE_IMAGE=)
-                │                     docker compose pull / up -d --wait
-                │                     └─ registry pull (layer cache, resumable)
-                └── device.state (applying / active / failed) ─MQTT─► AgentGateway ─► PostgreSQL
+                ├── ComposeRunner ──► /project/.env.edge (INFERENCE_IMAGE=)
+                │                     docker compose --env-file .env.edge pull / up -d --wait
+                │                     └─ GHCR pull (layer cache, resumable)
+                └── T_STATE_REPORT {active_image, runtime_status} ─MQTT─► AgentGateway
+                      └── FleetRegistry.record_state   (in-memory, not persisted)
+
+GET /deployments ─► per-device DeploymentView:
+      { device_id, name, desired_image (Postgres), active_image (FleetRegistry),
+        runtime_status, in_sync = desired_image == active_image }
 ```
 
 ---
 
-## 7. Error Handling
+## 7. Error handling
 
 | Failure | Handling |
 | --- | --- |
-| Model version has no image for this backend and no `artifact_uri` | Gateway raises `DeploymentFailed` → CRITICAL alert; nothing sent to the edge |
-| Command lost / edge offline | Nothing acks; desired not on the device → re-send (open item) or reconcile once desired is written |
-| `compose pull` fails (registry down, bad digest, auth) | `.env` restored, old image stays up, `runtime_status=failed` with detail |
-| `compose up --wait` unhealthy | `.env` restored + `compose up -d` old image, `runtime_status=failed` |
-| Edge reboots mid-deploy | On restart the agent reads `state.json`, `reconcile()` re-runs `_deploy(desired.image)` — idempotent (same digest → `ComposeRunner` no-ops) |
-| Legacy artifact download / checksum fails | `runtime_status=failed`, previous model keeps running |
+| `image` tag not in the registry | `ModelCatalog` 404 → `NotFoundError` → HTTP 404; nothing changes, no command sent |
+| Unknown `device_id` | `AgentService.get_device` → HTTP 404 |
+| Command lost / edge offline | Nothing acks; `Device.desired_image` is set, so the agent's `reconcile()` re-applies it once the device is back — idempotent (same digest → `ComposeRunner` no-ops) |
+| `compose pull` fails (registry down, bad digest, auth) | `.env.edge` restored, old image stays up, `T_STATE_REPORT(failed, detail)` |
+| `compose up --wait` unhealthy | `.env.edge` restored + `compose up -d` old image, `T_STATE_REPORT(failed)` |
+| Edge reboots mid-deploy | On restart the agent reads `state.json`; `reconcile()` re-runs `_deploy(desired.image)` |
+| Server restarts | `FleetRegistry` empties; refills from the next heartbeat / retained `state`. `Device.desired_image` (Postgres) is untouched. |
+| Reported `runtime_status == "failed"` | `AgentGateway` publishes `DeploymentFailed` → observability `DEPLOYMENT_FAILED` (CRITICAL) |
 
 ---
 
 ## 8. Observability
 
-* Logs: `deployment_id`, `device_id`, `model_version_id`, `command_id`, chosen `image` digest, each `runtime_status` transition with `detail`
-* Metrics: activate → first `applying` latency; `applying` → `active` duration (pull + up time); deploy success/failure rate; image pull bytes
-* Alerts: `DeploymentFailed` → observability `DEPLOYMENT_FAILED`
+* Logs: `device_id`, `command_id`, chosen `image` digest, each `runtime_status` transition with `detail`; `audit_logs` row per deploy (`actor` → device → ref)
+* Alerts: reported `failed` → `DeploymentFailed` → `DEPLOYMENT_FAILED`
+* No deploy-latency metrics yet (was tied to the removed `Deployment` timestamps) — follow-up
 
 ---
 
@@ -199,33 +223,38 @@ Frontend ─POST activate─► DeploymentService.activate
 
 | Configuration | Description | Default |
 | --- | --- | --- |
-| `compose.project_dir` / `compose.env_file` | Where `compose.yml` + env file live on the edge | `/project`, `/project/.env` |
-| `compose.image_var` | Env var the agent rewrites | `INFERENCE_IMAGE` |
-| `compose.service` | Compose service to swap | `inference` |
-| `compose.up_timeout_s` | Cap on a single `compose` invocation | `180` |
-| `reconcile_interval_s` | How fast a stuck / interrupted deploy self-heals | `30` |
-| model version `image_repo` / `image_cpu_digest` / `image_gpu_digest` | Per-variant OCI refs (registry / CI) | — |
+| `MODEL_REGISTRY__{OWNER,PACKAGE,TOKEN}` | GHCR package the catalog reads (`TOKEN` optional — public) | — / — / empty |
+| `COMPOSE__PROJECT_DIR` / `COMPOSE__ENV_FILE` | Where the agent runs `docker compose` on the edge | `/project`, `/project/.env.edge` |
+| `COMPOSE__IMAGE_VAR` | Env var the agent rewrites | `INFERENCE_IMAGE` |
+| `COMPOSE__SERVICE` | Compose service to swap | `inference` |
+| `COMPOSE__UP_TIMEOUT_S` | Cap on one `compose` invocation | `180` |
+| `RECONCILE_INTERVAL_S` | How fast a stuck / interrupted deploy self-heals | `30` |
+| `app_settings["inference_policy"]` | Fleet-wide config tier (`PATCH /system/settings`) | `{}` |
+| `Device.inference` | Per-device config tier (`PATCH /agent/devices/{id}`) | `{}` |
 
 ---
 
-## 10. Related Components
+## 10. Related components
 
-* `app/modules/deployment/service.py` (`activate`), `app/modules/deployment/event.py` (`DeploymentActivated`, `DeploymentFailed`)
-* `app/edge/gateway.py` (`_on_deployment_activated`, `_select_model_image`, `_on_heartbeat` → `devices.backend`)
-* `app/modules/model_registry/models.py` (`image_repo`, `image_cpu_digest`, `image_gpu_digest`)
-* `edge_agent/services/agent.py` (`_deploy`, `_apply_image`, `_apply_artifact`, `reconcile`)
+* `app/modules/deployment/service.py` (`DeployService.deploy` / `list` / `count_active`)
+* `app/modules/deployment/config_resolver.py` (`ConfigResolver`)
+* `app/modules/deployment/event.py` (`DeployRequested`, `ConfigResolved`, `DeploymentFailed`)
+* `app/modules/deployment/subscribers.py` (`DeviceConfigChanged` → `ConfigResolved`)
+* `app/modules/model_registry/catalog.py` + `schemas.py` (`ModelCatalog`, `ModelImage`)
+* `app/edge/gateway.py` (`_on_deploy_requested`, `_on_config_resolved`, `_on_state_report`)
+* `app/modules/agent/fleet_registry.py` (`FleetRegistry.record_state` / `record_heartbeat`)
+* `edge_agent/services/agent.py` (`_deploy`, `_update_config`, `reconcile`)
 * `edge_agent/runner/compose_runner.py` (`ComposeRunner`)
-* `edge_agent/core/config.py` (`ComposeConfig`), `edge_agent/core/state.py` (`DesiredState.image`)
-* contract: `edge_protocol/messages.py` (`DeployModelPayload.image`, `DeviceCapabilities.backend`)
+* contract: `edge_protocol/messages.py` (`DeployModelPayload.image`, `UpdateConfigPayload`, `StateReportPayload.active_image`)
 
 ---
 
-## 11. Open items (follow-up phase)
+## 11. Open items
 
-* `backend/vision_runtime/` — the buildable that becomes the model images (capture + infer + WHIP), CPU + GPU Dockerfiles
-* DeepStream GPU pipeline (currently a skeleton)
+* MQTT **retained** `state` publish + LWT — needs `svc_core` `MessageBus.publish(retain=)`
+* Deploy-progress WS channel (FE polls `GET /deployments` for now)
 * cosign signature verification before `compose up`
-* registry credential provisioning on the edge (short-lived token via server)
-* `docker-socket-proxy` instead of raw socket mount
-* non-blocking legacy `runtime.load`; outbox for at-least-once violations
-* reconcile backoff + give-up; `T_UPDATE_CONFIG` hot-apply
+* private-package pull token minted by the server over the mTLS link
+* `docker-socket-proxy` instead of the raw socket mount
+* DeepStream GPU pipeline (`Dockerfile.jetson` + `runtime/deepstream.py` skeleton)
+* deploy-latency metrics
