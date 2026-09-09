@@ -8,55 +8,24 @@ from dqh.svc_core.transports.http import PaginationParams
 
 from app.mcp._session import session_scope
 from app.modules.agent import AgentService
-from app.modules.agent.rules import DeviceStatus
 
 
-async def list_devices(site: str | None = None, status: str | None = None, limit: int = 50) -> dict:
-    """List edge devices, optionally filtered by site or status
-    (provisioning|online|degraded|offline). Returns id, name, site, status,
-    last_seen_at, agent_version, active_image."""
-    st = DeviceStatus(status) if status else None
+async def list_devices(site: str | None = None, limit: int = 50) -> dict:
+    """List edge devices - merged desired config + reported runtime. Fields:
+    device_id, name, site, status, known, last_seen_at, agent_version,
+    active_image, desired_image, in_sync."""
     async with session_scope() as session:
-        page = await AgentService(session).list_devices(
-            site=site, status=st, params=PaginationParams(page=1, page_size=min(limit, 200))
-        )
+        devices = await AgentService(session).list_devices(site=site)
         return {
-            "total": page.total,
-            "devices": [
-                {
-                    "id": d.id,
-                    "name": d.name,
-                    "site": d.site,
-                    "status": str(d.status),
-                    "backend": d.backend,
-                    "last_seen_at": d.last_seen_at.isoformat() if d.last_seen_at else None,
-                    "agent_version": d.agent_version,
-                    "active_image": d.active_image,
-                }
-                for d in page.items
-            ],
+            "total": len(devices),
+            "devices": [d.model_dump(mode="json") for d in devices[:limit]],
         }
 
 
 async def get_device(device_id: str) -> dict:
     """Full detail for one device by id."""
     async with session_scope() as session:
-        d = await AgentService(session).get_device(device_id)
-        return {
-            "id": d.id,
-            "name": d.name,
-            "site": d.site,
-            "hardware": d.hardware,
-            "status": str(d.status),
-            "backend": d.backend,
-            "arch": d.arch,
-            "ip_address": d.ip_address,
-            "last_seen_at": d.last_seen_at.isoformat() if d.last_seen_at else None,
-            "agent_version": d.agent_version,
-            "uptime_s": d.uptime_s,
-            "active_image": d.active_image,
-            "labels": d.labels,
-        }
+        return (await AgentService(session).get_device_view(device_id)).model_dump(mode="json")
 
 
 async def fleet_health() -> dict:

@@ -13,7 +13,6 @@ from fastapi import APIRouter, WebSocket, status
 from app.api.deps import DbSession, Pagination
 from app.core.ws import ws_hub
 from app.modules.agent import telemetry_relay
-from app.modules.agent.rules import DeviceStatus
 from app.modules.agent.schemas import (
     AgentHealth,
     DeviceCreate,
@@ -67,29 +66,23 @@ async def ws_logs(websocket: WebSocket) -> None:
 
 @router.post("/devices", response_model=ApiResponse[DeviceOut], status_code=status.HTTP_201_CREATED)
 async def register_device(data: DeviceCreate, db: DbSession) -> ApiResponse[DeviceOut]:
-    device = await AgentService(db).register_device(data)
-    return ok(DeviceOut.model_validate(device))
+    return ok(await AgentService(db).register_device(data))
 
 
 @router.get("/devices", response_model=ApiResponse[Page[DeviceOut]])
-async def list_devices(
-    db: DbSession,
-    params: Pagination,
-    site: str | None = None,
-    device_status: DeviceStatus | None = None,
-) -> ApiResponse[Page[DeviceOut]]:
-    page = await AgentService(db).list_devices(site=site, status=device_status, params=params)
-    return ok(Page.of([DeviceOut.model_validate(d) for d in page.items], total=page.total, params=params))
+async def list_devices(db: DbSession, params: Pagination, site: str | None = None) -> ApiResponse[Page[DeviceOut]]:
+    devices = await AgentService(db).list_devices(site=site)
+    return ok(Page.of(devices, total=len(devices), params=params))
 
 
 @router.get("/devices/{device_id}", response_model=ApiResponse[DeviceOut])
 async def get_device(device_id: str, db: DbSession) -> ApiResponse[DeviceOut]:
-    return ok(DeviceOut.model_validate(await AgentService(db).get_device(device_id)))
+    return ok(await AgentService(db).get_device_view(device_id))
 
 
 @router.patch("/devices/{device_id}", response_model=ApiResponse[DeviceOut])
 async def update_device(device_id: str, data: DeviceUpdate, db: DbSession) -> ApiResponse[DeviceOut]:
-    return ok(DeviceOut.model_validate(await AgentService(db).update_device(device_id, data)))
+    return ok(await AgentService(db).update_device(device_id, data))
 
 
 @router.delete("/devices/{device_id}", status_code=status.HTTP_204_NO_CONTENT)

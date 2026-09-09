@@ -10,36 +10,57 @@ from app.modules.agent.rules import DeviceStatus
 from app.shared.schema import ORMSchema
 
 
+class CameraSpec(BaseModel):
+    id: str
+    source: str
+    zone: str = "default"
+    fps_limit: int | None = None
+    enabled: bool = True
+    overrides: dict = Field(default_factory=dict)
+
+
 class DeviceCreate(BaseModel):
     device_id: str = Field(min_length=1, max_length=64)  # operator-assigned, = box's DEVICE_ID
     name: str = Field(min_length=1, max_length=128)
     site: str = Field(min_length=1, max_length=128)
-    hardware: str = Field(min_length=1, max_length=64)
-    ip_address: str | None = None
     labels: dict[str, str] = Field(default_factory=dict)
+    desired_image: str | None = None
+    cameras: list[CameraSpec] = Field(default_factory=list)
 
 
 class DeviceUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=128)
     site: str | None = Field(default=None, max_length=128)
-    hardware: str | None = Field(default=None, max_length=64)
-    ip_address: str | None = None
     labels: dict[str, str] | None = None
+    desired_image: str | None = None
+    cameras: list[CameraSpec] | None = None
+    inference: dict | None = None
+    agent_config: dict | None = None
 
 
-class DeviceOut(ORMSchema):
+class DeviceOut(BaseModel):
+    """Merged view: desired config (Postgres) + reported runtime (FleetRegistry)."""
+
     device_id: str
     name: str
     site: str
-    hardware: str
-    ip_address: str | None
-    status: DeviceStatus
     labels: dict
-    last_seen_at: dt.datetime | None
+    desired_image: str | None
+    cameras: list[CameraSpec]
+    inference: dict
+    agent_config: dict
+    known: bool  # has a config row (vs. only ever seen over MQTT)
+    # reported
+    status: DeviceStatus
+    last_seen_at: dt.datetime | None = None
     agent_version: str | None = None
+    ip_address: str | None = None
     uptime_s: float | None = None
+    backend: str | None = None
+    arch: str | None = None
     active_image: str | None = None
-    created_at: dt.datetime
-    updated_at: dt.datetime
+    runtime_status: str = "unknown"
+    in_sync: bool = False
 
 
 class HeartbeatIn(BaseModel):
@@ -55,7 +76,7 @@ class HeartbeatIn(BaseModel):
     temperature_c: float | None = None
     fps: float | None = Field(default=None, ge=0)
     inference_latency_ms: float | None = Field(default=None, ge=0)
-    # agent identity / state (persisted onto the Device row, not the sample)
+    # agent identity / state (kept in FleetRegistry, not the sample)
     agent_version: str | None = None
     ip_address: str | None = None
     uptime_s: float | None = Field(default=None, ge=0)

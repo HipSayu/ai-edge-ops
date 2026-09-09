@@ -17,12 +17,11 @@ from dqh.svc_core.messaging import MessageRouter
 from dqh.svc_core.messaging.rpc import RpcServer
 
 from app.core import database
-from app.core.config import settings
 from app.core.events import event_bus
+from app.core.fleet import fleet
 from app.core.ws import ws_hub
 from app.modules.agent import AgentService
-from app.modules.agent.presence_records import PresenceEvent
-from app.modules.agent.presence_registry import PresenceRegistry
+from app.modules.agent.event import DeviceWentOffline
 from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.telemetry_relay import publish_sample
 from app.modules.deployment.event import DeploymentActivated, DeploymentFailed
@@ -37,10 +36,6 @@ class AgentGateway:
         self.bus = bus
         self._session_factory = session_factory
         self.router = MessageRouter()
-        self.presence = PresenceRegistry(
-            stale_after=settings.offline_threshold_seconds / 2,
-            offline_after=settings.offline_threshold_seconds,
-        )
         self._subs: list[Subscription] = []
         self._rpc = RpcServer(bus, source="server")
         # device_id -> monotonic-ish ts of the last telemetry sample persisted;
@@ -113,7 +108,6 @@ class AgentGateway:
                 caps.device,
                 caps.model_formats,
             )
-        self.presence.mark_seen(device_id)
 
     async def _on_telemetry(self, env: Envelope) -> None:
         """Fast metric stream: fan every sample out to dashboards over WS, but
@@ -122,7 +116,7 @@ class AgentGateway:
         payload = protocol.TelemetryPayload.model_validate(env.payload)
         if not payload.samples:
             return
-        self.presence.mark_seen(device_id)
+        fleet.record_heartbeat(device_id, payload.samples[-1])
 
         now = dt.datetime.now(dt.timezone.utc)
         for sample in payload.samples:
@@ -169,7 +163,7 @@ class AgentGateway:
 
     async def _on_state_report(self, env: Envelope) -> None:
         p = protocol.StateReportPayload.model_validate(env.payload)
-        self.presence.mark_seen(env.source)
+        fleet.record_state(device_id_from_envelope(env), p)
         logger.debug("state report from %s: %s", env.source, p.runtime_status)
 
     async def _on_bbox_frame(self, env: Envelope) -> None:
@@ -245,9 +239,12 @@ class AgentGateway:
         await self.bus.publish(protocol.TOPIC_CMD.render(device_id=str(device_id)), envelope)
 
     # --- periodic ------------------------------------------------------
-    def sweep_presence(self) -> list[PresenceEvent]:
-        """Recompute presence; call on a timer. Returns status transitions."""
-        return self.presence.evaluate()
+    async def sweep_presence(self) -> None:
+        """Recompute fleet statuses; call on a timer. Emits DeviceWentOffline."""
+        for t in fleet.sweep():
+            await event_bus.publish(
+                DeviceWentOffline(device_id=t.device_id, last_seen_at=None)
+            )
 
 
 __all__ = ["AgentGateway"]

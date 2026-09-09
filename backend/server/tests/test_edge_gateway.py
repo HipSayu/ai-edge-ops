@@ -6,6 +6,7 @@ import edge_protocol as protocol
 import pytest
 from dqh.svc_core.messaging import Envelope, InMemoryMessageBus
 
+from app.core.fleet import fleet
 from app.core.ws import ws_hub
 from app.edge.gateway import AgentGateway
 from app.modules.agent import telemetry_relay
@@ -54,15 +55,14 @@ async def test_heartbeat_over_bus_updates_device_and_presence(gateway, session):
         ),
     )
 
-    session.expire_all()  # gateway committed on its own session
-    device = await AgentService(session).get_device(device_id)
-    assert device.status is DeviceStatus.ONLINE
-    assert device.last_seen_at is not None
-    assert str(gateway.presence.status(str(device_id))) == "online"
-    assert device.agent_version == "1.2.3"
-    assert device.ip_address == "10.0.0.5"
-    assert device.uptime_s == 42.0
-    assert device.active_image == "ghcr.io/acme/model@sha256:7"
+    rs = fleet.get(device_id)
+    assert rs is not None
+    assert rs.status() is DeviceStatus.ONLINE
+    assert rs.last_seen_at is not None
+    assert rs.agent_version == "1.2.3"
+    assert rs.ip_address == "10.0.0.5"
+    assert rs.uptime_s == 42.0
+    assert rs.active_image == "ghcr.io/acme/model@sha256:7"
 
 
 async def test_telemetry_over_bus_fans_out_and_downsamples(gateway, session):
@@ -98,11 +98,7 @@ async def test_telemetry_over_bus_fans_out_and_downsamples(gateway, session):
     assert [e.payload["cpu_percent"] for e in received][:2] == [10.0, 20.0]
     assert all(e.payload["device_id"] == device_id for e in received)
 
-    # first telemetry burst also persisted one history row (downsampled)
-    session.expire_all()
-    device = await AgentService(session).get_device(device_id)
-    assert device.status is DeviceStatus.ONLINE
-    assert str(gateway.presence.status(str(device_id))) == "online"
+    assert fleet.get(device_id).status() is DeviceStatus.ONLINE
 
 
 async def test_violation_over_bus_records_and_alerts(gateway, session):

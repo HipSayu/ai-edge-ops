@@ -14,7 +14,7 @@ const formatUptime = (seconds: number | null): string => {
 }
 
 const mapDevice = (device: BackendDevice, latest?: BackendMetricSample): EdgeDevice => ({
-  id: device.device_id, name: device.name, hardware: device.hardware,
+  id: device.device_id, name: device.name, hardware: device.backend ?? device.arch ?? 'edge',
   status: device.status === 'provisioning' ? 'offline' : device.status,
   ip: device.ip_address ?? 'Not assigned',
   agentVersion: device.agent_version ?? 'Unknown',
