@@ -1,27 +1,30 @@
-"""Agent use-cases. No FastAPI here - safe to call from workers, CLI, LLM tools."""
+"""Agent use-cases. No FastAPI here - safe to call from workers, CLI, LLM tools.
+
+``Device`` is the desired config (Postgres). The reported runtime is merged in
+from :data:`app.core.fleet.fleet` (in-memory).
+"""
 
 from __future__ import annotations
 
 import datetime as dt
 
 from dqh.svc_core.contracts.errors import ConflictError, NotFoundError
-from dqh.svc_core.helpers.time import utcnow
-from dqh.svc_core.transports.http import Page
-from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.events import event_bus
+from app.core.fleet import fleet
 from app.modules.agent.event import (
     DeviceLatencyDegraded,
     DeviceRegistered,
-    DeviceWentOffline,
     HeartbeatRecorded,
 )
 from app.modules.agent.models import Device, MetricSample
 from app.modules.agent.repository import DeviceRepository, MetricSampleRepository
-from app.modules.agent.rules import DeviceStatus, evaluate_status
-from app.modules.agent.schemas import AgentHealth, DeviceCreate, DeviceUpdate, HeartbeatIn
+from app.modules.agent.rules import DeviceStatus
+from app.modules.agent.schemas import AgentHealth, DeviceCreate, DeviceOut, DeviceUpdate, HeartbeatIn
+
+_REPORTED = {"recorded_at", "agent_version", "ip_address", "uptime_s", "active_image", "backend", "arch"}
 
 
 class AgentService:
@@ -30,14 +33,17 @@ class AgentService:
         self.devices = DeviceRepository(session)
         self.metrics = MetricSampleRepository(session)
 
-    async def register_device(self, data: DeviceCreate) -> Device:
+    # --- desired config ------------------------------------------------------
+    async def register_device(self, data: DeviceCreate) -> DeviceOut:
+        if await self.devices.get(data.device_id):
+            raise ConflictError(f"device '{data.device_id}' already exists")
         if await self.devices.get_by_name(data.name):
-            raise ConflictError(f"device '{data.name}' already exists")
+            raise ConflictError(f"device name '{data.name}' is taken")
         device = Device(**data.model_dump())
         await self.devices.add(device)
         await self.session.commit()
         await event_bus.publish(DeviceRegistered(device_id=device.device_id, name=device.name))
-        return device
+        return self._view(device)
 
     async def get_device(self, device_id: str) -> Device:
         device = await self.devices.get(device_id)
@@ -45,68 +51,59 @@ class AgentService:
             raise NotFoundError(f"device {device_id} not found")
         return device
 
-    async def list_devices(
-        self, *, site: str | None, status: DeviceStatus | None, params: PageParams
-    ) -> Page[Device]:
-        items, total = await self.devices.list_page(site=site, status=status, params=params)
-        return Page.of(items, total=total, params=params)
+    async def get_device_view(self, device_id: str) -> DeviceOut:
+        if (device := await self.devices.get(device_id)) is not None:
+            return self._view(device)
+        if fleet.get(device_id) is not None:  # seen over MQTT, no config row
+            return self._view(None, device_id=device_id)
+        raise NotFoundError(f"device {device_id} not found")
 
-    async def update_device(self, device_id: str, data: DeviceUpdate) -> Device:
+    async def list_devices(self, *, site: str | None) -> list[DeviceOut]:
+        rows = {d.device_id: d for d in await self.devices.list_all(site=site)}
+        seen = set(fleet.all())
+        views = [self._view(rows[i]) for i in rows]
+        if site is None:
+            views += [self._view(None, device_id=i) for i in seen - rows.keys()]
+        return sorted(views, key=lambda v: v.name)
+
+    async def update_device(self, device_id: str, data: DeviceUpdate) -> DeviceOut:
         device = await self.get_device(device_id)
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(device, field, value)
         await self.session.commit()
-        return device
+        return self._view(device)
 
     async def delete_device(self, device_id: str) -> None:
         device = await self.get_device(device_id)
         await self.devices.delete(device)
         await self.session.commit()
+        fleet.forget(device_id)
 
-    async def record_heartbeat(self, device_id: str, hb: HeartbeatIn) -> tuple[Device, MetricSample]:
-        device = await self.get_device(device_id)
-        now = utcnow()
-        recorded_at = hb.recorded_at or now
-        _DEVICE_FIELDS = {
-            "agent_version",
-            "ip_address",
-            "uptime_s",
-            "active_image",
-            "backend",
-            "arch",
-        }
+    # --- reported runtime --------------------------------------------------
+    async def record_heartbeat(self, device_id: str, hb: HeartbeatIn) -> tuple[DeviceOut, MetricSample]:
+        recorded_at = hb.recorded_at or dt.datetime.now(dt.timezone.utc)
         sample = MetricSample(
-            device_id=device.device_id,
+            device_id=device_id,
             recorded_at=recorded_at,
-            **hb.model_dump(exclude={"recorded_at", *_DEVICE_FIELDS}),
+            **hb.model_dump(exclude=_REPORTED),
         )
         await self.metrics.add(sample)
-
-        previous = device.status
-        device.last_seen_at = recorded_at
-        for field in _DEVICE_FIELDS:
-            if (value := getattr(hb, field)) is not None:
-                setattr(device, field, value)
-        device.status = evaluate_status(
-            last_seen_at=recorded_at,
-            now=now,
-            offline_threshold_seconds=settings.offline_threshold_seconds,
-            inference_latency_ms=hb.inference_latency_ms,
-            latency_slo_ms=settings.latency_slo_ms,
-        )
         await self.session.commit()
 
-        if device.status is DeviceStatus.DEGRADED and previous is not DeviceStatus.DEGRADED:
+        transition = fleet.record_heartbeat(device_id, hb)
+        status = fleet.get(device_id).status()
+
+        if status is DeviceStatus.DEGRADED and (transition is None or transition.old is not DeviceStatus.DEGRADED):
             await event_bus.publish(
                 DeviceLatencyDegraded(
-                    device_id=device.device_id,
+                    device_id=device_id,
                     inference_latency_ms=hb.inference_latency_ms or 0.0,
                     slo_ms=settings.latency_slo_ms,
                 )
             )
         await event_bus.publish(
             HeartbeatRecorded(
-                device_id=device.device_id,
+                device_id=device_id,
                 recorded_at=recorded_at,
                 cpu_percent=hb.cpu_percent,
                 gpu_percent=hb.gpu_percent,
@@ -119,29 +116,22 @@ class AgentService:
                 inference_latency_ms=hb.inference_latency_ms,
             )
         )
-        return device, sample
+        device = await self.devices.get(device_id)
+        return self._view(device, device_id=device_id), sample
 
     async def list_metrics(
-        self, device_id: str, *, since: dt.datetime | None, params: PageParams
-    ) -> Page[MetricSample]:
-        await self.get_device(device_id)
+        self, device_id: str, *, since: dt.datetime | None, params
+    ):
+        from dqh.svc_core.transports.http import Page
+
         items, total = await self.metrics.list_for_device(device_id, since=since, params=params)
         return Page.of(items, total=total, params=params)
 
-    async def sweep_offline(self) -> int:
-        cutoff = utcnow() - dt.timedelta(seconds=settings.offline_threshold_seconds)
-        stale = await self.devices.list_stale(cutoff)
-        for device in stale:
-            device.status = DeviceStatus.OFFLINE
-        await self.session.commit()
-        for device in stale:
-            await event_bus.publish(
-                DeviceWentOffline(device_id=device.device_id, last_seen_at=device.last_seen_at)
-            )
-        return len(stale)
-
     async def agent_health(self) -> AgentHealth:
-        counts = await self.devices.count_by_status()
+        """Counts over the union of known (config) + seen (fleet) devices."""
+        counts: dict[DeviceStatus, int] = {}
+        for view in await self.list_devices(site=None):
+            counts[view.status] = counts.get(view.status, 0) + 1
         return AgentHealth(
             total=sum(counts.values()),
             online=counts.get(DeviceStatus.ONLINE, 0),
@@ -152,3 +142,35 @@ class AgentService:
 
     async def avg_inference_latency_ms(self, since: dt.datetime) -> float | None:
         return await self.metrics.avg_latency_since(since)
+
+    # --- merge -----------------------------------------------------------
+    @staticmethod
+    def _view(device: Device | None, *, device_id: str | None = None) -> DeviceOut:
+        did = device.device_id if device else device_id
+        rs = fleet.get(did)
+        base = dict(
+            device_id=did,
+            name=device.name if device else did,
+            site=device.site if device else "unassigned",
+            labels=device.labels if device else {},
+            desired_image=device.desired_image if device else None,
+            cameras=device.cameras if device else [],
+            inference=device.inference if device else {},
+            agent_config=device.agent_config if device else {},
+            known=device is not None,
+        )
+        if rs is None:
+            return DeviceOut(status=DeviceStatus.PROVISIONING, **base)
+        return DeviceOut(
+            status=rs.status(),
+            last_seen_at=rs.last_seen_at,
+            agent_version=rs.agent_version,
+            ip_address=rs.ip_address,
+            uptime_s=rs.uptime_s,
+            backend=rs.backend,
+            arch=rs.arch,
+            active_image=rs.active_image,
+            runtime_status=rs.runtime_status,
+            in_sync=bool(base["desired_image"]) and rs.active_image == base["desired_image"],
+            **base,
+        )

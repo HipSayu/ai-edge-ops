@@ -113,7 +113,7 @@ export default function DevicesPage() {
 
   function handleAddDevice(e: React.FormEvent) {
     e.preventDefault()
-    agentService.createDevice({ device_id: newDevice.id.trim(), name: newDevice.name.trim(), site: 'default', hardware: newDevice.hardware, ip_address: newDevice.ip.trim() || undefined })
+    agentService.createDevice({ device_id: newDevice.id.trim(), name: newDevice.name.trim(), site: 'default' })
       .then((addedDev) => {
         setDeviceList((current) => [addedDev, ...current])
         setShowAddModal(false)

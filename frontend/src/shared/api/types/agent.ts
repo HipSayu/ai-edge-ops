@@ -17,9 +17,13 @@ export interface CameraGroup {
 	onlineCameras: number; activeAlerts: number; aggregateFps: number; primaryModel: string
 }
 export type BackendDevice = {
-	device_id: string; name: string; hardware: string; ip_address: string | null
+	device_id: string; name: string; site: string; labels: Record<string, string>
+	desired_image: string | null; cameras: unknown[]; inference: Record<string, unknown>
+	agent_config: Record<string, unknown>; known: boolean
 	status: 'online' | 'degraded' | 'offline' | 'provisioning'; last_seen_at: string | null
-	agent_version: string | null; uptime_s: number | null; active_image: string | null
+	agent_version: string | null; ip_address: string | null; uptime_s: number | null
+	backend: string | null; arch: string | null; active_image: string | null
+	runtime_status: string; in_sync: boolean
 }
 export type BackendMetricSample = {
 	id: number; device_id: string; recorded_at: string
@@ -29,4 +33,4 @@ export type BackendMetricSample = {
 }
 export type BackendCamera = { id: number; name: string; source: string; zone: string; enabled: boolean }
 export type BackendCameraGroup = { id: number; name: string; description: string | null; site: string; camera_ids: number[] }
-export type CreateDevicePayload = { device_id: string; name: string; site: string; hardware: string; ip_address?: string }
+export type CreateDevicePayload = { device_id: string; name: string; site: string; labels?: Record<string, string>; desired_image?: string | null }
