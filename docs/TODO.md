@@ -59,14 +59,13 @@ Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc
   - FE types: `BackendDevice.id`, `DeploymentRecord.device_id`,
     `BackendCamera.id` → `string`; `CreateDevicePayload.device_id`
   - sửa test; fix luôn bug hiện tại (agent gửi `edge-dev-1`, server ép int)
-- [~] **S2 — `ModelCatalog` đọc GHCR**
-  - [x] S2a `model_registry/catalog.py` (`ModelCatalog` + `ModelImage`) +
-        `Settings.model_registry` + `app/core/model_catalog.py` + test (commit `56a328a`)
-  - [ ] S2b: `GET /models*` đổi backing; **bỏ `POST /models`**; xoá ORM
-        `models`/`model_versions` + repo + `ModelRegistryService`; `deployment`
-        + `gateway` dùng `image` string thay `model_version_id`
-  - [ ] FE: `types/ai.ts` reshape (id=string, versions=tags, field từ labels);
-        `ModelsPage` bỏ form register, hiện labels
+- [x] **S2 — `ModelCatalog` đọc GHCR** (commit `56a328a` + `393a2af`)
+  - S2a `catalog.py` (`ModelCatalog`/`ModelImage`) + `Settings.model_registry` + test
+  - S2b `GET /models` + `/models/{tag}` từ catalog; bỏ `POST /models`/versions/status;
+    xoá ORM `models`/`model_versions`/repo/service/schemas/rules; `deployment` +
+    `gateway` dùng `image` ref; `active_model_version_id` → `active_image` (protocol
+    + agent + Device); FE types + `ai.ts` service + `ModelsPage`/`DeploymentsPage`
+  - còn: 5 dòng E501 pre-existing trong `deployment/router.py` (không đụng ở S2b)
 - [ ] **S3 — `device_config` (desired) + config phân tầng**
   - bảng `device_config` + service; `POST/PATCH /agent/devices` +
     `/agent/cameras` map vào đó
