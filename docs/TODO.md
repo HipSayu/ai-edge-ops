@@ -48,7 +48,7 @@ Chi tiết kế hoạch: [`REFACTOR_stateless.md`](REFACTOR_stateless.md).
 
 ---
 
-## D. Stateless refactor — S1 → S7 (chưa làm)
+## D. Stateless refactor — S0..S6 XONG, S3.3/S7 dở
 
 Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc lập.
 
@@ -75,27 +75,15 @@ Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc
   - [ ] **còn**: agent publish `state` retained + LWT — cần svc_core
         `publish(retain=)` (submodule). LWT có thể set qua `MQTT__WILL_*` config
         ngay. Chưa làm → restart server mất ~1 nhịp heartbeat để roster về.
-  - [ ] **S3.3 còn**: gộp `cameras`/`camera_groups` vào `Device.cameras`;
-        `ConfigResolver.merge()` + `inference_policy` global; FE Fleet defaults page.
-- [ ] **S5 — deploy = command, không ghi row** *(chưa làm — kế tiếp)*
-  - `POST /deployments {device_id, image}` → resolve catalog → set
-    `Device.desired_image` → publish `DeployRequested` → gateway gửi
-    `T_DEPLOY_MODEL`. Không tạo row.
-  - xoá ORM `Deployment` + `DeploymentRepository`; `DeploymentService` còn mỏng
-    (`deploy()` + view). `GET /deployments` = per-device
-    `{desired_image, active_image, runtime_status, in_sync}` từ `list_devices`.
-  - deploy audit → `audit_logs`. `DeploymentFailed` giữ (gateway phát).
-  - sửa `mcp/tools/deployments.py`, analytics `count_active`.
-  - FE `DeploymentsPage`: list per-device; deploy = pick device + image tag;
-    progress từ WS, bỏ `progressPct`.
-- [ ] **S6 — metrics ra Prometheus**
-  - Prometheus (mới trong `compose.infra.yml`?) — *cần quyết*
-  - agent expose `/metrics`; `GET .../metrics` proxy Prometheus hoặc 501
-  - xoá `metric_samples`; FE chart live qua WS ring buffer
-- [ ] **S7 — dọn**
-  - `chat_messages`/assistant — giữ hay bỏ? *(cần quyết)*
-  - viết lại `backend/schema.sql` cho khớp DB đích
-  - dọn `docs/ARCHITECTURE.md` + `docs/flows/*` (bỏ nhắc artifact/presigned/S3)
+  - [x] **S3.3 config** (`0ca775b`): `ConfigResolver` (model labels < `app_settings`
+        `inference_policy` < `Device.inference`); operator sửa inference →
+        `DeviceConfigChanged` → `T_UPDATE_CONFIG`. `ModelImage` + Dockerfile thêm
+        `conf/iou/imgsz` labels.
+  - [ ] **S3.3 còn**: gộp `cameras`/`camera_groups` vào `Device.cameras`
+        (streaming dùng `camera_id: int` → đổi trước); FE Fleet defaults page.
+- [x] **S5** (`293481c`) — deploy = command; xoá ORM Deployment; GET /deployments = per-device view.
+- [x] **S6** (`847244c`) — metrics ring buffer in-memory (FleetRegistry); xoá `metric_samples`. Prometheus remote-write để sau.
+- [~] **S7** — `backend/schema.sql` regen (14 bảng); `ARCHITECTURE.md` + `deploy-model.md` dọn. `chat_messages` giữ (assistant). `docs/flows/*` mermaid chưa vẽ lại.
 
 **DB đích sau S1–S7:** giữ `device_config`, `violations`, `snapshots`, `alerts`,
 `users`/`roles`/`permissions`, `audit_logs`, `app_settings`. Bỏ: `devices`,

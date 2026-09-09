@@ -46,7 +46,7 @@ flowchart LR
 |---|---|---|---|
 | Edge ⇄ Server control plane | MQTT (`agent/devices/{id}/*`) | JSON `Envelope` | at-least-once; commands/violations must not drop |
 | Edge → Server (stream token) | MQTT request/reply (RPC) | `StreamTokenRequest` / `StreamTokenReply` | reuses the authenticated MQTT link |
-| Edge → Server (artifacts, evidence) | HTTP | model file download, multipart JPEG upload | retryable, idempotent |
+| Edge → Server (evidence) | HTTP | multipart JPEG upload | retryable, idempotent |
 | Edge → MediaMTX | WHIP (WebRTC / RTP) | raw H.264 video, one session per camera | best-effort, lossy |
 | MediaMTX → Browser | WHEP (WebRTC / RTP) | same video | best-effort, lossy |
 | Server ⇄ Browser (queries/commands) | HTTP REST, `ApiResponse` envelope | JSON | request/response |
@@ -74,7 +74,7 @@ edge/
   runtime.py       EdgePlane: owns the edge MessageBus (memory | mqtt) + AgentGateway
   gateway.py       AgentGateway: MQTT <-> app services; MessageRouter by Envelope.type
 domain/
-  presence/        PresenceRegistry: online / stale / offline state machine (in-memory)
+  fleet_registry.py  FleetRegistry: in-memory reported state (online/health/image) + metric ring
   reconcile/       generic desired-vs-observed diff -> Plan of CREATE/UPDATE/DELETE
 modules/<name>/    router.py (HTTP/WS) · service.py (use-cases) · repository.py (DB)
                    models.py (ORM) · schemas.py (pydantic) · event.py (published events)
@@ -82,8 +82,9 @@ modules/<name>/    router.py (HTTP/WS) · service.py (use-cases) · repository.p
 api/router.py      mounts every module router under /api/v1
 ```
 
-Modules: `auth`, `user`, `system`, `access_control`, `agent` (devices + heartbeats + metrics),
-`model_registry`, `deployment`, `observability` (violations + alerts + analytics),
+Modules: `auth`, `user`, `system`, `access_control`, `agent` (device config + FleetRegistry + metric ring),
+`model_registry` (GHCR catalog, no DB), `deployment` (deploy = command),
+`observability` (violations + alerts + analytics),
 `camera`, `streaming`, `assistant`.
 
 ### Module boundaries
@@ -104,18 +105,22 @@ flowchart TD
     DLD["DeviceLatencyDegraded"] --> OI3["observability.integration<br/>LATENCY_DEGRADED alert"]
     DF["DeploymentFailed"] --> OI4["observability.integration<br/>DEPLOYMENT_FAILED alert"]
     AR["AlertRaised"] --> ORL["observability.realtime<br/>push alert.created to ws_hub"]
-    DA["DeploymentActivated"] --> GW["AgentGateway<br/>send MQTT command.deploy_model"]
+    DR["DeployRequested"] --> GW["AgentGateway<br/>send MQTT T_DEPLOY_MODEL"]
+    DCC["DeviceConfigChanged"] --> DS["deployment.subscribers<br/>resolve -> ConfigResolved"]
+    CR["ConfigResolved"] --> GW2["AgentGateway<br/>send MQTT T_UPDATE_CONFIG"]
 ```
 
 | Event | Publisher | Subscribers |
 |---|---|---|
 | `HeartbeatRecorded` | `AgentService.record_heartbeat` | `telemetry_relay` → WS `telemetry/{id}` + `telemetry/agent` |
 | `DeviceLatencyDegraded` | `AgentService.record_heartbeat` (status → DEGRADED) | `observability.integration` → alert |
-| `DeviceWentOffline` | `AgentService.sweep_offline` (periodic job) | `observability.integration` → alert |
-| `ViolationRecorded` | `ViolationService.record` | `agent.handlers` (last_seen), `observability.integration` → alert |
+| `DeviceWentOffline` | `AgentGateway.sweep_presence` (from `fleet.sweep()`) | `observability.integration` → alert |
+| `DeviceConfigChanged` | `AgentService.update_device` (inference/cameras) | `deployment.subscribers` → resolve → `ConfigResolved` |
+| `ViolationRecorded` | `ViolationService.record` | `observability.integration` → alert |
 | `AlertRaised` | `AlertService.raise_alert` | `observability.realtime` → WS `alerts/{severity}` |
-| `DeploymentActivated` | `DeploymentService.activate` | `AgentGateway` → MQTT `command.deploy_model` |
-| `DeploymentFailed` | `DeploymentService.mark_failed` | `observability.integration` → alert |
+| `DeployRequested` | `DeployService.deploy` | `AgentGateway` → MQTT `T_DEPLOY_MODEL` |
+| `ConfigResolved` | `deployment.subscribers` | `AgentGateway` → MQTT `T_UPDATE_CONFIG` |
+| `DeploymentFailed` | `AgentGateway` (deploy send failure) | `observability.integration` → alert |
 
 ## Edge agent module map
 
@@ -124,7 +129,7 @@ flowchart TD
 ```
 main.py            wires bus + link + agent + backend + telemetry pump + local API, runs forever
 core/
-  config.py        AgentSettings (env with __ delimiter); device_id, cameras[], mqtt, vision, streaming
+  config.py        AgentSettings; device_id (string), cameras[], mqtt, vision
   hardware.py      detect_hardware(): arch, accelerators, encoders, model formats -> DeviceCapabilities
   identity.py      agent_version / primary_ip / uptime_s
   state.py         StateStore: desired vs reported model state, persisted to state.json
@@ -137,7 +142,7 @@ services/
   pipeline.py      CameraPipeline: frame -> runtime.infer -> evaluate_ppe -> violation + bbox frame
   telemetry.py     TelemetryPump: fast metric samples (~1s) batched to link.send_telemetry
   evidence.py      HttpEvidenceUploader: POST selected JPEG to server /evidence
-  artifacts.py     fetch_artifact(): download + checksum a model file
+  (model images: the agent runs docker compose pull — no artifact download)
 runtime/           InferenceRuntime: yolo | dummy
 streaming/         VideoPublisher: ffmpeg_whip (WHIP via `ffmpeg -f whip`) | null
 analytics/ppe.py   detections -> violation types (no_helmet, ...)
@@ -147,8 +152,9 @@ analytics/ppe.py   detections -> violation types (no_helmet, ...)
 
 | Store | Holds | Notes |
 |---|---|---|
-| PostgreSQL | devices, metric samples (downsampled to ~1/min), deployments, model versions, violations, alerts, users/roles, cameras | tables created by `init_db()` on boot; reference DDL in `schema.sql` |
-| Container registry (GHCR) | model artifacts — each model version is an OCI image | edge deploys by `docker compose pull` of the `inference` image |
+| PostgreSQL | **desired** device config (`devices`: name/site/labels/desired_image/cameras/inference), violations, snapshots, alerts, users/roles, audit_logs, app_settings, cameras | `init_db()` on boot; reference DDL in `backend/schema.sql`. No models / deployments / metric_samples tables. |
+| FleetRegistry (in-memory) | **reported** device state: online / health / running image / probed hw + a ~15-min metric ring buffer | not persisted; rebuilt from MQTT heartbeats + `state` on every server start. See [`REFACTOR_stateless.md`](REFACTOR_stateless.md). |
+| Container registry (GHCR) | the model catalog — each model version is one multi-arch OCI image; metadata in `ai.edge-ops.model.*` labels | `ModelCatalog` reads it live (v2 API); edge deploys by `docker compose pull` |
 | Local disk (server) | evidence images (`settings.evidence_dir`) | served from `/evidence/{filename}` |
 | Local disk (edge) | `state.json` (desired/reported), downloaded model weights, outbox | survives restart; drives reconcile |
 | Redis | transient WS pub/sub only | no durable data; used when `REALTIME_TRANSPORT=redis` |
