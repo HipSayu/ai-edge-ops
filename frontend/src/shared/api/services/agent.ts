@@ -32,10 +32,10 @@ const mapDevice = (device: BackendDevice, latest?: BackendMetricSample): EdgeDev
 
 const latestMetrics = async (deviceId: string): Promise<BackendMetricSample | undefined> => {
   try {
-    const page = await apiClient.get<{ items: BackendMetricSample[] }>(
-      `/agent/devices/${deviceId}/metrics`, { query: { page_size: 1 } },
+    const rows = await apiClient.get<BackendMetricSample[]>(
+      `/agent/devices/${deviceId}/metrics`, { query: { limit: 1 } },
     )
-    return page.items[0]
+    return rows.at(-1)
   } catch {
     return undefined
   }
@@ -63,12 +63,8 @@ export const agentService = {
     const device = await apiClient.get<BackendDevice>(`/agent/devices/${id}`)
     return mapDevice(device, await latestMetrics(device.device_id))
   },
-  listDeviceMetrics: async (deviceId: string) => {
-    const page = await apiClient.get<{ items: BackendMetricSample[] }>(
-      `/agent/devices/${deviceId}/metrics`, { query: { page_size: 100 } },
-    )
-    return page.items
-  },
+  listDeviceMetrics: (deviceId: string) =>
+    apiClient.get<BackendMetricSample[]>(`/agent/devices/${deviceId}/metrics`, { query: { limit: 300 } }),
   listCameras: async () => (await apiClient.get<BackendCamera[]>('/agent/cameras')).map(mapCamera),
   getCamera: async (id: string) => mapCamera(await apiClient.get<BackendCamera>(`/agent/cameras/${id}`)),
   listCameraGroups: async () => (await apiClient.get<BackendCameraGroup[]>('/agent/camera-groups')).map(mapGroup),

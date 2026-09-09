@@ -150,7 +150,7 @@ class AnalyticsService:
         day_ago = now - dt.timedelta(hours=24)
 
         health = await AgentService(self.session).agent_health()
-        avg_latency = await AgentService(self.session).avg_inference_latency_ms(day_ago)
+        avg_latency = AgentService(self.session).avg_inference_latency_ms(day_ago)
         active_deployments = await DeployService(self.session).count_active()
 
         return OverviewKpis(

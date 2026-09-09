@@ -26,7 +26,7 @@ export type BackendDevice = {
 	runtime_status: string; in_sync: boolean
 }
 export type BackendMetricSample = {
-	id: number; device_id: string; recorded_at: string
+	recorded_at: string
 	cpu_percent: number | null; gpu_percent: number | null; mem_percent: number | null
 	mem_used_mb: number | null; mem_total_mb: number | null; disk_percent: number | null
 	temperature_c: number | null; fps: number | null; inference_latency_ms: number | null

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import datetime as dt
 
-from dqh.svc_core.transports.http import PaginationParams
-
 from app.mcp._session import session_scope
 from app.modules.agent import AgentService
 
@@ -34,7 +32,7 @@ async def fleet_health() -> dict:
         svc = AgentService(session)
         health = await svc.agent_health()
         day_ago = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=24)
-        latency = await svc.avg_inference_latency_ms(day_ago)
+        latency = svc.avg_inference_latency_ms(day_ago)
         return {
             "total": health.total,
             "online": health.online,
@@ -49,23 +47,11 @@ async def device_metrics(device_id: str, hours: int = 6, limit: int = 100) -> di
     """Recent telemetry samples for a device (cpu/gpu/mem/fps/latency)."""
     since = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
     async with session_scope() as session:
-        page = await AgentService(session).list_metrics(
-            device_id, since=since, params=PaginationParams(page=1, page_size=min(limit, 500))
-        )
-        return {
-            "device_id": device_id,
-            "samples": [
-                {
-                    "recorded_at": m.recorded_at.isoformat(),
-                    "cpu_percent": m.cpu_percent,
-                    "gpu_percent": m.gpu_percent,
-                    "mem_percent": m.mem_percent,
-                    "fps": m.fps,
-                    "inference_latency_ms": m.inference_latency_ms,
-                }
-                for m in page.items
-            ],
-        }
+        rows = AgentService(session).list_metrics(device_id, since=since, limit=min(limit, 900))
+    return {
+        "device_id": device_id,
+        "samples": [{**m, "recorded_at": m["recorded_at"].isoformat()} for m in rows],
+    }
 
 
 TOOLS = [list_devices, get_device, fleet_health, device_metrics]

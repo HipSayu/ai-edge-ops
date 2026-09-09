@@ -9,12 +9,19 @@ On server restart the registry is empty and refills within one heartbeat interva
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field
 
 from dqh.svc_core.helpers.time import utcnow
 
 from app.core.config import settings
 from app.modules.agent.rules import DeviceStatus, evaluate_status
+
+_SAMPLE_KEYS = (
+    "cpu_percent", "gpu_percent", "mem_percent", "mem_used_mb", "mem_total_mb",
+    "disk_percent", "temperature_c", "fps", "inference_latency_ms",
+)
+_RING = 900  # ~15 min at 1 Hz — enough for a page-load chart
 
 
 @dataclass
@@ -29,6 +36,7 @@ class RuntimeState:
     active_image: str | None = None
     runtime_status: str = "unknown"  # applying | active | failed | unknown
     offline: bool = False  # set by the MQTT last-will / sweep
+    samples: deque = field(default_factory=lambda: deque(maxlen=_RING))
 
     def status(self, *, now: dt.datetime | None = None) -> DeviceStatus:
         if self.offline:
@@ -58,12 +66,34 @@ class FleetRegistry:
         rs = self._devices.setdefault(device_id, RuntimeState())
         old = rs.status()
         rs.offline = False
-        rs.last_seen_at = getattr(hb, "recorded_at", None) or utcnow()
+        recorded_at = getattr(hb, "recorded_at", None) or utcnow()
+        rs.last_seen_at = recorded_at
         rs.inference_latency_ms = hb.inference_latency_ms
         for f in ("agent_version", "ip_address", "uptime_s", "backend", "arch", "active_image"):
             if (v := getattr(hb, f, None)) is not None:
                 setattr(rs, f, v)
+        rs.samples.append(
+            {"recorded_at": recorded_at, **{k: getattr(hb, k, None) for k in _SAMPLE_KEYS}}
+        )
         return self._transition(device_id, old, rs.status())
+
+    def recent_samples(
+        self, device_id: str, *, since: dt.datetime | None = None, limit: int | None = None
+    ) -> list[dict]:
+        rs = self._devices.get(device_id)
+        if rs is None:
+            return []
+        out = [s for s in rs.samples if since is None or s["recorded_at"] >= since]
+        return out[-limit:] if limit else out
+
+    def avg_latency(self, since: dt.datetime) -> float | None:
+        vals = [
+            s["inference_latency_ms"]
+            for rs in self._devices.values()
+            for s in rs.samples
+            if s["recorded_at"] >= since and s["inference_latency_ms"] is not None
+        ]
+        return sum(vals) / len(vals) if vals else None
 
     def record_state(self, device_id: str, state) -> None:
         rs = self._devices.setdefault(device_id, RuntimeState())

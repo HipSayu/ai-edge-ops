@@ -7,7 +7,6 @@ import datetime as dt
 from pydantic import BaseModel, Field
 
 from app.modules.agent.rules import DeviceStatus
-from app.shared.schema import ORMSchema
 
 
 class CameraSpec(BaseModel):
@@ -83,25 +82,23 @@ class HeartbeatIn(BaseModel):
     active_image: str | None = None
 
 
-class MetricSampleOut(ORMSchema):
-    id: int
-    device_id: str
+class MetricSample(BaseModel):
     recorded_at: dt.datetime
-    cpu_percent: float | None
-    gpu_percent: float | None
-    mem_percent: float | None
-    mem_used_mb: float | None
-    mem_total_mb: float | None
-    disk_percent: float | None
-    temperature_c: float | None
-    fps: float | None
-    inference_latency_ms: float | None
+    cpu_percent: float | None = None
+    gpu_percent: float | None = None
+    mem_percent: float | None = None
+    mem_used_mb: float | None = None
+    mem_total_mb: float | None = None
+    disk_percent: float | None = None
+    temperature_c: float | None = None
+    fps: float | None = None
+    inference_latency_ms: float | None = None
 
 
 class HeartbeatAck(BaseModel):
     device_id: str
     status: DeviceStatus
-    sample: MetricSampleOut
+    sample: MetricSample
 
 
 class AgentHealth(BaseModel):
