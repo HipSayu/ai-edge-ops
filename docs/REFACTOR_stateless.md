@@ -256,7 +256,11 @@ Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S1→S5 theo t
 - Users/auth → **Postgres nhỏ** (không `users.yaml`).
 - Camera config → **server push, giữ config nhỏ** (`device_config.cameras`).
 - Metrics history → **sink Prometheus**, server vẫn stateless.
-- Registry → **GHCR** (PAT `read:packages`, API GitHub Packages).
+- Registry → **GHCR**. Model package **PUBLIC** cho MVP → edge pull vô danh,
+  `.env.edge` không có secret; server `ModelCatalog` chỉ cần token cho GitHub
+  Packages API (list tags) — vẫn để `MODEL_REGISTRY__TOKEN` (dev: `.env.app`).
+  Đường bảo mật sau: package private + server phát **pull-token ngắn hạn** qua
+  MQTT mTLS link (như stream-token) + **cosign verify** ở agent. Xem "Bảo mật sau".
 - Model image → **1 multi-arch manifest** (amd64 + arm64/Jetson), 1 tag; GPU/CPU
   do runtime tự dò, không phải manifest.
 
@@ -264,3 +268,16 @@ Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S1→S5 theo t
 
 - Prometheus đã có hạ tầng sẵn hay dựng mới trong `compose.infra.yml`? (quyết ở S6)
 - `chat_messages` / assistant có còn dùng không? (quyết ở S7)
+
+## Bảo mật sau (không làm ở MVP)
+
+Khi model là IP nhạy cảm — chuyển GHCR package sang **private**:
+
+1. Chỉ **server** giữ PAT `read:packages`.
+2. Deploy: server `GET ghcr.io/token?scope=repository:{owner}/{pkg}:pull` → bearer
+   ~5 phút → gửi trong `DeployModelPayload.pull_token` qua MQTT (đã mTLS) → agent
+   `docker login` bằng token đó → `compose pull` → token hết hạn. Edge **0
+   long-lived secret**; mất box → revoke MQTT cert của box đó.
+3. **cosign**: CI ký image; agent `cosign verify` trước `compose up`. Device chỉ
+   chạy image ký bằng key của bạn.
+4. Biến thể: Harbor trong `compose.infra.yml`, mỗi edge 1 robot account, pull qua LAN.
