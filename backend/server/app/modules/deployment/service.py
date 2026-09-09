@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.events import event_bus
 from app.core.model_catalog import model_catalog
 from app.modules.agent import AgentService
+from app.modules.deployment.config_resolver import ConfigResolver
 from app.modules.deployment.event import DeployRequested
 from app.modules.deployment.schemas import DeploymentView, DeployRequest
 from app.modules.system.models import AuditLog
@@ -33,6 +34,7 @@ class DeployService:
         device.desired_image = image.pinned_ref
         if data.config:
             device.inference = {**device.inference, **data.config}
+        effective = await ConfigResolver(self.session).resolve(image, device)
         self.session.add(
             AuditLog(
                 action="deploy.model",
@@ -43,7 +45,7 @@ class DeployService:
         )
         await self.session.commit()
         await event_bus.publish(
-            DeployRequested(device_id=device.device_id, image=image.pinned_ref, config=data.config)
+            DeployRequested(device_id=device.device_id, image=image.pinned_ref, config=effective)
         )
         return await self._view(device.device_id)
 

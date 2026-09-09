@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.events import event_bus
 from app.core.fleet import fleet
 from app.modules.agent.event import (
+    DeviceConfigChanged,
     DeviceLatencyDegraded,
     DeviceRegistered,
     HeartbeatRecorded,
@@ -68,9 +69,12 @@ class AgentService:
 
     async def update_device(self, device_id: str, data: DeviceUpdate) -> DeviceOut:
         device = await self.get_device(device_id)
-        for field, value in data.model_dump(exclude_unset=True).items():
+        changed = data.model_dump(exclude_unset=True)
+        for field, value in changed.items():
             setattr(device, field, value)
         await self.session.commit()
+        if {"inference", "cameras", "agent_config"} & changed.keys():
+            await event_bus.publish(DeviceConfigChanged(device_id=device_id))
         return self._view(device)
 
     async def delete_device(self, device_id: str) -> None:

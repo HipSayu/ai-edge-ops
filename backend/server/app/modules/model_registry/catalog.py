@@ -128,6 +128,9 @@ class ModelCatalog:
             params_m=to_float(labels.get("ai.edge-ops.model.params_m")),
             latency_ms=to_float(labels.get("ai.edge-ops.model.latency_ms")),
             base=labels.get("ai.edge-ops.model.base"),
+            conf=to_float(labels.get("ai.edge-ops.model.conf")),
+            iou=to_float(labels.get("ai.edge-ops.model.iou")),
+            imgsz=int(v) if (v := to_float(labels.get("ai.edge-ops.model.imgsz"))) else None,
         )
         self._cache[tag] = (now + self._cfg.ttl_s, image)
         return image

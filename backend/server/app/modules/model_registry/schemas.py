@@ -25,6 +25,10 @@ class ModelImage(BaseModel):
     params_m: float | None = None
     latency_ms: float | None = None
     base: str | None = None
+    # tuned inference defaults (tier 1 of the config hierarchy)
+    conf: float | None = None
+    iou: float | None = None
+    imgsz: int | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
