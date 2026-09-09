@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from dqh.svc_core.persistence.sqlalchemy import BaseRepository
 from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.modules.model_registry.domain import ModelTask
 from app.modules.model_registry.models import Model, ModelVersion
-from app.shared.repository import BaseRepository
 
 
 class ModelRepository(BaseRepository[Model]):

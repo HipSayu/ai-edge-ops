@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.persistence.sqlalchemy import DbEnum, TimestampMixin
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.modules.agent.domain import DeviceStatus
-from app.shared.helpers.database import db_enum
-from app.shared.models import TimestampMixin
 
 
 class Device(Base, TimestampMixin):
@@ -22,7 +21,7 @@ class Device(Base, TimestampMixin):
     hardware: Mapped[str] = mapped_column(String(64))  # e.g. "Jetson Orin Nano 8GB"
     ip_address: Mapped[str | None] = mapped_column(String(64), default=None)
     status: Mapped[DeviceStatus] = mapped_column(
-        db_enum(DeviceStatus), default=DeviceStatus.PROVISIONING, index=True
+        DbEnum(DeviceStatus), default=DeviceStatus.PROVISIONING, index=True
     )
     labels: Mapped[dict] = mapped_column(JSON, default=dict)
     last_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)

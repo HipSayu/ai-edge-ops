@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from dqh.svc_core.persistence.sqlalchemy import TimestampMixin
 from sqlalchemy import JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.shared.models import TimestampMixin
 
 
 class AppSetting(Base, TimestampMixin):

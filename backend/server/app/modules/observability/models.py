@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.persistence.sqlalchemy import DbEnum, TimestampMixin
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 from app.modules.observability.domain import AlertSeverity, AlertStatus, AlertType
-from app.shared.helpers.database import db_enum
-from app.shared.models import TimestampMixin
 
 
 class Violation(Base):
@@ -31,10 +30,10 @@ class Alert(Base, TimestampMixin):
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    type: Mapped[AlertType] = mapped_column(db_enum(AlertType), index=True)
-    severity: Mapped[AlertSeverity] = mapped_column(db_enum(AlertSeverity), index=True)
+    type: Mapped[AlertType] = mapped_column(DbEnum(AlertType), index=True)
+    severity: Mapped[AlertSeverity] = mapped_column(DbEnum(AlertSeverity), index=True)
     status: Mapped[AlertStatus] = mapped_column(
-        db_enum(AlertStatus), default=AlertStatus.OPEN, index=True
+        DbEnum(AlertStatus), default=AlertStatus.OPEN, index=True
     )
     title: Mapped[str] = mapped_column(String(256))
     description: Mapped[str | None] = mapped_column(Text, default=None)

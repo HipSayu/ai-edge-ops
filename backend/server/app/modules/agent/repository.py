@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.persistence.sqlalchemy import BaseRepository
 from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy import func, select
 
 from app.modules.agent.domain import DeviceStatus
 from app.modules.agent.models import Device, MetricSample
-from app.shared.repository import BaseRepository
 
 
 class DeviceRepository(BaseRepository[Device]):
