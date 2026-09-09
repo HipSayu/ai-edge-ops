@@ -67,7 +67,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "dqh-ai-core", extra = ["mcp", "openai"] },
-    { name = "dqh-svc-core", extra = ["fastapi", "mqtt", "redis", "security", "sqlalchemy"] },
+    { name = "dqh-svc-core", extra = ["fastapi", "httpclient", "mqtt", "redis", "security", "sqlalchemy"] },
     { name = "edge-protocol" },
     { name = "fastapi" },
     { name = "mcp" },
@@ -94,7 +94,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14" },
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "dqh-ai-core", extras = ["mcp", "openai"], editable = "backend/packages/ai_core" },
-    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "redis", "sqlalchemy", "security"], editable = "backend/packages/svc_core" },
+    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "redis", "sqlalchemy", "security", "httpclient"], editable = "backend/packages/svc_core" },
     { name = "edge-protocol", editable = "backend/libs/edge_protocol" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.26" },
     { name = "fastapi", specifier = ">=0.115" },
@@ -1167,7 +1167,7 @@ provides-extras = ["anthropic", "openai", "mcp", "redis"]
 
 [[package]]
 name = "dqh-svc-core"
-version = "0.7.0"
+version = "0.8.0"
 source = { editable = "backend/packages/svc_core" }
 dependencies = [
     { name = "pydantic" },
@@ -1180,6 +1180,7 @@ all = [
     { name = "aiomqtt" },
     { name = "argon2-cffi" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "nats-py" },
     { name = "pyjwt" },
     { name = "python-multipart" },
@@ -1198,6 +1199,9 @@ dev = [
 fastapi = [
     { name = "fastapi" },
     { name = "python-multipart" },
+]
+httpclient = [
+    { name = "httpx" },
 ]
 kafka = [
     { name = "aiokafka" },
@@ -1225,10 +1229,11 @@ requires-dist = [
     { name = "aiomqtt", marker = "extra == 'mqtt'", specifier = ">=2" },
     { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.20" },
     { name = "argon2-cffi", marker = "extra == 'security'", specifier = ">=23.1" },
-    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "sqlalchemy", "security"], marker = "extra == 'all'", editable = "backend/packages/svc_core" },
+    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "sqlalchemy", "security", "httpclient"], marker = "extra == 'all'", editable = "backend/packages/svc_core" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.26" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.110" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'httpclient'", specifier = ">=0.27" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13" },
     { name = "nats-py", marker = "extra == 'nats'", specifier = ">=2.6" },
     { name = "pydantic", specifier = ">=2.5" },
@@ -1241,7 +1246,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy'", specifier = ">=2.0" },
 ]
-provides-extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "sqlalchemy", "security", "all", "dev"]
+provides-extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "httpclient", "sqlalchemy", "security", "all", "dev"]
 
 [[package]]
 name = "edge-protocol"

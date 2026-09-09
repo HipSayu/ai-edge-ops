@@ -5,8 +5,7 @@ FleetRegistry's reported `active_image`; history is in `audit_logs`.
 
 from __future__ import annotations
 
-import httpx
-from dqh.svc_core.contracts.errors import NotFoundError
+from dqh.svc_core.contracts.errors import AppError, NotFoundError
 from dqh.svc_core.helpers.time import utcnow
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +27,7 @@ class DeployService:
         tag = data.image if "@" in data.image else data.image.rsplit(":", 1)[-1]
         try:
             image = await model_catalog.get_model(tag)
-        except httpx.HTTPStatusError as exc:
+        except AppError as exc:
             raise NotFoundError(f"model image {data.image!r} not in the registry") from exc
 
         device.desired_image = image.pinned_ref

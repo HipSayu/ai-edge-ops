@@ -14,7 +14,7 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "alembic>=1.14",
-    "dqh-svc-core[fastapi,mqtt,redis,sqlalchemy,security]",
+    "dqh-svc-core[fastapi,mqtt,redis,sqlalchemy,security,httpclient]",
     "dqh-ai-core[mcp,openai]",
     "edge-protocol",
     "mcp>=1.2",
