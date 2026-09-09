@@ -79,8 +79,8 @@ Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc
         `inference_policy` < `Device.inference`); operator sửa inference →
         `DeviceConfigChanged` → `T_UPDATE_CONFIG`. `ModelImage` + Dockerfile thêm
         `conf/iou/imgsz` labels.
-  - [ ] **S3.3 còn**: gộp `cameras`/`camera_groups` vào `Device.cameras`
-        (streaming dùng `camera_id: int` → đổi trước); FE Fleet defaults page.
+  - [x] **camera-fold HỦY** (user 2026-09-09): giữ `cameras` + `camera_groups`
+        tables như cũ. Còn: FE "Fleet defaults" page.
 - [x] **S5** (`293481c`) — deploy = command; xoá ORM Deployment; GET /deployments = per-device view.
 - [x] **S6** (`847244c`) — metrics ring buffer in-memory (FleetRegistry); xoá `metric_samples`. Prometheus remote-write để sau.
 - [~] **S7** — `backend/schema.sql` regen (14 bảng); `ARCHITECTURE.md` + `deploy-model.md` dọn. `chat_messages` giữ (assistant). `docs/flows/*` mermaid chưa vẽ lại.

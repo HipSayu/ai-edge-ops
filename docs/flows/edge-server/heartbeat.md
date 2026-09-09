@@ -1,5 +1,9 @@
 # Flow: health heartbeat
 
+> **Updated for the stateless refactor** ([`REFACTOR_stateless.md`](../../REFACTOR_stateless.md)):
+> reported device state (health, status, running image) lives in the in-memory
+> `FleetRegistry`, not Postgres; metric samples are a ~15-min ring buffer, not a
+> `metric_samples` table; `PresenceRegistry` is gone.
 ## 1. Overview
 
 **Purpose:**
@@ -19,7 +23,7 @@ Starts at the edge `EdgeLink._heartbeat_loop` tick. Ends when the browser receiv
 * Edge Camera — `EdgeLink` heartbeat loop, `collect_metrics`, identity
 * MQTT — `agent/devices/{id}/state` channel
 * Backend — AgentGateway, `AgentService`, `telemetry_relay`
-* Storage — PostgreSQL (`MetricSample`, `Device`)
+* Storage — Postgres (`Device` desired config only); reported state + metric ring → `FleetRegistry` (in-memory)
 * Frontend — device cards, metric sparklines
 
 ---
@@ -58,7 +62,7 @@ sequenceDiagram
     loop every heartbeat_interval_s (15s)
         EC->>MQTT: device.heartbeat (metrics, active model, hardware)
         MQTT->>S: route to AgentGateway
-        S->>DB: insert MetricSample, refresh last_seen_at, recompute status
+        S->>DB: append to FleetRegistry ring + update RuntimeState
         S->>FE: telemetry.device and telemetry.agent (WebSocket)
     end
     Note over S,FE: an ONLINE to DEGRADED transition also raises a latency WARNING alert
@@ -66,10 +70,10 @@ sequenceDiagram
 
 **Flow:**
 
-1. Each tick the edge calls `collect_metrics(hardware)` (CPU, GPU, memory, disk, temperature, FPS, rolling inference latency), stamps identity fields, and copies `active_model_version_id` from persisted state.
+1. Each tick the edge calls `collect_metrics(hardware)` (CPU, GPU, memory, disk, temperature, FPS, rolling inference latency), stamps identity fields, and copies `active_image` from persisted state.
 2. The payload is wrapped in an `Envelope` (`device.heartbeat`) and published fire-and-forget to `agent/devices/{device_id}/state`.
 3. `AgentGateway` (subscribed to `agent/devices/+/state`) routes `device.heartbeat` to `_on_heartbeat`, which validates against `HeartbeatPayload`.
-4. `AgentService.record_heartbeat` inserts one `MetricSample`, refreshes `last_seen_at`, copies identity fields onto `Device`, and recomputes `status` via `evaluate_status` (ONLINE / DEGRADED / OFFLINE).
+4. `AgentService.record_heartbeat` pushes the sample into `FleetRegistry` (ring + `RuntimeState`) and recomputes `status` via `evaluate_status` (ONLINE / DEGRADED / OFFLINE).
 5. On an ONLINE → DEGRADED edge it publishes `DeviceLatencyDegraded` (one WARNING alert, on the edge only). It always publishes `HeartbeatRecorded`.
 6. `_on_heartbeat` calls `presence.mark_seen(device_id)`.
 7. `telemetry_relay` turns `HeartbeatRecorded` into `telemetry.device` on `telemetry/{device_id}` and a fleet aggregate `telemetry.agent` on `telemetry/agent`.
@@ -83,7 +87,7 @@ sequenceDiagram
 | Edge Camera | Sample machine metrics, report identity + active model, publish every 15 s |
 | MQTT | Carry `device.heartbeat` latest-wins |
 | AgentGateway | Route, validate, mark presence |
-| AgentService | Persist `MetricSample`, recompute `Device.status`, emit events |
+| AgentService | Push sample into `FleetRegistry`, recompute status, emit events |
 | telemetry_relay | Fan the heartbeat to WebSocket telemetry topics |
 | Storage / DB | Hold metric history and device state |
 | Frontend | Show status dot, last-seen, agent version, IP, sparklines |
@@ -107,11 +111,11 @@ sequenceDiagram
     participant H as ws_hub
     participant F as Frontend
 
-    E->>HB: collect_metrics(hardware) + identity + active_model_version_id
+    E->>HB: collect_metrics(hardware) + identity + active_image
     E->>M: device.heartbeat (HeartbeatPayload)
     M->>G: MessageRouter.dispatch
     G->>AS: HeartbeatIn(...)
-    AS->>DB: insert MetricSample, device.status = evaluate_status(...), commit
+    AS->>FR: FleetRegistry.record_heartbeat -> ring + status
     alt status changes to DEGRADED
         AS->>EB: publish DeviceLatencyDegraded
     end
@@ -130,7 +134,7 @@ sequenceDiagram
 ```text
 Edge Camera
   │
-  │ collect_metrics(hardware) + identity + active_model_version_id
+  │ collect_metrics(hardware) + identity + active_image
   ▼
 EdgeLink._heartbeat_loop ──► HeartbeatPayload
   │
@@ -138,7 +142,7 @@ EdgeLink._heartbeat_loop ──► HeartbeatPayload
   ▼
 AgentGateway._on_heartbeat ──► AgentService.record_heartbeat
   │
-  ├── MetricSample row ─────► PostgreSQL
+  ├── sample ─────► FleetRegistry ring (in-memory, ~15 min)
   ├── Device.status / last_seen_at / identity ─────► PostgreSQL
   └── HeartbeatRecorded ──► telemetry_relay ──► ws_hub
                                                   │
@@ -169,7 +173,7 @@ AgentGateway._on_heartbeat ──► AgentService.record_heartbeat
 **Metrics**
 
 * heartbeat inter-arrival time per device
-* `MetricSample` insert rate
+* ring append rate
 * per-device CPU / GPU / FPS / inference latency (the samples themselves)
 
 **Tracing**
