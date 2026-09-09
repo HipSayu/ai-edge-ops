@@ -1,17 +1,11 @@
+"""Value objects emitted by :class:`PresenceRegistry`."""
+
 from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from enum import Enum
 
-
-class PresenceStatus(str, Enum):
-    ONLINE = "online"
-    STALE = "stale"
-    OFFLINE = "offline"
-
-    def __str__(self) -> str:
-        return self.value
+from app.modules.agent.presence_status import PresenceStatus
 
 
 @dataclass(frozen=True)
@@ -30,4 +24,4 @@ class PresenceEvent:
     at: dt.datetime
 
 
-__all__ = ["PresenceStatus", "PresenceSnapshot", "PresenceEvent"]
+__all__ = ["PresenceEvent", "PresenceSnapshot"]

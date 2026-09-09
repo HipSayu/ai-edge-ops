@@ -20,7 +20,8 @@ from app.core import database
 from app.core.config import settings
 from app.core.events import event_bus
 from app.core.ws import ws_hub
-from app.domain.presence import PresenceEvent, PresenceRegistry
+from app.modules.agent.presence_records import PresenceEvent
+from app.modules.agent.presence_registry import PresenceRegistry
 from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.service import AgentService
 from app.modules.agent.telemetry_relay import publish_sample

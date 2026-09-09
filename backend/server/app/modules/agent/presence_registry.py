@@ -6,7 +6,8 @@ from dataclasses import dataclass
 
 from dqh.svc_core.helpers.time import utcnow
 
-from app.domain.presence.models import PresenceEvent, PresenceSnapshot, PresenceStatus
+from app.modules.agent.presence_records import PresenceEvent, PresenceSnapshot
+from app.modules.agent.presence_status import PresenceStatus
 
 Clock = Callable[[], dt.datetime]
 
@@ -40,7 +41,9 @@ class PresenceRegistry:
             if entry.status is not PresenceStatus.ONLINE:
                 entry.status = PresenceStatus.ONLINE
                 entry.since = now
-        return PresenceEvent(endpoint_id, previous, PresenceStatus.ONLINE, now) if previous is not PresenceStatus.ONLINE else None
+        if previous is PresenceStatus.ONLINE:
+            return None
+        return PresenceEvent(endpoint_id, previous, PresenceStatus.ONLINE, now)
 
     def mark_offline(self, endpoint_id: str, *, at: dt.datetime | None = None) -> PresenceEvent | None:
         now = at or self._clock()
@@ -51,7 +54,9 @@ class PresenceRegistry:
         elif entry.status is not PresenceStatus.OFFLINE:
             entry.status = PresenceStatus.OFFLINE
             entry.since = now
-        return PresenceEvent(endpoint_id, previous, PresenceStatus.OFFLINE, now) if previous is not PresenceStatus.OFFLINE else None
+        if previous is PresenceStatus.OFFLINE:
+            return None
+        return PresenceEvent(endpoint_id, previous, PresenceStatus.OFFLINE, now)
 
     def forget(self, endpoint_id: str) -> None:
         self._entries.pop(endpoint_id, None)
@@ -63,7 +68,12 @@ class PresenceRegistry:
             if entry.last_seen_at is None:
                 continue
             elapsed = (now - entry.last_seen_at).total_seconds()
-            target = PresenceStatus.OFFLINE if elapsed >= self._offline else PresenceStatus.STALE if elapsed >= self._stale else PresenceStatus.ONLINE
+            if elapsed >= self._offline:
+                target = PresenceStatus.OFFLINE
+            elif elapsed >= self._stale:
+                target = PresenceStatus.STALE
+            else:
+                target = PresenceStatus.ONLINE
             if target is not entry.status:
                 events.append(PresenceEvent(endpoint_id, entry.status, target, now))
                 entry.status = target
@@ -75,7 +85,10 @@ class PresenceRegistry:
         return entry.status if entry else None
 
     def snapshot(self) -> list[PresenceSnapshot]:
-        return [PresenceSnapshot(eid, entry.status, entry.last_seen_at, entry.since) for eid, entry in self._entries.items()]
+        return [
+            PresenceSnapshot(eid, entry.status, entry.last_seen_at, entry.since)
+            for eid, entry in self._entries.items()
+        ]
 
 
 __all__ = ["PresenceRegistry", "Clock"]
