@@ -232,8 +232,16 @@ Không cấu hình toàn cục HAY theo device — **cả hai, dạng phân tầ
 | **S6** | Prometheus service vào `compose.infra.yml`; agent expose `/metrics` (scrape); `GET .../metrics` proxy Prometheus hoặc 501; xoá `metric_samples` | chart live qua WS ring buffer; history qua proxy | thấp (phụ) |
 | **S7** | Xoá `chat_messages` nếu không dùng; viết lại `backend/schema.sql`; dọn `docs/ARCHITECTURE.md` + flows | dọn type/service chết | 0 |
 
-Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S1→S5 theo thứ tự
-(phụ thuộc nhau); S6/S7 độc lập.
+Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S6/S7 độc lập.
+
+**Thứ tự thực tế (đổi so với đánh số):**
+`artifact_uri/S3 cleanup` (xong, `refactor(server): drop the legacy artifact_uri`)
+→ **S2** (ModelCatalog — tự chứa nhất, đúng thứ user cần) → **S3** → **S4**.
+**S1 (`device_id` string) gộp vào S3+S4**: `device_id: int` xuyên suốt ~50 chỗ ở
+agent/camera/deployment/observability; `devices`/`deployments`/`cameras` bị xoá ở
+S3/S4 nên migrate FK riêng ở S1 là phí. Khi `devices` → `device_config` +
+`FleetRegistry` (S3/S4), khoá là string ngay từ đầu — không cần cầu int↔str.
+`violations.device_id` → TEXT làm ở S4 cùng lúc.
 
 ---
 
