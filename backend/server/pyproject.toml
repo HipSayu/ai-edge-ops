@@ -14,9 +14,7 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "alembic>=1.14",
-    "argon2-cffi>=23.1",
-    "PyJWT>=2.9",
-    "dqh-svc-core[fastapi,mqtt,redis,sqlalchemy]",
+    "dqh-svc-core[fastapi,mqtt,redis,sqlalchemy,security]",
     "edge-protocol",
 ]
 

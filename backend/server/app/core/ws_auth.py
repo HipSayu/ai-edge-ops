@@ -7,7 +7,7 @@ endpoints pass this as ``serve_ws(..., authenticate=...)``. It runs *before*
 Token source, in order: ``?token=`` query param (browsers can't set headers on
 ``new WebSocket``), then an ``Authorization: Bearer`` header. In
 ``ENVIRONMENT=local`` an anonymous socket is allowed, matching
-:func:`app.core.auth.require_permission`.
+:func:`app.core.bearer_auth.require_permission`.
 """
 
 from __future__ import annotations
@@ -15,9 +15,9 @@ from __future__ import annotations
 from fastapi import WebSocket, status
 from fastapi.exceptions import WebSocketException
 
-from app.core.auth import decode_token
 from app.core.config import settings
 from app.core.database import session_scope
+from app.core.token_codec import decode_token
 from app.modules.user.models import User
 
 

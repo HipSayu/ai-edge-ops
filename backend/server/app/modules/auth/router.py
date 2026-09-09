@@ -7,13 +7,9 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import DbSession
-from app.core.auth import (
-    CurrentUser,
-    decode_token,
-    issue_tokens,
-    permission_codes,
-    verify_password,
-)
+from app.core.bearer_auth import CurrentUser, permission_codes
+from app.core.password_hasher import verify_password
+from app.core.token_codec import decode_token, issue_tokens
 from app.modules.auth.schemas import AuthSession, AuthTokens, LoginRequest, RefreshRequest, UserSession
 from app.modules.user.models import User
 

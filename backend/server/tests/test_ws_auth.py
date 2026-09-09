@@ -4,8 +4,10 @@ import pytest
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from app.core import auth
+import datetime as dt
+
 from app.core.config import settings
+from app.core.token_codec import token_codec
 from app.main import create_app
 
 
@@ -32,7 +34,7 @@ async def test_non_local_env_accepts_valid_token(_engine, session, monkeypatch):
     await session.commit()
 
     monkeypatch.setattr(settings, "environment", "staging")
-    token, _ = auth._encode(str(user.id), "access", auth.dt.timedelta(minutes=5))
+    token, _ = token_codec.encode(str(user.id), "access", dt.timedelta(minutes=5))
 
     app = create_app()
     with TestClient(app) as client, client.websocket_connect(
