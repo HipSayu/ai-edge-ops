@@ -66,9 +66,11 @@ source = { editable = "backend/server" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
+    { name = "dqh-ai-core", extra = ["mcp", "openai"] },
     { name = "dqh-svc-core", extra = ["fastapi", "mqtt", "redis", "security", "sqlalchemy"] },
     { name = "edge-protocol" },
     { name = "fastapi" },
+    { name = "mcp" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn", extra = ["standard"] },
@@ -91,12 +93,14 @@ requires-dist = [
     { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.20" },
     { name = "alembic", specifier = ">=1.14" },
     { name = "asyncpg", specifier = ">=0.30" },
+    { name = "dqh-ai-core", extras = ["mcp", "openai"], editable = "backend/packages/ai_core" },
     { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "redis", "sqlalchemy", "security"], editable = "backend/packages/svc_core" },
     { name = "edge-protocol", editable = "backend/libs/edge_protocol" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.26" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.0" },
+    { name = "mcp", specifier = ">=1.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pydantic-settings", specifier = ">=2.6" },
@@ -1266,7 +1270,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -3603,6 +3607,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "polars-runtime-32" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/a4/15/e8541eefc22fbc7ca89bcb5112298a153729f73cfbc0cf6a668e509f975c/polars-1.44.2.tar.gz", hash = "sha256:86c8e26b6c2de8c8d344bb910b74dfc47b118ac3fe0f19b44909467990a0b281", size = 766272, upload-time = "2026-09-09T07:42:08.859Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/6d/3014112c7f717d1253223faa13b6db3ac3a64ed00ab2a3bc1b942bc9cdd4/polars-1.44.2-py3-none-any.whl", hash = "sha256:1bb331f17a40d9d931101533dcd33637b66edc61eb377b07020dac16a0f0377b", size = 865768, upload-time = "2026-09-09T07:40:12.053Z" },
 ]
@@ -3611,6 +3616,7 @@ wheels = [
 name = "polars-runtime-32"
 version = "1.44.2"
 source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/a1/a7eace6587b56f22cf2a21ab4d5e695db372dc23fd96accb68b1ec12660b/polars_runtime_32-1.44.2.tar.gz", hash = "sha256:b84842f7d621aaca7a52e165e19a24f89db45f8aa13744941430218419a14a67", size = 3172205, upload-time = "2026-09-09T07:42:10.851Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/5b/a5215f82c3dd443dc5d6911b0d3e937f97056e0ef7753f7e123422481a18/polars_runtime_32-1.44.2-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:1fd536720668ba203a16a20b08cd6b23057e407a0279cf36b2f35f879d6e3208", size = 48334014, upload-time = "2026-09-09T07:40:16.43Z" },
     { url = "https://files.pythonhosted.org/packages/c2/e0/f3dc93fce4b4e99370db6a89001a1b8d3c606e3560d0d91dda809d6c6324/polars_runtime_32-1.44.2-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:e0fd43720c8222ae39919c8ff891636d53b352706087120e62f83544dd3ff782", size = 43331099, upload-time = "2026-09-09T07:40:21.029Z" },

@@ -15,3 +15,9 @@ class ChatMessageOut(BaseModel):
 
 class ChatMessageCreate(BaseModel):
     text: str = Field(min_length=1, max_length=10000)
+
+
+class SlashCommandOut(BaseModel):
+    cmd: str
+    desc: str
+    kind: str
