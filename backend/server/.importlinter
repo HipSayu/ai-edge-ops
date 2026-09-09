@@ -3,8 +3,8 @@ root_package = app
 
 # Feature modules must not import each other's internals — only each other's
 # package __init__ (public service surface) or .event (domain events).
-# app.modules.auth + app.modules.access_control are the IAM foundation and are
-# deliberately excluded: any feature module may depend on them.
+# app.modules.iam is the shared IAM foundation and is deliberately excluded:
+# any feature module may depend on it.
 [importlinter:contract:feature-modules-are-independent]
 name = Feature modules are independent
 type = independence
@@ -17,7 +17,6 @@ modules =
     app.modules.observability
     app.modules.streaming
     app.modules.system
-    app.modules.user
 ignore_imports =
     app.modules.deployment.service -> app.modules.agent
     app.modules.deployment.service -> app.modules.model_registry
@@ -25,10 +24,6 @@ ignore_imports =
     app.modules.observability.service -> app.modules.deployment
     app.modules.observability.subscribers -> app.modules.agent.event
     app.modules.observability.subscribers -> app.modules.deployment.event
-    # IAM foundation reads the user/permission tables — allowed, and not a
-    # feature-to-feature edge (auth is excluded from this contract).
-    app.modules.auth.bearer_auth -> app.modules.user.models
-    app.modules.auth.ws_auth -> app.modules.user.models
 
 [importlinter:contract:edge-adapter-is-downstream]
 name = app.edge depends on modules, never the reverse

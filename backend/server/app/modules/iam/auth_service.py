@@ -8,9 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.password_hasher import verify_password
 from app.core.token_codec import decode_token, issue_tokens
-from app.modules.auth.bearer_auth import permission_codes
-from app.modules.auth.schemas import AuthSession, AuthTokens, UserSession
-from app.modules.user.models import User
+from app.modules.iam.bearer_auth import permission_codes
+from app.modules.iam.models import User
+from app.modules.iam.schemas import AuthSession, AuthTokens, UserSession
 
 
 class AuthService:
