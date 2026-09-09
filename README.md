@@ -1,127 +1,173 @@
 # AI Edge Ops
 
-Control plane + edge agent + operator dashboard for real-time PPE detection.
+Control plane (FastAPI) + edge agent + operator dashboard (React) for real-time
+PPE detection.
 
 ```
 app/
-├── docker-compose.yml        dev stack: infra + server (+ edge-agent under `edge` profile)
-├── docker-compose.prod.yml   prod stack: GHCR images behind Caddy
-├── Caddyfile  mediamtx.prod.yml   prod support files (shipped to the deploy host by CI)
-├── DEPLOY.md                 full production runbook
+├── deploy/            all docker compose lives here
+│   ├── compose.infra.yml   backing services (db, redis, mqtt, mediamtx) — the base
+│   ├── compose.yml          DEV: includes infra + server + edge-agent + inference
+│   ├── compose.app.yml      PROD overlay: Caddy + frontend + server (GHCR images)
+│   ├── compose.edge.yml     a real edge device (agent + inference, no infra)
+│   ├── .env.infra.example    ┐  one file per concern — copy each to .env.<name>
+│   ├── .env.app.example      │  compose files are pure ${VAR} templates:
+│   ├── .env.edge.example     ┘  no literals, no fallbacks
+│   ├── config/              Caddyfile, mediamtx.yml
+│   └── vps-proxy/           system-nginx snippets to expose an infra-only VPS
 ├── backend/
-│   ├── packages/svc_core/    shared lib (private submodule)
-│   ├── libs/edge_protocol/   server <-> edge wire contract
-│   ├── server/               FastAPI control plane        — server/compose.yml, server/Dockerfile
-│   └── edge_agent/           runs on each Jetson device    — edge_agent/compose.yml, edge_agent/Dockerfile
-└── frontend/                 React SPA (nginx)            — frontend/Dockerfile
+│   ├── server/              FastAPI control plane        (server/Dockerfile)
+│   ├── edge_agent/          host supervisor per device   (edge_agent/Dockerfile)
+│   ├── inference/           vision runtime, swapped per model deploy
+│   ├── libs/edge_protocol/  server <-> edge wire contract
+│   └── packages/            svc_core, ai_core (shared libs)
+├── frontend/                React SPA (Vite dev / nginx image in prod)
+└── DEPLOY.md                production runbook
 ```
-
-Config is per level: `app/.env` (shared infra creds), `backend/server/.env`,
-`backend/edge_agent/.env`. Copy each `*.env.example` and edit. `.env` files are
-git-ignored.
 
 ---
 
 ## Prerequisites
 
-- Docker + Docker Compose v2.24+ (needs `include:` and the object `env_file` form)
-- For the private `svc_core` submodule: `git submodule update --init --recursive`
+- Docker + Docker Compose **v2.24+** (`include:` + object `env_file` + inline
+  env-file comments)
+- `git submodule update --init --recursive` — private `svc_core` / `ai_core`
+- Node 20+ and `uv` — only for running frontend / backend outside Docker
 
 ---
 
-## Run — dev (local)
+## Config — one env file per concern
 
-Everything from this directory (`app/`).
+Compose files hold **no literal values and no fallbacks** — every `${VAR}` must
+come from an env file. There are three, by concern:
+
+| file | feeds | used by |
+|---|---|---|
+| `.env.infra` | db / redis / mqtt / mediamtx creds + host ports | every stack |
+| `.env.app` | server settings, JWT, prod image/domain | dev + prod |
+| `.env.edge` | `DEVICE_ID`, agent MQTT target, cameras, inference image | edge |
 
 ```bash
-cp .env.example .env                       # optional — defaults work
-cp backend/server/.env.example backend/server/.env
+cd deploy
+cp .env.infra.example .env.infra
+cp .env.app.example   .env.app
+cp .env.edge.example  .env.edge      # only if running an edge node
+```
 
-# infra (postgres, emqx, minio, redis, mediamtx) + server, with live reload
-docker compose up --build
+`.env.*` are git-ignored; the `.example` files list every key with a `prod:` /
+`device:` note. Compose loads them via **`COMPOSE_ENV_FILES`** (comma-separated,
+later wins) — for dev, export all three (silences unset-var warnings from the
+`edge` profile):
+
+```bash
+export COMPOSE_ENV_FILES=.env.infra,.env.app,.env.edge     # put this in your shell rc
+```
+
+---
+
+## Run — dev
+
+From `app/deploy/`, with `COMPOSE_ENV_FILES` exported as above:
+
+| Command | What it does |
+|---|---|
+| `docker compose up --build` | infra (db, redis, mqtt, mediamtx) + server, live reload |
+| `docker compose --profile edge up --build` | the above **+** edge-agent + inference sidecar (full pipeline on one box) |
+| `docker compose -f compose.infra.yml up -d` | infra only — for running the server/agent from source |
+| `docker compose down` | stop, keep volumes |
+| `docker compose down -v` | stop, drop `pgdata` / `redisdata` / edge state |
+
+The frontend is not in compose — run it from `app/frontend`:
+
+```bash
+npm install
+npm run dev            # http://localhost:5173, proxies /api/v1 -> :8000
 ```
 
 | Service | URL |
 |---|---|
 | API + docs | http://localhost:8000/docs |
-| EMQX dashboard | http://localhost:18083 — `admin` / `public` |
-| MinIO console | http://localhost:9001 — `minioadmin` / `minioadmin` |
+| Dashboard (Vite) | http://localhost:5173 |
+| EMQX dashboard | http://localhost:58083 — `admin` / `EMQX_DASHBOARD_PASSWORD` |
+| Edge agent API | http://localhost:9100/status |
 
-Add an edge agent for an end-to-end demo (talks to the compose `mqtt` + `server`):
-
-```bash
-cp backend/edge_agent/.env.example backend/edge_agent/.env
-DEVICE_ID=1 docker compose --profile edge up --build edge-agent
-# local agent API: http://localhost:9100/status
-```
-
-Stop / wipe:
-
-```bash
-docker compose --profile edge down          # keep volumes
-docker compose --profile edge down -v       # drop pgdata / miniodata / state
-```
+Host ports sit in the 5xxxx range (`DB_PORT=55432`, …) so they don't collide
+with a system Postgres/Redis; change them in `.env`.
 
 ---
 
-## Build images
+## Run — an edge device
 
-The two images CI publishes to GHCR:
-
-```bash
-# server  — build context is backend/ (bundles svc_core + edge_protocol)
-docker build -t ghcr.io/hopquangdo/ai-edge-ops-server:dev \
-  -f backend/server/Dockerfile backend
-
-# frontend — static SPA served by nginx
-docker build -t ghcr.io/hopquangdo/ai-edge-ops-frontend:dev frontend
-```
-
-Edge-agent image (not in CI — operators build/pull it per device):
+`compose.edge.yml` is standalone (no infra — it dials a remote broker). The
+agent shells out to `docker compose` itself for model deploys, so on the device
+the file must be named `compose.yml`:
 
 ```bash
-docker build -t ai-edge-ops/edge-agent:dev \
-  -f backend/edge_agent/Dockerfile backend
+mkdir -p /opt/ai-edge-ops && cd /opt/ai-edge-ops
+scp  <you>@dev:app/deploy/compose.edge.yml   ./compose.yml
+scp  <you>@dev:app/deploy/.env.edge.example  ./.env.edge
+$EDITOR .env.edge    # DEVICE_ID, AGENT_MQTT_HOST/PORT/TLS, AGENT_CAMERAS
+export COMPOSE_ENV_FILES=.env.edge
+docker compose up -d
+docker compose logs -f edge-agent
 ```
 
-`docker compose build` (dev) and `docker compose -f docker-compose.prod.yml`
-(prod) drive these same Dockerfiles.
-
-> Jetson: swap the `edge_agent/Dockerfile` base for an `l4t-pytorch` image and
-> install the `[inference]` extra (real YOLO via the vendored
-> `backend/edge_agent/package/ultralytics`).
+Jetson: swap `inference/Dockerfile.cpu` for the `l4t` GPU build and set
+`INFERENCE_RUNTIME`.
 
 ---
 
 ## Run — prod
 
-Images come from GHCR (pushed by `.github/workflows/deploy.yml` on every push to
-`main`). On the deploy host:
+Layered: infra base **+** app overlay. On the deploy host:
 
 ```bash
-sudo mkdir -p /opt/ai-edge-ops && cd /opt/ai-edge-ops
-# CI scp's docker-compose.prod.yml + Caddyfile + mediamtx.prod.yml here each deploy
-cp .env.prod.example .env        # DOMAIN, POSTGRES_PASSWORD, JWT_SECRET, MINIO_ROOT_*
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+cd /opt/ai-edge-ops
+cp .env.infra.example .env.infra  &&  cp .env.app.example .env.app
+$EDITOR .env.infra .env.app   # POSTGRES_PASSWORD, JWT_SECRET, MQTT_*, DOMAIN,
+                              # SERVER_ENVIRONMENT=production, SERVER_MQTT_TLS=true, ...
+export COMPOSE_FILE=compose.infra.yml:compose.app.yml
+export COMPOSE_ENV_FILES=.env.infra,.env.app
+docker compose pull
+docker compose up -d
 ```
 
-Full runbook — TLS, MQTT mTLS, schema, secrets, rollback, backups — in
-[`DEPLOY.md`](DEPLOY.md). Running an edge device against a production broker:
-[`backend/edge_agent/README.md`](backend/edge_agent/README.md).
+CI (`.github/workflows/deploy.yml`) builds the GHCR images and ships
+`compose.infra.yml` + `compose.app.yml` + `config/` to `/opt/ai-edge-ops` on
+every push to `main`. TLS, MQTT mTLS, schema, rollback, backups: **[`DEPLOY.md`](DEPLOY.md)**.
+
+VPS running backing services only: `docker compose -f compose.infra.yml up -d`
+plus the `deploy/vps-proxy/` nginx snippets — see `deploy/vps-proxy/README.md`.
+
+---
+
+## Build images
+
+CI publishes two; the build context for the server is `backend/` (it bundles the
+shared libs):
+
+```bash
+docker build -t ghcr.io/hopquangdo/ai-edge-ops-server:dev   -f backend/server/Dockerfile   backend
+docker build -t ghcr.io/hopquangdo/ai-edge-ops-frontend:dev  frontend
+docker build -t ai-edge-ops/edge-agent:dev -f backend/edge_agent/Dockerfile backend
+docker build -t ai-edge-ops/inference:dev  -f backend/inference/Dockerfile.cpu backend
+```
+
+`docker compose build` drives the same Dockerfiles.
 
 ---
 
 ## Test
 
-```bash
-cd backend
-python -m venv .venv
-.venv/Scripts/pip install -e "packages/svc_core[fastapi,mqtt,dev]" \
-                          -e "libs/edge_protocol[dev]" \
-                          -e "server[dev]" -e "edge_agent[dev]"
+One `uv sync` at the repo root builds every backend package into a shared env:
 
-for pkg in packages/svc_core libs/edge_protocol server edge_agent; do
-  (cd "$pkg" && python -m pytest -q)
-done
+```bash
+uv sync
+uv run --package dqh-svc-core   pytest -q
+uv run --package edge-protocol  pytest -q
+uv run --package server         pytest -q
+uv run --package edge_agent     pytest -q
+uv run --package inference      pytest -q
+
+cd frontend && npm run lint && npm run build
 ```

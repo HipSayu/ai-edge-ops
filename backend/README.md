@@ -8,16 +8,12 @@ backend/
 ├── packages/svc_core/     dqh.svc_core — generic: messaging, config, http, presence, reconcile, errors
 ├── libs/edge_protocol/    edge_protocol — the server<->edge wire contract (payloads + topics)
 ├── server/                control plane: FastAPI + Postgres, operator API, AgentGateway
-│   ├── compose.yml        server service (pulled into ../../docker-compose.yml)
-│   └── mediamtx.yml       dev MediaMTX config
 └── edge_agent/            runs on each edge device (Jetson): MQTT link, runtime, camera pipeline, local API
-    └── compose.yml        edge-agent service (`edge` profile / standalone on a device)
 ```
 
-The dev stack lives at the repo root: `docker-compose.yml` holds the infra
-(db + emqx + minio + redis + mediamtx) and `include:`s the two package compose
-files. Prod: `docker-compose.prod.yml` + `Caddyfile` + `mediamtx.prod.yml` (see
-`DEPLOY.md`).
+All docker compose lives in `../deploy/` — one file per stack, one `.env.<concern>`
+per concern. Dev: `cd deploy && COMPOSE_ENV_FILES=.env.infra,.env.app docker
+compose up`. Prod + edge: `../README.md`, `../DEPLOY.md`.
 
 `server` and `edge_agent` both depend on `dqh-svc-core` and `edge-protocol`
 (installed editable from `packages/` and `libs/`).
@@ -54,11 +50,11 @@ cd backend/edge_agent          && uv run --extra dev pytest -q
 ## Run
 
 ```bash
-# infra + control plane (from the repo root)
-docker compose up --build                       # http://localhost:8000/docs
+cd deploy && export COMPOSE_ENV_FILES=.env.infra,.env.app
+docker compose up --build                        # infra + control plane, http://localhost:8000/docs
 
-# + an edge node for an end-to-end demo (see docs/run-edge-agent.md)
-DEVICE_ID=1 docker compose --profile edge up --build
+# + an edge node for an end-to-end demo
+COMPOSE_ENV_FILES=.env.infra,.env.app,.env.edge docker compose --profile edge up --build
 ```
 
 ## The server
@@ -78,5 +74,5 @@ Schema is created on startup (`init_db`). Swap for Alembic when it stabilises.
 ## Config
 
 One `Settings` object, nested groups from `dqh.svc_core.config`, env with `__`:
-`DB__URL`, `MQTT__HOST`, `S3__ENDPOINT_URL`, `REDIS__URL`, `CORS_ORIGINS`,
+`DB__URL`, `MQTT__HOST`, `REDIS__URL`, `CORS_ORIGINS`,
 `OFFLINE_THRESHOLD_SECONDS`, `EDGE_TRANSPORT`.

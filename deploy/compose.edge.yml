@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EDGE DEVICE — the agent (host supervisor) + the inference container it swaps
+# on every model deploy. An edge box runs NO infra; it connects to a remote
+# MQTT broker.
+#
+# The agent runs `docker compose` itself (cwd = its project dir) on a
+# T_DEPLOY_MODEL command, so on the device this file must be named `compose.yml`:
+#
+#   mkdir -p /opt/ai-edge-ops && cd /opt/ai-edge-ops
+#   scp  <repo>/app/deploy/compose.edge.yml   ./compose.yml
+#   scp  <repo>/app/deploy/.env.example       ./.env
+#   $EDITOR .env        # DEVICE_ID, AGENT_MQTT_HOST/PORT/TLS, AGENT_CAMERAS, ...
+#   docker compose up -d
+#
+# One-machine end-to-end demo: use compose.yml (`--profile edge`) instead.
+# Every value is in .env — see .env.example. No literals, no fallbacks.
+# ─────────────────────────────────────────────────────────────────────────────
+name: ${COMPOSE_PROJECT_NAME}
+
+services:
+  edge-agent:
+    container_name: ${COMPOSE_PROJECT_NAME}-edge-agent-${DEVICE_ID}
+    image: ${EDGE_AGENT_IMAGE}
+    build:
+      context: ../backend
+      dockerfile: edge_agent/Dockerfile
+    environment:
+      DEVICE_ID: ${DEVICE_ID}
+      TRANSPORT: ${AGENT_TRANSPORT}
+      MQTT__HOST: ${AGENT_MQTT_HOST}
+      MQTT__PORT: ${AGENT_MQTT_PORT}
+      MQTT__TLS: ${AGENT_MQTT_TLS}
+      MQTT__USERNAME: ${AGENT_MQTT_USERNAME}
+      MQTT__PASSWORD: ${AGENT_MQTT_PASSWORD}
+      SERVER__BASE_URL: ${AGENT_SERVER_BASE_URL}
+      CAMERAS: ${AGENT_CAMERAS}
+      INFERENCE_SOCKET: /run/edge/inference.sock
+      COMPOSE__PROJECT_DIR: /project
+      COMPOSE__ENV_FILE: /project/.env.edge
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # prod: front with docker-socket-proxy
+      - .:/project                                   # this dir — compose.yml + .env
+      - edge_state:/var/lib/edge-agent
+      - ipc:/run/edge
+    ports: ["${AGENT_API_PORT}:9100"]
+    restart: unless-stopped
+    # Report HOST metrics, not the container's:
+    # pid: host
+    # volumes: [ "/proc:/host/proc:ro", "/sys:/host/sys:ro" ]
+    # environment: { HOST_PROC: /host/proc, HOST_SYS: /host/sys }
+
+  inference:
+    container_name: ${COMPOSE_PROJECT_NAME}-inference-${DEVICE_ID}
+    image: ${INFERENCE_IMAGE}
+    build:
+      context: ../backend
+      dockerfile: inference/Dockerfile.cpu
+    environment:
+      SOCKET_PATH: /run/edge/inference.sock
+      RUNTIME: ${INFERENCE_RUNTIME}
+    volumes:
+      - ipc:/run/edge
+    healthcheck:
+      test: ["CMD", "test", "-S", "/run/edge/inference.sock"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    # GPU model image also needs:
+    # runtime: nvidia
+    # deploy: { resources: { reservations: { devices: [{ capabilities: [gpu] }] } } }
+
+volumes:
+  edge_state:
+  ipc:
