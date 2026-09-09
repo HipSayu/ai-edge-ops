@@ -27,7 +27,7 @@ jobs:
         working-directory: backend
         run: |
           python -m pip install -U pip
-          pip install -e "packages/svc_core[fastapi,mqtt,dev]" \
+          pip install -e "packages/svc_core[fastapi,mqtt,redis,sqlalchemy,security,dev]" \
                       -e "libs/edge_protocol[dev]" \
                       -e "server[dev]" \
                       -e "edge_agent[dev]"
@@ -37,6 +37,10 @@ jobs:
         run: |
           ruff check packages/svc_core/src libs/edge_protocol/src server/app edge_agent/src \
                      server/tests edge_agent/tests packages/svc_core/tests
+
+      - name: Import boundaries
+        working-directory: backend/server
+        run: lint-imports
 
       - name: Pytest
         working-directory: backend

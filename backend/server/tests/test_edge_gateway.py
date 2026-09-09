@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import edge_protocol as protocol
 import pytest
 from dqh.svc_core.messaging import Envelope, InMemoryMessageBus
 
-import edge_protocol as protocol
+from app.core.ws import ws_hub
 from app.edge.gateway import AgentGateway
+from app.modules.agent import telemetry_relay
 from app.modules.agent.rules import DeviceStatus
 from app.modules.agent.schemas import DeviceCreate
 from app.modules.agent.service import AgentService
-from app.core.ws import ws_hub
-from app.modules.agent import telemetry_relay
 from app.modules.observability.repository import AlertRepository, ViolationRepository
 
 

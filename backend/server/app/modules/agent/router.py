@@ -12,7 +12,6 @@ from fastapi import APIRouter, WebSocket, status
 
 from app.api.deps import DbSession, Pagination
 from app.core.ws import ws_hub
-from app.core.ws_auth import authenticate_ws
 from app.modules.agent import telemetry_relay
 from app.modules.agent.rules import DeviceStatus
 from app.modules.agent.schemas import (
@@ -25,6 +24,7 @@ from app.modules.agent.schemas import (
     MetricSampleOut,
 )
 from app.modules.agent.service import AgentService
+from app.modules.auth.ws_auth import authenticate_ws
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 

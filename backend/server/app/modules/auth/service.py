@@ -6,9 +6,9 @@ from dqh.svc_core.contracts.errors import UnauthorizedError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.bearer_auth import permission_codes
 from app.core.password_hasher import verify_password
 from app.core.token_codec import decode_token, issue_tokens
+from app.modules.auth.bearer_auth import permission_codes
 from app.modules.auth.schemas import AuthSession, AuthTokens, UserSession
 from app.modules.user.models import User
 

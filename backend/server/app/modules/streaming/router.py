@@ -10,7 +10,7 @@ from __future__ import annotations
 from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter, Depends, Response, status
 
-from app.core.bearer_auth import require_permission
+from app.modules.auth.bearer_auth import require_permission
 from app.modules.streaming.schemas import StreamAuthCheck, StreamTokenOut
 from app.modules.streaming.service import StreamingService
 

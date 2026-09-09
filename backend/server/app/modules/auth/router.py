@@ -4,7 +4,7 @@ from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter
 
 from app.api.deps import DbSession
-from app.core.bearer_auth import CurrentUser
+from app.modules.auth.bearer_auth import CurrentUser
 from app.modules.auth.schemas import AuthSession, AuthTokens, LoginRequest, RefreshRequest, UserSession
 from app.modules.auth.service import AuthService
 

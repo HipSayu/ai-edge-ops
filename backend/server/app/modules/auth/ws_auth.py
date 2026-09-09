@@ -7,7 +7,7 @@ endpoints pass this as ``serve_ws(..., authenticate=...)``. It runs *before*
 Token source, in order: ``?token=`` query param (browsers can't set headers on
 ``new WebSocket``), then an ``Authorization: Bearer`` header. In
 ``ENVIRONMENT=local`` an anonymous socket is allowed, matching
-:func:`app.core.bearer_auth.require_permission`.
+:func:`app.modules.auth.bearer_auth.require_permission`.
 """
 
 from __future__ import annotations

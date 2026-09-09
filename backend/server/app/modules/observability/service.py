@@ -143,8 +143,8 @@ class AnalyticsService:
         self.alerts = AlertRepository(session)
 
     async def overview(self) -> OverviewKpis:
-        from app.modules.agent.service import AgentService
-        from app.modules.deployment.service import DeploymentService
+        from app.modules.agent import AgentService
+        from app.modules.deployment import DeploymentService
 
         now = utcnow()
         day_ago = now - dt.timedelta(hours=24)
