@@ -20,7 +20,29 @@ from dqh.svc_core.config import (
     MqttConfig,
     RedisConfig,
 )
-from pydantic import Field
+from pydantic import BaseModel, Field
+
+
+class ModelRegistryConfig(BaseModel):
+    """Model catalog source — an OCI registry. env: ``MODEL_REGISTRY__*``.
+
+    The model package is public (built by a separate pipeline), so ``token`` is
+    optional — only for a private package or to lift the GHCR rate limit.
+    """
+
+    host: str = "ghcr.io"
+    owner: str = ""
+    package: str = ""
+    token: str | None = None
+    ttl_s: float = 30.0
+
+    @property
+    def repo(self) -> str:
+        return f"{self.owner}/{self.package}"
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.owner and self.package)
 
 
 class Settings(BaseAppSettings):
@@ -52,6 +74,9 @@ class Settings(BaseAppSettings):
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)
     mqtt: MqttConfig = Field(default_factory=MqttConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
+
+    # --- model catalog, read live from an OCI registry (env: MODEL_REGISTRY__*)
+    model_registry: ModelRegistryConfig = Field(default_factory=ModelRegistryConfig)
 
 
 @lru_cache
