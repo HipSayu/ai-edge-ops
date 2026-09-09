@@ -42,6 +42,8 @@ class Settings(BaseAppSettings):
 
     # Edge transport: "memory" (in-process) or "mqtt"
     edge_transport: str = "memory"
+    # Browser realtime fan-out: "memory" (single replica) or "redis" (multi-replica)
+    realtime_transport: str = "memory"
 
     # WebRTC video streaming (edge -> MediaMTX -> frontend), see app/modules/streaming
     mediamtx_whip_url: str = "http://localhost:8889"

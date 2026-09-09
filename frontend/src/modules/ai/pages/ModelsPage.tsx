@@ -35,25 +35,11 @@ export default function ModelsPage() {
     e.preventDefault()
     if (!newModelName.trim()) return
 
-    const newArtifact: ModelArtifact = {
-      id: `MOD-00${models.length + 1}`,
-      name: newModelName,
-      version: newModelVersion || 'v1.0.0',
-      architecture: 'Custom-YOLO-Engine',
-      format: 'TensorRT FP16',
-      sizeMb: 38.4,
-      mAP50: 93.2,
-      latencyBenchmarkMs: 15.0,
-      inputResolution: '640×640',
-      targetHardware: 'NVIDIA Orin Series',
-      tags: ['Custom', 'Detection'],
-      registeredAt: new Date().toISOString().slice(0, 10),
-      status: 'staging'}
-
-    setModels([newArtifact, ...models])
-    setNewModelName('')
-    setNewModelVersion('')
-    setShowRegisterModal(false)
+    aiService.createModel({ name: newModelName.trim(), task: 'detection', architecture: newModelVersion.trim() || 'unknown' })
+      .then(() => aiService.listModels())
+      .then(setModels)
+      .then(() => { setNewModelName(''); setNewModelVersion(''); setShowRegisterModal(false) })
+      .catch(() => setLoadError('Unable to register model with the backend.'))
   }
 
   return (

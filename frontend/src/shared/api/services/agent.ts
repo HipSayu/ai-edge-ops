@@ -3,16 +3,30 @@ import { apiClient } from '../client'
 
 const round = (n: number, d = 0) => Math.round(n * 10 ** d) / 10 ** d
 
+const formatUptime = (seconds: number | null): string => {
+  if (!seconds || seconds < 0) return 'Unknown'
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
 const mapDevice = (device: BackendDevice, latest?: BackendMetricSample): EdgeDevice => ({
   id: String(device.id), name: device.name, hardware: device.hardware,
   status: device.status === 'provisioning' ? 'offline' : device.status,
-  ip: device.ip_address ?? 'Not assigned', agentVersion: 'Unknown', uptime: 'Unknown',
+  ip: device.ip_address ?? 'Not assigned',
+  agentVersion: device.agent_version ?? 'Unknown',
+  uptime: formatUptime(device.uptime_s),
   cpuUsage: round(latest?.cpu_percent ?? 0),
   gpuUsage: round(latest?.gpu_percent ?? 0),
   ramUsedGb: round((latest?.mem_used_mb ?? 0) / 1024, 1),
   ramTotalGb: round((latest?.mem_total_mb ?? 0) / 1024, 1),
+  diskUsage: round(latest?.disk_percent ?? 0),
   tempC: round(latest?.temperature_c ?? 0),
-  assignedCameras: 0, modelRunning: 'No model reported',
+  assignedCameras: 0,
+  modelRunning: device.active_model_version_id ? `Model v${device.active_model_version_id}` : 'No model reported',
   lastHeartbeat: device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : 'Never',
 })
 
@@ -49,9 +63,17 @@ export const agentService = {
     const device = await apiClient.get<BackendDevice>(`/agent/devices/${id}`)
     return mapDevice(device, await latestMetrics(device.id))
   },
+  listDeviceMetrics: async (deviceId: string) => {
+    const page = await apiClient.get<{ items: BackendMetricSample[] }>(
+      `/agent/devices/${deviceId}/metrics`, { query: { page_size: 100 } },
+    )
+    return page.items
+  },
   listCameras: async () => (await apiClient.get<BackendCamera[]>('/agent/cameras')).map(mapCamera),
   getCamera: async (id: string) => mapCamera(await apiClient.get<BackendCamera>(`/agent/cameras/${id}`)),
   listCameraGroups: async () => (await apiClient.get<BackendCameraGroup[]>('/agent/camera-groups')).map(mapGroup),
+  createCameraGroup: async (payload: { name: string; description?: string; site: string; camera_ids: number[] }) =>
+    mapGroup(await apiClient.post<BackendCameraGroup>('/agent/camera-groups', payload)),
   getCameraGroup: async (id: string) => mapGroup(await apiClient.get<BackendCameraGroup>(`/agent/camera-groups/${id}`)),
   listSnapshots: (cameraId?: string) => apiClient.get<unknown[]>('/agent/snapshots', { query: { cameraId } }),
 }

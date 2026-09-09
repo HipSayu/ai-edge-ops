@@ -50,6 +50,19 @@ class VisionConfig(BaseModel):
     runtime: str = "auto"  # auto (yolo if installed, else dummy) | yolo | dummy
 
 
+class TelemetryConfig(BaseModel):
+    """Fast metric stream, separate from the 15s health heartbeat.
+
+    Samples are collected every ``sample_interval_s`` and flushed as a
+    ``TelemetryPayload`` batch every ``flush_interval_s`` — the server fans
+    these out to dashboards over WebSocket without touching the database.
+    """
+
+    enabled: bool = True
+    sample_interval_s: float = 1.0
+    flush_interval_s: float = 2.0
+
+
 class InferenceConfig(BaseModel):
     weights_dir: str = "/var/lib/edge-agent/models"
     conf_threshold: float = 0.25
@@ -77,6 +90,7 @@ class AgentSettings(BaseAppSettings):
     s3: S3Config = Field(default_factory=S3Config)
     server: ServerConfig = Field(default_factory=ServerConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
+    telemetry: TelemetryConfig = Field(default_factory=TelemetryConfig)
     vision: VisionConfig = Field(default_factory=VisionConfig)
     streaming: StreamingConfig = Field(default_factory=StreamingConfig)
     cameras: list[CameraConfig] = Field(default_factory=list)

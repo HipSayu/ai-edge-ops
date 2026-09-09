@@ -3,19 +3,23 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 
+from dqh.svc_core.messaging import Envelope
 from dqh.svc_core.transports.http import ApiResponse, Page, ok
 from dqh.svc_core.transports.websocket.fastapi import serve_ws
 from fastapi import APIRouter, WebSocket, status
 
 from app.api.deps import DbSession, Pagination
 from app.core.ws import ws_hub
+from app.core.ws_auth import authenticate_ws
+from app.modules.agent import telemetry_relay
 from app.modules.agent.domain import DeviceStatus
 from app.modules.agent.schemas import (
+    AgentHealth,
     DeviceCreate,
     DeviceOut,
     DeviceUpdate,
-    AgentHealth,
     HeartbeatAck,
     HeartbeatIn,
     MetricSampleOut,
@@ -26,17 +30,39 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 
 
 # --- live updates ------------------------------------------------------------
+async def _on_telemetry_message(websocket: WebSocket, raw: str) -> None:
+    """Client -> server control frames. ``{"op":"snapshot"}`` replays the
+    current per-device values so a freshly opened socket isn't blank until the
+    next sample arrives."""
+    try:
+        op = json.loads(raw).get("op")
+    except (ValueError, AttributeError):
+        return
+    if op == "snapshot":
+        for frame in telemetry_relay.snapshot():
+            await websocket.send_text(
+                Envelope(type="telemetry.device", source="agent", payload=frame).model_dump_json()
+            )
+
+
 @router.websocket("/ws/telemetry")
 async def ws_telemetry(websocket: WebSocket) -> None:
-    """Live heartbeat feed: per-device samples (``telemetry/{device_id}``) plus a
-    agent-wide rolling average (``telemetry/agent``) recomputed on every heartbeat."""
-    await serve_ws(websocket, ws_hub, "telemetry/#")
+    """Live metric feed: per-device samples (``telemetry/{device_id}``, ~1s from
+    the edge telemetry pump) plus an agent-wide rolling aggregate
+    (``telemetry/agent``). Send ``{"op":"snapshot"}`` on connect for current state."""
+    await serve_ws(
+        websocket,
+        ws_hub,
+        "telemetry/#",
+        authenticate=authenticate_ws,
+        on_message=_on_telemetry_message,
+    )
 
 
 @router.websocket("/ws/logs")
 async def ws_logs(websocket: WebSocket) -> None:
     """Live log stream from edge agents."""
-    await serve_ws(websocket, ws_hub, "logs/#")
+    await serve_ws(websocket, ws_hub, "logs/#", authenticate=authenticate_ws)
 
 
 @router.post("/devices", response_model=ApiResponse[DeviceOut], status_code=status.HTTP_201_CREATED)

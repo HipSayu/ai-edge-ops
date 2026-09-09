@@ -23,12 +23,10 @@ import type { AnalyticsOverview } from '@/shared/api/types/observability'
 
 type ChartMetric = 'fps' | 'latency' | 'detections'
 
-const DETECTION_CLASSES: { name: string; pct: number; count: number; color: string }[] = []
-
 export default function Overview() {
   const [activeMetric, setActiveMetric] = useState<ChartMetric>('fps')
-  const [telemetry] = useState<{ time: string; fps: number; latency: number; detections: number }[]>([])
-  const [totalDetections] = useState(0)
+  const [telemetry, setTelemetry] = useState<{ time: string; fps: number; latency: number; detections: number }[]>([])
+  const [detectionClasses, setDetectionClasses] = useState<{ name: string; pct: number; count: number; color: string }[]>([])
   const [analyticsOverview, setAnalyticsOverview] = useState<AnalyticsOverview | null>(null)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [hoveredClass, setHoveredClass] = useState<number | null>(null)
@@ -40,11 +38,31 @@ export default function Overview() {
   const gradId = useId()
 
   useEffect(() => {
-    agentService.listDevices().then(setDeviceStats).catch(() => setDeviceStats([]))
+    agentService.listDevices().then(async (devices) => {
+      setDeviceStats(devices)
+      const metrics = (await Promise.all(devices.map((device) => agentService.listDeviceMetrics(device.id))))
+        .flat()
+        .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
+      setTelemetry(metrics.map((metric) => ({
+        time: new Date(metric.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fps: metric.fps ?? 0,
+        latency: metric.inference_latency_ms ?? 0,
+        detections: 0,
+      })))
+    }).catch(() => { setDeviceStats([]); setTelemetry([]) })
     agentService.listCameras().then(setCameras).catch(() => setCameras([]))
     aiService.listDeployments().then(setDeployments).catch(() => setDeployments([]))
     observabilityService.listIncidents().then(setIncidents).catch(() => setIncidents([]))
     observabilityService.getAnalyticsOverview().then(setAnalyticsOverview).catch(() => setAnalyticsOverview(null))
+    observabilityService.getViolationsByType().then((rows) => {
+      const total = rows.reduce((sum, row) => sum + row.count, 0)
+      setDetectionClasses(rows.map((row, index) => ({
+        name: row.label,
+        count: row.count,
+        pct: total === 0 ? 0 : (row.count / total) * 100,
+        color: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5],
+      })))
+    }).catch(() => setDetectionClasses([]))
   }, [])
 
   // Compute metrics for the active stream
@@ -102,7 +120,7 @@ export default function Overview() {
   const CIRCUMFERENCE = 2 * Math.PI * DONUT_R
 
   let cumulativePct = 0
-  const donutSlices = DETECTION_CLASSES.map((item, idx) => {
+  const donutSlices = detectionClasses.map((item, idx) => {
     const strokeDasharray = `${(item.pct / 100) * CIRCUMFERENCE} ${CIRCUMFERENCE}`
     const strokeDashoffset = -((cumulativePct / 100) * CIRCUMFERENCE)
     cumulativePct += item.pct
@@ -119,16 +137,16 @@ export default function Overview() {
       <div className="av-kpi-row">
         <KpiCard
           label="Total Detections"
-          value={(analyticsOverview?.violations_24h ?? totalDetections).toLocaleString()}
+          value={(analyticsOverview?.violations_24h ?? 0).toLocaleString()}
           sub="Real-time Stream"
           icon={<Activity size={22} />}
           iconBg="rgba(59, 130, 246, 0.12)"
           iconColor="#2563eb"
-          deltaText="12.8% vs last hr"
+          deltaText="From backend analytics"
           isUp={true}
           chartType="sparkline"
           chartColor="#2563eb"
-          chartData={[12, 16, 14, 22, 18, 28, 22, 30]}
+          chartData={telemetry.map((point) => point.detections)}
         />
         <KpiCard
           label="Edge Agent"
@@ -137,37 +155,37 @@ export default function Overview() {
           icon={<Truck size={22} />}
           iconBg="rgba(16, 185, 129, 0.12)"
           iconColor="#10b981"
-          deltaText="0% vs last hr"
+          deltaText="Current online status"
           isUp={true}
           chartType="sparkline"
           chartColor="#10b981"
-          chartData={[18, 22, 19, 25, 23, 29, 24, 28]}
+          chartData={deviceStats.map((device) => device.cpuUsage)}
         />
         <KpiCard
           label="Live Cameras"
           value={`${onlineCameras} / ${cameras.length}`}
-          sub="30 FPS avg"
+          sub="Backend camera status"
           icon={<Camera size={22} />}
           iconBg="rgba(168, 85, 247, 0.12)"
           iconColor="#9333ea"
-          deltaText="2.4% vs last hr"
+          deltaText="Current online status"
           isUp={true}
           chartType="sparkline"
           chartColor="#9333ea"
-          chartData={[10, 16, 13, 22, 18, 26, 23, 29]}
+          chartData={cameras.map((camera) => camera.runtime.fps)}
         />
         <KpiCard
           label="Inference Latency"
           value={analyticsOverview?.avg_inference_latency_ms != null ? `${analyticsOverview.avg_inference_latency_ms.toFixed(1)} ms` : '—'}
-          sub="TensorRT FP16"
+          sub="Backend average"
           icon={<Zap size={22} />}
           iconBg="rgba(245, 158, 11, 0.14)"
           iconColor="#d97706"
-          deltaText="4.1% vs last hr"
+          deltaText="Backend average"
           isUp={false}
           chartType="sparkline"
           chartColor="#f59e0b"
-          chartData={[22, 26, 19, 28, 22, 29, 25, 31]}
+          chartData={telemetry.map((point) => point.latency)}
         />
         <KpiCard
           label="Security Incidents"
@@ -177,50 +195,50 @@ export default function Overview() {
           icon={<ShieldAlert size={22} />}
           iconBg="rgba(239, 68, 68, 0.12)"
           iconColor="#ef4444"
-          deltaText="15% vs last hr"
+          deltaText="Current alert count"
           isUp={false}
           chartType="bars"
           chartColor="#ef4444"
-          chartData={[6, 12, 18, 10, 16, 26, 22]}
+          chartData={incidents.map((incident) => incident.confidence)}
         />
         <KpiCard
           label="Agent Health"
-          value="99.4%"
+          value={deviceStats.length === 0 ? '—' : `${((onlineDevices / deviceStats.length) * 100).toFixed(1)}%`}
           sub="Optimal Status"
           icon={<Heart size={22} />}
           iconBg="rgba(56, 189, 248, 0.14)"
           iconColor="#0284c7"
-          deltaText="0.8% vs last hr"
+          deltaText="Online devices"
           isUp={true}
           chartType="bars"
           chartColor="#38bdf8"
-          chartData={[20, 22, 24, 21, 23, 25, 22, 24, 26, 25, 23, 26]}
+          chartData={deviceStats.map((device) => device.status === 'online' ? 1 : 0)}
         />
         <KpiCard
           label="Bandwidth Usage"
-          value="1.42 GB/s"
+          value="—"
           sub="Edge to Cloud"
           icon={<Radio size={22} />}
           iconBg="rgba(236, 72, 153, 0.12)"
           iconColor="#ec4899"
-          deltaText="1.2% vs last hr"
+          deltaText="Not provided by backend"
           isUp={true}
           chartType="sparkline"
           chartColor="#ec4899"
-          chartData={[12, 14, 13, 16, 15, 18, 14, 15]}
+          chartData={[]}
         />
         <KpiCard
           label="Avg GPU Load"
-          value="78%"
+          value={deviceStats.length === 0 ? '—' : `${(deviceStats.reduce((sum, device) => sum + device.gpuUsage, 0) / deviceStats.length).toFixed(1)}%`}
           sub="Compute Capacity"
           icon={<Cpu size={22} />}
           iconBg="rgba(14, 165, 233, 0.12)"
           iconColor="#0ea5e9"
-          deltaText="4.5% vs last hr"
+          deltaText="Current device average"
           isUp={true}
           chartType="sparkline"
           chartColor="#0ea5e9"
-          chartData={[65, 68, 70, 62, 75, 74, 76, 78]}
+          chartData={deviceStats.map((device) => device.gpuUsage)}
         />
       </div>
 
@@ -507,17 +525,17 @@ export default function Overview() {
                   }}
                 >
                   <span className="av-mono" style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
-                    {hoveredClass !== null ? `${DETECTION_CLASSES[hoveredClass].pct}%` : `${totalDetections.toLocaleString()}`}
+                    {hoveredClass !== null ? `${detectionClasses[hoveredClass].pct.toFixed(1)}%` : `${(analyticsOverview?.violations_24h ?? 0).toLocaleString()}`}
                   </span>
                   <span style={{ fontSize: 10, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {hoveredClass !== null ? DETECTION_CLASSES[hoveredClass].name.split(' ')[0] : 'Total Live'}
+                    {hoveredClass !== null ? detectionClasses[hoveredClass].name.split(' ')[0] : 'Total Live'}
                   </span>
                 </div>
               </div>
 
               {/* Legend List */}
               <div className="av-donut-legend">
-                {DETECTION_CLASSES.map((item, idx) => (
+                {detectionClasses.map((item, idx) => (
                   <div
                     key={idx}
                     className="av-donut-legend-item"

@@ -66,6 +66,11 @@ class EdgeLink:
             p.TOPIC_STATE.render(device_id=self.device_id), p.T_HEARTBEAT, payload
         )
 
+    async def send_telemetry(self, payload: p.TelemetryPayload) -> None:
+        await self._publish(
+            p.TOPIC_TELEMETRY.render(device_id=self.device_id), p.T_TELEMETRY, payload
+        )
+
     async def send_violation(self, payload: p.ViolationPayload) -> None:
         await self._publish(
             p.TOPIC_EVENTS.render(device_id=self.device_id), p.T_VIOLATION, payload

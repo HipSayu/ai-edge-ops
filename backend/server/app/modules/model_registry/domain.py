@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.shared.helpers.enums import StrEnum
+from dqh.svc_core.helpers.str_enum import StrEnum
 
 
 class ModelTask(StrEnum):

@@ -8,6 +8,14 @@ export default function MonitoringPage() {
   const [timeline, setTimeline] = useState<MonitoringPoint[]>([])
   useEffect(() => { observabilityService.getMonitoringTimeline().then(setTimeline).catch(() => setTimeline([])) }, [])
   const [timeRange, setTimeRange] = useState('24h')
+  const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+  const gpuAverage = average(timeline.map((point) => point.gpuAvg))
+  const cpuAverage = average(timeline.map((point) => point.cpuAvg))
+  const fpsAverage = average(timeline.map((point) => point.fpsAvg))
+  const latencyP95 = average(timeline.map((point) => point.latencyP95))
+  const ramAverage = average(timeline.map((point) => point.ramAvg))
+  const networkAverage = average(timeline.map((point) => point.networkMbps))
+  const formatMetric = (value: number | null, suffix = '') => value == null ? '—' : `${value.toFixed(1)}${suffix}`
 
   return (
     <div className="av-page-layout">
@@ -35,7 +43,7 @@ export default function MonitoringPage() {
               <Cpu size={14} color="var(--accent)" />
               <span>Agent GPU Utilization (%)</span>
             </span>
-            <span className="av-panel-sub av-mono">Avg: 68%</span>
+            <span className="av-panel-sub av-mono">Avg: {formatMetric(gpuAverage, '%')}</span>
           </div>
           <MiniTimeSeries
             title="GPU Utilization"
@@ -51,7 +59,7 @@ export default function MonitoringPage() {
               <Cpu size={14} color="var(--warning)" />
               <span>CPU Core Utilization (%)</span>
             </span>
-            <span className="av-panel-sub av-mono">Avg: 42%</span>
+            <span className="av-panel-sub av-mono">Avg: {formatMetric(cpuAverage, '%')}</span>
           </div>
           <MiniTimeSeries
             title="CPU Core Load"
@@ -67,7 +75,7 @@ export default function MonitoringPage() {
               <Zap size={14} color="var(--good)" />
               <span>Aggregate Inference Throughput (FPS)</span>
             </span>
-            <span className="av-panel-sub av-mono">Mean: 28.5 FPS</span>
+            <span className="av-panel-sub av-mono">Mean: {formatMetric(fpsAverage, ' FPS')}</span>
           </div>
           <MiniTimeSeries
             title="Inference Speed"
@@ -83,7 +91,7 @@ export default function MonitoringPage() {
               <Clock size={14} color="var(--critical)" />
               <span>P95 End-to-End Latency (ms)</span>
             </span>
-            <span className="av-panel-sub av-mono">P95: 25.4ms</span>
+            <span className="av-panel-sub av-mono">P95: {formatMetric(latencyP95, 'ms')}</span>
           </div>
           <MiniTimeSeries
             title="P95 Latency"
@@ -99,7 +107,7 @@ export default function MonitoringPage() {
               <HardDrive size={14} color="var(--info)" />
               <span>RAM / Unified Memory (%)</span>
             </span>
-            <span className="av-panel-sub av-mono">Avg: 59%</span>
+            <span className="av-panel-sub av-mono">Avg: {formatMetric(ramAverage, '%')}</span>
           </div>
           <MiniTimeSeries
             title="Memory Allocated"
@@ -115,7 +123,7 @@ export default function MonitoringPage() {
               <ArrowDownUp size={14} color="#8b5cf6" />
               <span>Network Ingress / Streaming (Mbps)</span>
             </span>
-            <span className="av-panel-sub av-mono">Bandwidth: 48 Mbps</span>
+            <span className="av-panel-sub av-mono">Bandwidth: {formatMetric(networkAverage, ' Mbps')}</span>
           </div>
           <MiniTimeSeries
             title="Network Throughput"

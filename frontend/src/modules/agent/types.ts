@@ -28,6 +28,7 @@ export interface EdgeDevice {
   gpuUsage: number
   ramUsedGb: number
   ramTotalGb: number
+  diskUsage: number
   tempC: number
   assignedCameras: number
   modelRunning: string

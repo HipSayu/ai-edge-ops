@@ -5,13 +5,13 @@ from __future__ import annotations
 import datetime as dt
 
 from dqh.svc_core.contracts.errors import ConflictError, NotFoundError
+from dqh.svc_core.helpers.time import utcnow
 from dqh.svc_core.transports.http import Page
 from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.events import event_bus
-from app.shared.helpers.time import utcnow
 from app.modules.agent.domain import DeviceStatus, evaluate_status
 from app.modules.agent.event import (
     DeviceLatencyDegraded,
@@ -67,15 +67,19 @@ class AgentService:
         device = await self.get_device(device_id)
         now = utcnow()
         recorded_at = hb.recorded_at or now
+        _DEVICE_FIELDS = {"agent_version", "ip_address", "uptime_s", "active_model_version_id"}
         sample = MetricSample(
             device_id=device_id,
             recorded_at=recorded_at,
-            **hb.model_dump(exclude={"recorded_at"}),
+            **hb.model_dump(exclude={"recorded_at", *_DEVICE_FIELDS}),
         )
         await self.metrics.add(sample)
 
         previous = device.status
         device.last_seen_at = recorded_at
+        for field in _DEVICE_FIELDS:
+            if (value := getattr(hb, field)) is not None:
+                setattr(device, field, value)
         device.status = evaluate_status(
             last_seen_at=recorded_at,
             now=now,
@@ -102,6 +106,7 @@ class AgentService:
                 mem_percent=hb.mem_percent,
                 mem_used_mb=hb.mem_used_mb,
                 mem_total_mb=hb.mem_total_mb,
+                disk_percent=hb.disk_percent,
                 temperature_c=hb.temperature_c,
                 fps=hb.fps,
                 inference_latency_ms=hb.inference_latency_ms,

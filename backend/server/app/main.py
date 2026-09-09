@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+from dqh.svc_core.middleware.logging import configure_logging
 from dqh.svc_core.transports.http.fastapi import create_app as svc_create_app
 from fastapi import FastAPI
 from sqlalchemy import text
@@ -14,7 +15,6 @@ from sqlalchemy import text
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import init_db, session_scope
-from app.core.logging import configure_logging
 from app.core.ws import ws_hub
 from app.edge.runtime import EdgePlane
 from app.modules import register_event_handlers

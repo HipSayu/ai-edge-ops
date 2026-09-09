@@ -1,6 +1,6 @@
 """Observability domain enums."""
 
-from app.shared.helpers.enums import StrEnum
+from dqh.svc_core.helpers.str_enum import StrEnum
 
 
 class AlertSeverity(StrEnum):

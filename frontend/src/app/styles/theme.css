@@ -151,6 +151,39 @@
   min-width: 0;
   max-width: 1680px;
   width: 100%;
+  position: relative;
+}
+
+.av-route-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(2px);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  animation: av-fade-in 0.12s ease-out;
+}
+
+.av-route-loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: left;
+  background: var(--accent);
+  animation: av-route-loading-progress 0.35s ease-out forwards;
+}
+
+@keyframes av-route-loading-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .av-page-layout {

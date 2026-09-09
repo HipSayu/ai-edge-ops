@@ -1,5 +1,6 @@
 export interface ModelArtifact {
   id: string
+  versionId?: string
   name: string
   version: string
   architecture: string

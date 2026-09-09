@@ -3,6 +3,7 @@ import { Plus, RotateCcw, RotateCw } from 'lucide-react'
 import { type Deployment } from '@/modules/ai/types'
 import type { ModelArtifact } from '@/modules/ai/types'
 import { aiService } from '@/shared/api/services/ai'
+import { agentService } from '@/shared/api/services/agent'
 
 export default function DeploymentsPage() {
   const [deployments, setDeployments] = useState<Deployment[]>([])
@@ -10,6 +11,7 @@ export default function DeploymentsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showDeployModal, setShowDeployModal] = useState(false)
   const [models, setModels] = useState<ModelArtifact[]>([])
+  const [devices, setDevices] = useState<{ id: string; name: string }[]>([])
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedVersion, setSelectedVersion] = useState('')
   const [selectedStrategy, setSelectedStrategy] = useState<'Rolling Update' | 'Canary (20%)' | 'Immediate'>('Rolling Update')
@@ -21,6 +23,8 @@ export default function DeploymentsPage() {
       .catch(() => setLoadError('Unable to load deployments from the backend.'))
       .finally(() => setIsLoading(false))
   }, [])
+
+  useEffect(() => { agentService.listDevices().then(setDevices).catch(() => setDevices([])) }, [])
 
   useEffect(() => {
     aiService.listModels().then((items) => {
@@ -50,22 +54,17 @@ export default function DeploymentsPage() {
 
   function handleCreateDeploy(e: React.FormEvent) {
     e.preventDefault()
-    const newDep: Deployment = {
-      id: `DEP-${Math.floor(8400 + Math.random() * 100)}`,
-      modelName: selectedModel,
-      modelVersion: selectedVersion,
-      targetDevices: ['EDGE-NX-01', 'EDGE-AGX-02'],
-      strategy: selectedStrategy,
-      status: 'In Progress',
-      progressPct: 15,
-      deployedBy: 'Hop Do (Lead Operations)',
-      deployedAt: 'Just now',
-      rollbackVersion: 'v2.0.0'}
-
-    setDeployments([newDep, ...deployments])
-    setShowDeployModal(false)
-    setActionNotice(`Deployment ${newDep.id} queued for target nodes`)
-    setTimeout(() => setActionNotice(null), 3500)
+    const model = models.find((item) => item.name === selectedModel)
+    const device = devices[0]
+    if (!model?.versionId || !device) {
+      setActionNotice('Select a model version and ensure an edge device is available.')
+      return
+    }
+    aiService.createDeployment({ device_id: Number(device.id), model_version_id: Number(model.versionId), config: { strategy: selectedStrategy } })
+      .then(() => aiService.listDeployments())
+      .then(setDeployments)
+      .then(() => { setShowDeployModal(false); setActionNotice('Deployment queued by backend.'); setTimeout(() => setActionNotice(null), 3500) })
+      .catch(() => setActionNotice('Unable to create deployment with the backend.'))
   }
 
   return (

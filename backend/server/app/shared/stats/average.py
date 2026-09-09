@@ -1,4 +1,4 @@
-"""Small statistics helpers."""
+"""Mean of a list, or ``None`` when empty."""
 
 from __future__ import annotations
 

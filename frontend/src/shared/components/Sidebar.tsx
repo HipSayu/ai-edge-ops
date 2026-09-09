@@ -10,10 +10,6 @@ import {
   Rocket,
   Target,
   Tags,
-  Activity,
-  AlertTriangle,
-  Zap,
-  Terminal,
   Users,
   Settings as SettingsIcon,
   ClipboardList,
@@ -60,15 +56,6 @@ const NAVIGATION_GROUPS: NavGroup[] = [
       { to: '/ai/deployments', label: 'Deployments', icon: Rocket, badge: '1', dotColor: 'blue' },
       { to: '/ai/inference', label: 'Inference', icon: Target },
       { to: '/ai/class-config', label: 'Class Config', icon: Tags },
-    ],
-  },
-  {
-    title: 'OBSERVABILITY',
-    items: [
-      { to: '/observability/monitoring', label: 'Monitoring', icon: Activity },
-      { to: '/observability/alerts', label: 'Alerts', icon: AlertTriangle, badge: '3', dotColor: 'red' },
-      { to: '/observability/events', label: 'Events', icon: Zap },
-      { to: '/observability/logs', label: 'Logs', icon: Terminal },
     ],
   },
   {

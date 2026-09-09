@@ -1,8 +1,18 @@
-"""Edge host metrics helpers."""
+"""Edge host metrics — **whole-machine**, not this process.
+
+``psutil.cpu_percent`` / ``virtual_memory`` / ``disk_usage`` are already
+system-wide. The one caveat is containers: psutil then sees the container's
+namespaced view. Run the agent natively on the device, or mount the host's
+procfs/sysfs and point psutil at them:
+
+    docker run -v /proc:/host/proc:ro -v /sys:/host/sys:ro \
+               -e HOST_PROC=/host/proc -e HOST_SYS=/host/sys ...
+"""
 
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 
@@ -13,6 +23,12 @@ from dqh.svc_core.helpers.time import utcnow
 from edge_agent.core.hardware import Hardware
 
 logger = logging.getLogger("edge_agent.metrics")
+
+# Point psutil at the host's procfs/sysfs when running containerised (no-op otherwise).
+if _host_proc := os.getenv("HOST_PROC"):
+    psutil.PROCFS_PATH = _host_proc
+if _host_sys := os.getenv("HOST_SYS"):
+    os.environ.setdefault("HOST_SYS", _host_sys)  # psutil reads this for sensors on Linux
 
 
 def _gpu_stats() -> tuple[float | None, float | None]:
@@ -44,14 +60,25 @@ def _gpu_stats() -> tuple[float | None, float | None]:
         return None, None
 
 
-def collect_metrics(*, hardware: Hardware | None = None) -> p.HeartbeatPayload:
-    temperatures = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
-    temperature = next((item.current for group in temperatures.values() for item in group), None)
+def _cpu_temp() -> float | None:
+    if not hasattr(psutil, "sensors_temperatures"):
+        return None
+    groups = psutil.sensors_temperatures()
+    # prefer a CPU/SoC package sensor, else the first reading available
+    for key in ("coretemp", "cpu_thermal", "k10temp", "soc", "thermal"):
+        if key in groups and groups[key]:
+            return groups[key][0].current
+    return next((item.current for group in groups.values() for item in group), None)
 
+
+def collect_metrics(*, hardware: Hardware | None = None) -> p.HeartbeatPayload:
     vmem = psutil.virtual_memory()
+    disk = psutil.disk_usage("/")
+
     gpu_percent, gpu_temp = (None, None)
     if hardware is None or hardware.has_cuda:
         gpu_percent, gpu_temp = _gpu_stats()
+    cpu_temp = _cpu_temp()
 
     capabilities = None
     if hardware is not None:
@@ -71,7 +98,8 @@ def collect_metrics(*, hardware: Hardware | None = None) -> p.HeartbeatPayload:
         mem_percent=vmem.percent,
         mem_used_mb=round(vmem.used / 1024 / 1024, 1),
         mem_total_mb=round(vmem.total / 1024 / 1024, 1),
-        temperature_c=temperature if temperature is not None else gpu_temp,
+        disk_percent=disk.percent,
+        temperature_c=cpu_temp if cpu_temp is not None else gpu_temp,
         capabilities=capabilities,
         recorded_at=utcnow(),
     )

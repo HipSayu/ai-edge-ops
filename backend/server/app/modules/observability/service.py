@@ -5,14 +5,14 @@ from __future__ import annotations
 import datetime as dt
 
 from dqh.svc_core.contracts.errors import NotFoundError
+from dqh.svc_core.helpers.time import utcnow
 from dqh.svc_core.transports.http import Page
 from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
-from app.shared.helpers.time import utcnow
-from app.modules.observability.event import AlertRaised, ViolationRecorded
 from app.modules.observability.domain import AlertSeverity, AlertStatus, AlertType
+from app.modules.observability.event import AlertRaised, ViolationRecorded
 from app.modules.observability.models import Alert, Violation
 from app.modules.observability.repository import AlertRepository, ViolationRepository
 from app.modules.observability.schemas import (
@@ -143,8 +143,8 @@ class AnalyticsService:
         self.alerts = AlertRepository(session)
 
     async def overview(self) -> OverviewKpis:
-        from app.modules.deployment.service import DeploymentService
         from app.modules.agent.service import AgentService
+        from app.modules.deployment.service import DeploymentService
 
         now = utcnow()
         day_ago = now - dt.timedelta(hours=24)
