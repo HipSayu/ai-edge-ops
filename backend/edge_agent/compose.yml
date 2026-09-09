@@ -1,9 +1,18 @@
-# Edge-node service. Pulled into the root stack via `include:` under the `edge`
-# profile — for a local end-to-end demo alongside the server:
+# Edge-node stack: the agent (host supervisor) + the inference container it swaps
+# on every model deploy.
+#
+# Local end-to-end demo alongside the server (from the repo root):
 #   docker compose --profile edge up --build edge-agent
 #
-# On a real device (Jetson) run this file standalone, pointing at a central broker:
-#   cd backend/edge_agent && DEVICE_ID=1 MQTT__HOST=<broker> docker compose up -d
+# Real device: copy this file to the box, set DEVICE_ID / MQTT__HOST, and
+#   docker compose up -d
+# The agent then runs `docker compose pull inference && up -d --wait inference`
+# itself on a T_DEPLOY_MODEL command (it rewrites INFERENCE_IMAGE in ./.env).
+#
+# The container-network values (MQTT__HOST: mqtt, SERVER__BASE_URL: http://server)
+# are hardcoded on purpose — `docker compose include:` auto-loads this dir's .env
+# as the *substitution* context, so `${MQTT__HOST:-mqtt}` would resolve to the
+# bare-metal ".env" value instead of the fallback.
 services:
   edge-agent:
     container_name: ai-edge-ops-edge-agent-${DEVICE_ID:-edge-dev-1}
@@ -12,17 +21,6 @@ services:
     build:
       context: ..                 # = backend/
       dockerfile: edge_agent/Dockerfile
-    # NOTE: deliberately no `env_file: .env` here. `.env` next to this file is
-    # for running the agent bare-metal on the host (where "localhost" is
-    # correct — db/mqtt/server ports are published to the host).
-    #
-    # Also deliberately NOT using `${MQTT__HOST:-mqtt}`-style substitution for
-    # the container-network values below: `docker compose include:` auto-loads
-    # this directory's `.env` as the *substitution* context for this file
-    # (independent of `env_file:`), so `${MQTT__HOST:-mqtt}` would silently
-    # resolve to that .env's "localhost" instead of the "mqtt" fallback —
-    # exactly the bug that caused this container to loop-crash. These are
-    # hardcoded on purpose; they must always be the container hostnames.
     environment:
       DEVICE_ID: ${DEVICE_ID:-edge-dev-1}
       TRANSPORT: mqtt
@@ -30,24 +28,46 @@ services:
       MQTT__PORT: "1883"
       MQTT__TLS: "false"
       SERVER__BASE_URL: http://server:8000/api/v1
-      INFERENCE__WEIGHTS_DIR: /var/lib/edge-agent/models
-      CAMERAS: '[{"id":"bay-1","source":"0","zone":"loading-bay","enabled":true,"fps_limit":10,"loop":false}]'
+      INFERENCE_SOCKET: /run/edge/inference.sock
+      COMPOSE__PROJECT_DIR: /project
+      COMPOSE__ENV_FILE: /project/.env
+      CAMERAS: '[{"id":"bay-1","source":"0","zone":"loading-bay","enabled":true,"fps_limit":10}]'
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # real device: use docker-socket-proxy
+      - .:/project                                   # so the agent can run `docker compose`
       - edge_state:/var/lib/edge-agent
-      - ./weights:/var/lib/edge-agent/models:ro
+      - ipc:/run/edge
     ports: ["9100:9100"]
     restart: unless-stopped
-    # Real device: report the HOST machine's metrics, not the container's
+    # Real device: report HOST metrics, not the container's
     # pid: host
-    # volumes:
-    #   - /proc:/host/proc:ro
-    #   - /sys:/host/sys:ro
-    # environment:
-    #   HOST_PROC: /host/proc
-    #   HOST_SYS: /host/sys
-    # Jetson: uncomment for GPU + camera passthrough
+    # volumes: [ "/proc:/host/proc:ro", "/sys:/host/sys:ro" ]
+    # environment: { HOST_PROC: /host/proc, HOST_SYS: /host/sys }
+
+  inference:
+    container_name: ai-edge-ops-inference-${DEVICE_ID:-edge-dev-1}
+    # Swapped by the agent per model deploy; default = a runtime that emits
+    # placeholder detections so the stack comes up before the first deploy.
+    image: ${INFERENCE_IMAGE:-ai-edge-ops/inference:dev}
+    profiles: ["edge"]
+    build:
+      context: ..
+      dockerfile: inference/Dockerfile.cpu
+    environment:
+      SOCKET_PATH: /run/edge/inference.sock
+      RUNTIME: ${INFERENCE_RUNTIME:-dummy}
+    volumes:
+      - ipc:/run/edge
+    healthcheck:
+      test: ["CMD", "test", "-S", "/run/edge/inference.sock"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    # GPU model image also needs:
     # runtime: nvidia
-    # devices: ["/dev/video0:/dev/video0"]
+    # deploy: { resources: { reservations: { devices: [{ capabilities: [gpu] }] } } }
 
 volumes:
   edge_state:
+  ipc:

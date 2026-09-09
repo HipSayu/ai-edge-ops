@@ -1,4 +1,4 @@
-# Build context = backend/ (see edge_agent/compose.example.yml).
+# Build context = backend/ (see edge_agent/compose.yml).
 # The agent is the host supervisor: MQTT link, control/reconcile, telemetry, and
 # it drives `docker compose` to deploy the model image as the `inference` service
 # — so it needs the docker CLI + compose plugin and the docker socket mounted.
