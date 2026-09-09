@@ -4,29 +4,39 @@ Ngày lập: 2026-09-09. Mục tiêu: (a) nhấc hạ tầng thuần từ `backe
 `backend/packages/svc_core` (`dqh.svc_core`), (b) chuẩn hoá module contract của
 server, (c) áp rule code-style mới.
 
-## Trạng thái (branch `refactor/svc-core-extract-1`)
+## Trạng thái (branch `refactor/svc-core-extract-1`, 10 commit `8dab862..ce01015`)
 
-| Commit | Nội dung |
+| Commit (server / svc_core) | Nội dung |
 |---|---|
-| server `8dab862` + svc_core `509663d` | PR1 — EventBus + StrEnum + configure_logging (1.1/1.2/1.6) |
-| server `47249b8` | PR2.1 — ModuleRegistry auto-discovery + observability subscribers wired |
-| server `9d62577` + svc_core `cac594a` | PR1.3 — RedisPubSubMessageBus → svc_core `[redis]` |
-| server `0977400` + svc_core `b48bed4` | PR1.4 — persistence: Base/EngineFactory/BaseRepository/TimestampMixin/DbEnum → svc_core `[sqlalchemy]` |
-| server `ad68dd5` + svc_core `566cc78` | PR1.5 — auth split: PasswordHasher/TokenCodec → svc_core `[security]`; app `bearer_auth.py` |
+| `8dab862` / `509663d` | PR1 — EventBus + StrEnum + configure_logging (1.1/1.2/1.6) |
+| `47249b8` / — | PR2.1 — `ModuleRegistry` auto-discovery; gộp handlers/integration/realtime → `subscribers.py` (class); **wire lại observability subscribers vốn chưa từng chạy** |
+| `9d62577` / `cac594a` | PR1.3 — `RedisPubSubMessageBus` → svc_core `[redis]`; app `RealtimeBusFactory` |
+| `0977400` / `b48bed4` | PR1.4 — persistence: `Base`/`EngineFactory`/`BaseRepository`/`TimestampMixin`/`DbEnum` → svc_core `[sqlalchemy]` |
+| `ad68dd5` / `566cc78` | PR1.5 — `PasswordHasher`/`TokenCodec`/`TokenError` → svc_core `[security]`; app tách `password_hasher.py`/`token_codec.py`/`bearer_auth.py` |
+| `0ed653a` / — | PR2.2 — `modules/*/domain.py` → `rules.py` (agent/deployment/model_registry/observability) |
+| `a4fea82` / — | PR2.3 — `class AuthService` tách khỏi `auth/router.py` |
+| `ee93407` / `36cd7e2` | PR4.1 — xoá `app/domain/`: presence → `modules/agent/presence_*`, reconcile → svc_core `[reconcile]` 0.6.0 |
+| `ce01015` / — | PR4.2 — `bearer_auth`/`ws_auth` → `modules/auth/`; sửa cross-module reach-in; **`.importlinter` 3 contract xanh**; CI chạy `lint-imports` |
 
-**PHẦN 1 (extract → svc_core) + 1.7 (pyproject) + 2.1 (subscribers): XONG.**
-svc_core 0.1.0 → 0.5.0, 41 test pass. server: 24 pass / 3 fail.
+**XONG:** PHẦN 1 đầy đủ (1.1–1.7), PHẦN 2 (rename + AuthService), PHẦN 4 (dời
+`app/domain/` + import-linter). svc_core **0.1.0 → 0.6.0, 46 test pass**. server
+**20 pass / 3 fail**.
 
-**3 test đỏ CÒN LẠI = bug có sẵn trong WIP chưa commit, KHÔNG do refactor:**
-- `test_edge_gateway::test_violation_over_bus_records_and_alerts` — violation
-  không được route qua bus (edge_protocol/gateway WIP đang dở)
-- `test_api_smoke::test_violation_flow_creates_alert_and_shows_in_analytics` — cùng gốc
+**3 test đỏ = bug có sẵn trong WIP chưa commit, KHÔNG do refactor** (đã xác minh:
+revert sạch mọi thay đổi refactor → vẫn đỏ đúng 3 test):
+- `test_edge_gateway::test_violation_over_bus_records_and_alerts` + `test_api_smoke::test_violation_flow…`
+  — violation không route qua bus (edge_protocol/gateway WIP đang dở)
 - `test_ws_alerts::test_alert_raised_is_pushed_over_websocket` — WS đóng khi connect
-  (ws-auth trong `observability/router.py` WIP)
-Đã xác minh: revert sạch mọi thay đổi refactor → vẫn đúng 3 test này đỏ.
+  (ws-auth WIP trong `observability/router.py`)
 
-**Còn lại:** PHẦN 2 (module contract: rename domain.py→rules.py, khuôn đồng nhất),
-PHẦN 3 (xẻ edge gateway), PHẦN 4 (import-linter + workspace).
+**KHÔNG làm / hoãn:**
+- PHẦN 3 (xẻ edge gateway) — **user huỷ**, giữ nguyên `app/edge/gateway.py`.
+- `[tool.uv.workspace]` ở root — hoãn: mỗi member phải đổi `[tool.uv.sources]`
+  sang `{ workspace = true }` (đụng `edge_agent` + `ai_core` đang có WIP). Làm khi
+  động vào 2 package đó. Hiện `[tool.uv.sources]` path/editable ở từng package vẫn chạy tốt.
+- Thêm `repository.py` cho camera/system/user/streaming — bỏ: các service này
+  query 1–2 dòng inline, thêm lớp repo là ceremony thuần, rủi ro > lợi. `auth` +
+  `access_control` là nền IAM (không nằm trong contract "feature module độc lập").
 
 ---
 
