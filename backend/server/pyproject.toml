@@ -20,8 +20,8 @@ dependencies = [
 
 # local monorepo packages — installed editable (see Dockerfile / README)
 [tool.uv.sources]
-dqh-svc-core = { path = "../packages/svc_core", editable = true }
-edge-protocol = { path = "../libs/edge_protocol", editable = true }
+dqh-svc-core = { workspace = true }
+edge-protocol = { workspace = true }
 
 [project.optional-dependencies]
 dev = [

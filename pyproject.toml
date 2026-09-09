@@ -1,5 +1,22 @@
 [project]
 name = "app"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = []
+
+# One `uv sync` from the repo root builds every backend package into a single
+# environment with a shared lockfile. Each package is still independently usable
+# (its own pyproject, tests, and `uv run`).
+[tool.uv.workspace]
+members = [
+    "backend/server",
+    "backend/edge_agent",
+    "backend/libs/edge_protocol",
+    "backend/packages/svc_core",
+    "backend/packages/ai_core",
+]
+
+[tool.uv.sources]
+dqh-svc-core = { workspace = true }
+dqh-ai-core = { workspace = true }
+edge-protocol = { workspace = true }
