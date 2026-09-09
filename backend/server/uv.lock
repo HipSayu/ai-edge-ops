@@ -16,13 +16,12 @@ dependencies = [
     { name = "alembic" },
     { name = "argon2-cffi" },
     { name = "asyncpg" },
-    { name = "dqh-svc-core", extra = ["fastapi", "mqtt"] },
+    { name = "dqh-svc-core", extra = ["fastapi", "mqtt", "redis"] },
     { name = "edge-protocol" },
     { name = "fastapi" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
-    { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -44,7 +43,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14" },
     { name = "argon2-cffi", specifier = ">=23.1" },
     { name = "asyncpg", specifier = ">=0.30" },
-    { name = "dqh-svc-core", extras = ["fastapi", "mqtt"], editable = "../packages/svc_core" },
+    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "redis"], editable = "../packages/svc_core" },
     { name = "edge-protocol", editable = "../libs/edge_protocol" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.26" },
     { name = "fastapi", specifier = ">=0.115" },
@@ -55,7 +54,6 @@ requires-dist = [
     { name = "pyjwt", specifier = ">=2.9" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
-    { name = "redis", specifier = ">=5.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
@@ -474,7 +472,7 @@ wheels = [
 
 [[package]]
 name = "dqh-svc-core"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "../packages/svc_core" }
 dependencies = [
     { name = "pydantic" },
@@ -489,12 +487,16 @@ fastapi = [
 mqtt = [
     { name = "aiomqtt" },
 ]
+redis = [
+    { name = "redis" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "aiokafka", marker = "extra == 'kafka'", specifier = ">=0.11" },
     { name = "aiomqtt", marker = "extra == 'mqtt'", specifier = ">=2" },
-    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "kafka", "nats"], marker = "extra == 'all'" },
+    { name = "dqh-svc-core", extras = ["fastapi", "mqtt", "kafka", "nats", "redis"], marker = "extra == 'all'" },
+    { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.26" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.110" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13" },
@@ -504,9 +506,10 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "python-multipart", marker = "extra == 'fastapi'", specifier = ">=0.0.9" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7" },
 ]
-provides-extras = ["fastapi", "mqtt", "kafka", "nats", "all", "dev"]
+provides-extras = ["fastapi", "mqtt", "kafka", "nats", "redis", "all", "dev"]
 
 [[package]]
 name = "edge-protocol"
