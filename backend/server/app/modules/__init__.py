@@ -1,31 +1,25 @@
-"""Module registry.
+"""Domain modules.
 
-Importing this package has two side effects required at startup:
-1. every ORM model is imported, so ``Base.metadata`` knows all tables;
-2. :func:`register_event_handlers` wires cross-module event subscribers.
+Importing this package must populate ``Base.metadata`` (every ORM model) and
+lets the app wire cross-module event subscribers. Both are delegated to
+:class:`app.modules.registry.ModuleRegistry`.
 """
 
 from __future__ import annotations
 
-from app.modules.access_control import models as _access_control_models  # noqa: F401
-from app.modules.agent import models as _agent_models  # noqa: F401
-from app.modules.assistant import models as _assistant_models  # noqa: F401
-from app.modules.camera import models as _camera_models  # noqa: F401
-from app.modules.deployment import models as _deployment_models  # noqa: F401
-from app.modules.model_registry import models as _model_registry_models  # noqa: F401
-from app.modules.system import models as _system_models  # noqa: F401
-from app.modules.user import models as _user_models  # noqa: F401
+from app.modules.registry import ModuleRegistry
 
-_HANDLERS_REGISTERED = False
+_registry = ModuleRegistry()
+_registry.load_models()
 
 
 def register_event_handlers() -> None:
-    global _HANDLERS_REGISTERED
-    if _HANDLERS_REGISTERED:
-        return
-    from app.modules.agent import handlers as agent_handlers
-    from app.modules.agent import telemetry_relay as agent_ws_relay
+    _registry.register_subscribers()
 
-    agent_handlers.register()
-    agent_ws_relay.register()
-    _HANDLERS_REGISTERED = True
+
+def reset_event_handlers() -> None:
+    """Test helper."""
+    _registry.reset()
+
+
+__all__ = ["register_event_handlers", "reset_event_handlers"]
