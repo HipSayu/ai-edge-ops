@@ -1,0 +1,31 @@
+# GPU / NVIDIA model image — DeepStream base carries CUDA + TensorRT + pyds.
+# The engine must be built for the exact TensorRT/JetPack of this base, which is
+# why the runtime + model + engine ship as one immutable image.
+#
+#   docker build -f backend/inference/Dockerfile.gpu \
+#     --build-arg MODEL_VERSION=42 \
+#     -t registry/org/models/ppe:v42-gpu backend
+ARG DEEPSTREAM_TAG=7.1-triton-multiarch
+FROM nvcr.io/nvidia/deepstream:${DEEPSTREAM_TAG}
+
+ARG MODEL_VERSION=0
+ENV MODEL_VERSION_ID=${MODEL_VERSION} \
+    RUNTIME=deepstream \
+    DEVICE=cuda:0 \
+    SOCKET_PATH=/run/edge/inference.sock \
+    MODEL_DIR=/models
+
+WORKDIR /srv
+COPY packages/svc_core        /srv/packages/svc_core
+COPY libs/edge_protocol       /srv/libs/edge_protocol
+COPY inference                /srv/inference
+
+RUN pip install --no-cache-dir -U pip \
+ && pip install --no-cache-dir -e "/srv/packages/svc_core" \
+ && pip install --no-cache-dir -e "/srv/libs/edge_protocol" \
+ && pip install --no-cache-dir -e "/srv/inference"
+
+# CI builds the TensorRT .engine from the exported .onnx against this base's TRT
+COPY --chown=root:root models/ /models/
+
+CMD ["vision-runtime"]

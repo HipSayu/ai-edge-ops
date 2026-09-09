@@ -13,9 +13,9 @@ import functools
 import logging
 import shutil
 
-from edge_agent.streaming.base import VideoPublisher
+from vision_runtime.publish.base import VideoPublisher
 
-logger = logging.getLogger("edge_agent.streaming")
+logger = logging.getLogger("vision_runtime.publish")
 
 # preferred -> [(encoder name, extra args)], tried in order, first available wins.
 _HARDWARE_ENCODERS: dict[str, tuple[str, list[str]]] = {

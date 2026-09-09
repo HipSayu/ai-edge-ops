@@ -1,16 +1,20 @@
-"""Video and camera frame helpers."""
+"""Camera / video-file frame generator (blocking — call from a thread)."""
 
 from __future__ import annotations
 
+# Yielded when OpenCV isn't installed: keeps the pipeline ticking (the dummy
+# runtime ignores frame content) without pulling in cv2 for CI / dev.
+NO_CV2_FRAME = object()
+
 
 def frames(source: str, *, loop: bool = False):
-    """Yield frames from a camera, video file, or placeholder source."""
+    """Yield frames from a camera, video file, or (no cv2) a placeholder."""
     try:
         import cv2  # noqa: PLC0415
     except ModuleNotFoundError:
         while True:
-            yield None
-        return
+            yield NO_CV2_FRAME
+
     video_source = int(source) if source.isdigit() else source
     while True:
         capture = cv2.VideoCapture(video_source)
@@ -28,4 +32,4 @@ def frames(source: str, *, loop: bool = False):
             return
 
 
-__all__ = ["frames"]
+__all__ = ["NO_CV2_FRAME", "frames"]

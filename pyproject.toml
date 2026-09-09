@@ -11,6 +11,7 @@ dependencies = []
 members = [
     "backend/server",
     "backend/edge_agent",
+    "backend/inference",
     "backend/libs/edge_protocol",
     "backend/packages/svc_core",
     "backend/packages/ai_core",

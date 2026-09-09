@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from edge_agent.streaming.base import VideoPublisher
+from vision_runtime.publish.base import VideoPublisher
 
 
 class NullPublisher(VideoPublisher):

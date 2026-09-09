@@ -1,6 +1,6 @@
 [project]
 name = "edge-protocol"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI Edge Ops server<->edge wire contract: Envelope payloads + MQTT topic scheme. Shared by server and edge_agent."
 requires-python = ">=3.10"
 dependencies = [

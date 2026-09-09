@@ -8,7 +8,7 @@ from typing import Any, Protocol
 
 import httpx
 
-logger = logging.getLogger("edge_agent.services.evidence")
+logger = logging.getLogger("vision_runtime.evidence")
 
 
 class EvidenceUploader(Protocol):

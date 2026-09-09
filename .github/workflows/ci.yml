@@ -30,13 +30,15 @@ jobs:
           pip install -e "packages/svc_core[fastapi,mqtt,redis,sqlalchemy,security,dev]" \
                       -e "libs/edge_protocol[dev]" \
                       -e "server[dev]" \
-                      -e "edge_agent[dev]"
+                      -e "edge_agent[dev]" \
+                      -e "inference[dev]"
 
       - name: Ruff
         working-directory: backend
         run: |
-          ruff check packages/svc_core/src libs/edge_protocol/src server/app edge_agent/src \
-                     server/tests edge_agent/tests packages/svc_core/tests
+          ruff check packages/svc_core/src libs/edge_protocol/src server/app \
+                     edge_agent/src inference/src \
+                     server/tests edge_agent/tests inference/tests packages/svc_core/tests
 
       - name: Import boundaries
         working-directory: backend/server
@@ -46,7 +48,7 @@ jobs:
         working-directory: backend
         run: |
           set -e
-          for pkg in packages/svc_core libs/edge_protocol server edge_agent; do
+          for pkg in packages/svc_core libs/edge_protocol server edge_agent inference; do
             echo "::group::pytest $pkg"
             (cd "$pkg" && python -m pytest -q)
             echo "::endgroup::"

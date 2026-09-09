@@ -13,7 +13,6 @@ from edge_agent.core.config import AgentSettings, ComposeConfig
 from edge_agent.core.state import StateStore
 from edge_agent.network.link import EdgeLink
 from edge_agent.runner import ComposeRunner, DeployResult
-from edge_agent.runtime.dummy import DummyRuntime
 from edge_agent.services.agent import Agent
 
 
@@ -52,7 +51,6 @@ async def wired(tmp_path):
     deployer = FakeDeployer()
     agent = Agent(
         settings,
-        runtime=DummyRuntime(),
         store=StateStore(settings.state_file),
         deployer=deployer,
     )

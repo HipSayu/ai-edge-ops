@@ -1,0 +1,53 @@
+# Edge-node stack: the agent (host supervisor) + the inference container it
+# swaps on every model deploy. Copy to compose.yml on the device and adjust.
+#
+#   cd /opt/edge && DEVICE_ID=7 MQTT__HOST=broker.example.com docker compose up -d
+#
+# `docker compose pull inference && docker compose up -d --wait inference` is run
+# BY THE AGENT on a T_DEPLOY_MODEL command — it rewrites INFERENCE_IMAGE in .env.
+
+services:
+  agent:
+    image: registry.example.com/ai-edge-ops/edge-agent:1.5
+    restart: unless-stopped
+    environment:
+      DEVICE_ID: ${DEVICE_ID:?set DEVICE_ID}
+      TRANSPORT: mqtt
+      MQTT__HOST: ${MQTT__HOST:?set MQTT__HOST}
+      MQTT__PORT: "8883"
+      MQTT__TLS: "true"
+      SERVER__BASE_URL: ${SERVER_BASE_URL:-https://edgeops.example.com/api/v1}
+      SERVER__ENROLL_TOKEN: ${ENROLL_TOKEN}
+      INFERENCE_SOCKET: /run/edge/inference.sock
+      COMPOSE__PROJECT_DIR: /project
+      COMPOSE__ENV_FILE: /project/.env
+      STREAMING_ENABLED: "true"
+      CAMERAS: '[{"id":"bay-1","source":"rtsp://cam-1/stream","zone":"loading-bay","camera_id":12}]'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # -> swap for tecnativa/docker-socket-proxy
+      - .:/project                                   # so the agent can run `docker compose`
+      - edge_state:/var/lib/edge-agent
+      - ipc:/run/edge
+    # report HOST metrics, not the container's
+    pid: host
+    network_mode: host
+
+  inference:
+    image: ${INFERENCE_IMAGE:-registry.example.com/ai-edge-ops/models/bootstrap:latest}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-S", "/run/edge/inference.sock"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    environment:
+      SOCKET_PATH: /run/edge/inference.sock
+    volumes:
+      - ipc:/run/edge
+    # GPU model image also needs:
+    # deploy: { resources: { reservations: { devices: [{ capabilities: [gpu] }] } } }
+    # runtime: nvidia
+
+volumes:
+  edge_state:
+  ipc:

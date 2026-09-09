@@ -7,6 +7,16 @@ scheme.
 
 from __future__ import annotations
 
+from edge_protocol.ipc import (
+    T_VR_HEALTH,
+    T_VR_HELLO,
+    T_VR_SET_CAMERAS,
+    T_VR_STREAM_TOKEN,
+    CameraHealth,
+    IpcCameraSpec,
+    SetCamerasPayload,
+    WorkerHealthPayload,
+)
 from edge_protocol.messages import (
     BboxFramePayload,
     BboxPayload,
@@ -77,7 +87,6 @@ __all__ = [
     "TOPIC_STREAM_TOKEN",
     "TOPIC_TELEMETRY",
     "T_BBOX_FRAME",
-    "T_STREAM_TOKEN_REQUEST",
     "T_COMMAND_ACK",
     "T_DEPLOY_MODEL",
     # types
@@ -86,21 +95,31 @@ __all__ = [
     "T_RESTART",
     "T_RUN_DIAGNOSTICS",
     "T_STATE_REPORT",
+    "T_STREAM_TOKEN_REQUEST",
     "T_TELEMETRY",
     "T_UPDATE_CONFIG",
     "T_VIOLATION",
+    "T_VR_HEALTH",
+    "T_VR_HELLO",
+    "T_VR_SET_CAMERAS",
+    "T_VR_STREAM_TOKEN",
     "BboxFramePayload",
     "BboxPayload",
-    "StreamTokenReplyPayload",
-    "StreamTokenRequestPayload",
+    # agent <-> vision-runtime IPC
+    "CameraHealth",
     "CommandAckPayload",
     "DeployModelPayload",
     "DeviceCapabilities",
     # payloads
     "HeartbeatPayload",
+    "IpcCameraSpec",
     "LogPayload",
+    "SetCamerasPayload",
     "StateReportPayload",
+    "StreamTokenReplyPayload",
+    "StreamTokenRequestPayload",
     "TelemetryPayload",
     "UpdateConfigPayload",
     "ViolationPayload",
+    "WorkerHealthPayload",
 ]
