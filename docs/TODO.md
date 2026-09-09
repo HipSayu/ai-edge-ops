@@ -77,11 +77,17 @@ Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc
         ngay. Chưa làm → restart server mất ~1 nhịp heartbeat để roster về.
   - [ ] **S3.3 còn**: gộp `cameras`/`camera_groups` vào `Device.cameras`;
         `ConfigResolver.merge()` + `inference_policy` global; FE Fleet defaults page.
-- [ ] **S5 — deploy = command, không ghi row**
-  - `/deployments` = set `device_config.desired_image` + publish `T_DEPLOY_MODEL`
-  - xoá ORM `deployments`; history → `audit_logs`
-  - FE `DeploymentsPage`: chọn device(s) + image tag; tiến trình từ WS
-    (`ack`+`state`), bỏ `progressPct`
+- [ ] **S5 — deploy = command, không ghi row** *(chưa làm — kế tiếp)*
+  - `POST /deployments {device_id, image}` → resolve catalog → set
+    `Device.desired_image` → publish `DeployRequested` → gateway gửi
+    `T_DEPLOY_MODEL`. Không tạo row.
+  - xoá ORM `Deployment` + `DeploymentRepository`; `DeploymentService` còn mỏng
+    (`deploy()` + view). `GET /deployments` = per-device
+    `{desired_image, active_image, runtime_status, in_sync}` từ `list_devices`.
+  - deploy audit → `audit_logs`. `DeploymentFailed` giữ (gateway phát).
+  - sửa `mcp/tools/deployments.py`, analytics `count_active`.
+  - FE `DeploymentsPage`: list per-device; deploy = pick device + image tag;
+    progress từ WS, bỏ `progressPct`.
 - [ ] **S6 — metrics ra Prometheus**
   - Prometheus (mới trong `compose.infra.yml`?) — *cần quyết*
   - agent expose `/metrics`; `GET .../metrics` proxy Prometheus hoặc 501
