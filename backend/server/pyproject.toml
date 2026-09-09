@@ -15,12 +15,15 @@ dependencies = [
     "pydantic-settings>=2.6",
     "alembic>=1.14",
     "dqh-svc-core[fastapi,mqtt,redis,sqlalchemy,security]",
+    "dqh-ai-core[mcp,openai]",
     "edge-protocol",
+    "mcp>=1.2",
 ]
 
 # local monorepo packages — installed editable (see Dockerfile / README)
 [tool.uv.sources]
 dqh-svc-core = { workspace = true }
+dqh-ai-core = { workspace = true }
 edge-protocol = { workspace = true }
 
 [project.optional-dependencies]

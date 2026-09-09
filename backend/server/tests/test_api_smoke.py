@@ -67,6 +67,9 @@ async def test_camera_system_and_assistant_endpoints_persist_data(client):
     settings = (await client.patch("system/settings", json={"confidence_threshold": 0.5})).json()["data"]
     assert settings["confidence_threshold"]["value"]["value"] == 0.5
 
-    message = (await client.post("assistant/messages", json={"text": "Show system status"})).json()["data"]
-    assert message["role"] == "user"
-    assert (await client.get("assistant/messages")).json()["data"][0]["text"] == "Show system status"
+    # `/help` is a direct slash command — deterministic, no LLM. The endpoint
+    # returns the assistant reply; both turns are persisted.
+    reply = (await client.post("assistant/messages", json={"text": "/help"})).json()["data"]
+    assert reply["role"] == "assistant"
+    history = (await client.get("assistant/messages")).json()["data"]
+    assert [m["text"] for m in history[:2]] == ["/help", reply["text"]]

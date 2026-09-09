@@ -6,7 +6,8 @@ from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter, status
 
 from app.api.deps import DbSession
-from app.modules.assistant.schemas import ChatMessageCreate, ChatMessageOut
+from app.modules.assistant.commands import COMMANDS
+from app.modules.assistant.schemas import ChatMessageCreate, ChatMessageOut, SlashCommandOut
 from app.modules.assistant.service import AssistantService
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
@@ -24,5 +25,15 @@ async def list_messages(db: DbSession) -> ApiResponse[list[ChatMessageOut]]:
     status_code=status.HTTP_201_CREATED,
 )
 async def send_message(data: ChatMessageCreate, db: DbSession) -> ApiResponse[ChatMessageOut]:
-    message = await AssistantService(db).send_message(data)
-    return ok(ChatMessageOut.model_validate(message))
+    reply = await AssistantService(db).send_message(data)
+    return ok(ChatMessageOut.model_validate(reply))
+
+
+@router.get("/commands", response_model=ApiResponse[list[SlashCommandOut]])
+async def list_commands() -> ApiResponse[list[SlashCommandOut]]:
+    return ok(
+        [SlashCommandOut(cmd=f"/{c.name}", desc=c.desc, kind=c.kind) for c in COMMANDS.values()]
+    )
+
+
+__all__ = ["router"]
