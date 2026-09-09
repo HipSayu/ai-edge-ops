@@ -33,15 +33,14 @@ Reconcile: `desired` (server) ⇄ `reported` (device) — agent đã có sẵn m
 ### `ModelCatalog` — thay `models` + `model_versions`
 
 - `app/modules/model_registry/catalog.py` — `class ModelCatalog`.
-- Registry = **GHCR** (đã chốt). API:
-  - list tags: `GET /orgs|users/{owner}/packages/container/{pkg}/versions`
-    (header `Authorization: Bearer <PAT read:packages>`), trả `metadata.container.tags`,
-    `name` (= digest), `created_at`, `updated_at`.
-  - labels: `GET https://ghcr.io/v2/{owner}/{pkg}/manifests/{tag}` (Bearer token
-    lấy qua `GET https://ghcr.io/token?scope=repository:{owner}/{pkg}:pull`) →
-    manifest list → chọn config blob → `GET .../blobs/{digest}` → `.config.Labels`.
-  - Config: `MODEL_REGISTRY__OWNER`, `MODEL_REGISTRY__PACKAGE`,
-    `MODEL_REGISTRY__TOKEN` (env `MODEL_REGISTRY__*`, nhóm mới trong `Settings`).
+- Registry = **GHCR**, package **public** → toàn bộ dùng **Registry v2 API vô danh**:
+  - token vô danh: `GET https://ghcr.io/token?scope=repository:{owner}/{pkg}:pull`
+  - tags: `GET https://ghcr.io/v2/{owner}/{pkg}/tags/list`
+  - labels: `GET .../manifests/{tag}` → manifest list → config blob →
+    `GET .../blobs/{digest}` → `.config.Labels` + `.created`
+  - Config: `MODEL_REGISTRY__{OWNER,PACKAGE}`; `MODEL_REGISTRY__TOKEN` **optional**
+    — chỉ khi package private hoặc cần nới rate limit.
+  - (Build image + set public = pipeline model riêng, không thuộc app.)
 - Metadata nướng vào **image labels** lúc build model image (pipeline riêng):
   `org.opencontainers.image.{version,created,revision}` +
   `ai.edge-ops.model.{task,classes,map50_95,params_m,latency_ms,base}`.
@@ -256,9 +255,11 @@ Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S1→S5 theo t
 - Users/auth → **Postgres nhỏ** (không `users.yaml`).
 - Camera config → **server push, giữ config nhỏ** (`device_config.cameras`).
 - Metrics history → **sink Prometheus**, server vẫn stateless.
-- Registry → **GHCR**. Model package **PUBLIC** cho MVP → edge pull vô danh,
-  `.env.edge` không có secret; server `ModelCatalog` chỉ cần token cho GitHub
-  Packages API (list tags) — vẫn để `MODEL_REGISTRY__TOKEN` (dev: `.env.app`).
+- Registry → **GHCR**. Model image = **phần riêng, độc lập app** (pipeline model
+  tự build multi-arch + tự set package **public**). App chỉ consume:
+  - edge pull vô danh, `.env.edge` không secret
+  - server `ModelCatalog` đọc `ghcr.io/v2` **vô danh**; `MODEL_REGISTRY__TOKEN`
+    optional (chỉ private / rate limit)
   Đường bảo mật sau: package private + server phát **pull-token ngắn hạn** qua
   MQTT mTLS link (như stream-token) + **cosign verify** ở agent. Xem "Bảo mật sau".
 - Model image → **1 multi-arch manifest** (amd64 + arm64/Jetson), 1 tag; GPU/CPU

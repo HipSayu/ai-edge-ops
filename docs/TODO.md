@@ -22,12 +22,14 @@ Chi tiết kế hoạch: [`REFACTOR_stateless.md`](REFACTOR_stateless.md).
 
 ## B. Việc tay — không phải code
 
-- [ ] Tạo **GitHub PAT `read:packages`** → đã có, đặt `MODEL_REGISTRY__TOKEN`
-      trong `deploy/.env.app` (prod: docker secret / Actions secret).
-- [ ] Khi có model image đầu tiên: set GHCR package đó **Public**
-      (`github.com/<user> → Packages → package → settings → visibility`).
 - [ ] Kiểm chứng CI `deploy.yml`: `scp` với `strip_components: 1` +
       `COMPOSE_FILE`/`COMPOSE_ENV_FILES` (chỉ chạy khi push `main`).
+
+> **Model image = phần riêng, độc lập với app.** Pipeline model tự build
+> multi-arch, tự set package **public**. App chỉ *consume*: `ModelCatalog` đọc
+> `ghcr.io/v2/{owner}/{pkg}` **vô danh** (public) — không cần PAT cho MVP.
+> `MODEL_REGISTRY__TOKEN` để trống, chỉ điền khi chuyển package sang private
+> hoặc cần nới GHCR rate limit.
 
 ---
 
