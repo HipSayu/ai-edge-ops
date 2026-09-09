@@ -14,8 +14,9 @@ import app.modules as modules  # noqa: F401  (registers ORM models)
 from app.api.deps import get_db
 from app.core.database import Base
 from app.core.events import event_bus
+from app.core.ws import ws_hub
 from app.main import create_app
-from app.modules import register_event_handlers
+from app.modules import register_event_handlers, reset_event_handlers
 from app.modules.agent import telemetry_relay as agent_ws_relay
 
 
@@ -35,15 +36,18 @@ async def _engine() -> AsyncGenerator[object, None]:
 
     event_bus.clear()
     agent_ws_relay.reset_cache()
-    modules._HANDLERS_REGISTERED = False
+    reset_event_handlers()
     register_event_handlers()
+    if not ws_hub.connected:
+        await ws_hub.connect()
 
     yield engine
 
     database.engine, database.async_session = prev_engine, prev_factory
     event_bus.clear()
     agent_ws_relay.reset_cache()
-    modules._HANDLERS_REGISTERED = False
+    reset_event_handlers()
+    await ws_hub.aclose()
     await engine.dispose()
 
 

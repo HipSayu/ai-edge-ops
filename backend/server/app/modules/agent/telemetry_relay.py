@@ -18,7 +18,6 @@ from typing import Any
 
 from dqh.svc_core.messaging import Envelope
 
-from app.core.events import event_bus
 from app.core.ws import ws_hub
 from app.modules.agent.event import HeartbeatRecorded
 from app.shared.stats.average import average_or_none
@@ -37,10 +36,6 @@ _METRIC_KEYS = (
 
 # device_id -> latest sample dict (for snapshot-on-connect)
 _latest: dict[int, dict[str, Any]] = {}
-
-
-def register() -> None:
-    event_bus.subscribe(HeartbeatRecorded, _on_heartbeat)
 
 
 async def publish_sample(device_id: int, sample: dict[str, Any]) -> None:
@@ -80,7 +75,7 @@ def _aggregate() -> dict[str, Any]:
     }
 
 
-async def _on_heartbeat(event: HeartbeatRecorded) -> None:
+async def on_heartbeat(event: HeartbeatRecorded) -> None:
     await publish_sample(
         event.device_id,
         {
@@ -94,4 +89,4 @@ def reset_cache() -> None:
     _latest.clear()
 
 
-__all__ = ["register", "reset_cache", "publish_sample", "snapshot"]
+__all__ = ["on_heartbeat", "publish_sample", "reset_cache", "snapshot"]
