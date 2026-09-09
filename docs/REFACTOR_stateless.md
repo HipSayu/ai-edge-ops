@@ -1,0 +1,263 @@
+# Refactor — server "stateless" cho fleet & model
+
+Ngày lập: 2026-09-09. Nối tiếp [`REFACTOR_TODO.md`](REFACTOR_TODO.md) (đã xong
+phần svc_core extract) và [model deploy = image](../deploy/compose.edge.yml).
+
+## Mục tiêu
+
+Server **không persist thứ gì có thể dựng lại được**:
+
+- **Model catalog** → đọc thẳng từ OCI registry (tags + image labels).
+- **Fleet state** (device nào sống, đang chạy image gì, health) → dựng lại từ
+  MQTT retained `state` + heartbeat mỗi lần server khởi động.
+- **Metrics history** → đẩy ra Prometheus/Timescale, không giữ trong Postgres.
+
+Postgres chỉ còn giữ thứ **không suy ra được**: bằng chứng vi phạm, người dùng,
+audit log, và **desired config** của mỗi device (operator gõ từ dashboard).
+
+## Nguyên tắc — 3 tầng state
+
+| Tầng | Ví dụ | Nguồn sự thật | Server restart |
+|---|---|---|---|
+| **Bootstrap** (tĩnh, trên box) | `DEVICE_ID`, `MQTT__HOST/PORT/TLS`, certs | `deploy/.env.edge` (~5 dòng) | n/a |
+| **Desired** (động, operator sửa) | cameras, model, threshold, log level | Postgres `device_config`, key = `device_id` | load lại từ DB |
+| **Reported / live** (device báo) | caps, active image, runtime_status, health | MQTT retained `state` + heartbeat | re-subscribe, vài giây là đủ |
+
+Reconcile: `desired` (server) ⇄ `reported` (device) — agent đã có sẵn máy
+(`services/agent.py`, `core/state.py`, `reconcile_interval_s`).
+
+---
+
+## Kiến trúc đích
+
+### `ModelCatalog` — thay `models` + `model_versions`
+
+- `app/modules/model_registry/catalog.py` — `class ModelCatalog`.
+- Registry = **GHCR** (đã chốt). API:
+  - list tags: `GET /orgs|users/{owner}/packages/container/{pkg}/versions`
+    (header `Authorization: Bearer <PAT read:packages>`), trả `metadata.container.tags`,
+    `name` (= digest), `created_at`, `updated_at`.
+  - labels: `GET https://ghcr.io/v2/{owner}/{pkg}/manifests/{tag}` (Bearer token
+    lấy qua `GET https://ghcr.io/token?scope=repository:{owner}/{pkg}:pull`) →
+    manifest list → chọn config blob → `GET .../blobs/{digest}` → `.config.Labels`.
+  - Config: `MODEL_REGISTRY__OWNER`, `MODEL_REGISTRY__PACKAGE`,
+    `MODEL_REGISTRY__TOKEN` (env `MODEL_REGISTRY__*`, nhóm mới trong `Settings`).
+- Metadata nướng vào **image labels** lúc CI build:
+  `org.opencontainers.image.{version,created,revision}` +
+  `ai.edge-ops.model.{task,classes,map50_95,params_m,latency_ms,base}`.
+- Cache TTL ~30s; `GET /models?refresh=1` để ép làm mới.
+- **1 multi-arch manifest** (đã chốt): `linux/amd64` + `linux/arm64` (Jetson)
+  trong cùng 1 tag. Docker trên device tự kéo đúng arch. GPU-vs-CPU **không**
+  do manifest chọn — runtime tự dò `torch.cuda.is_available()` và fallback CPU.
+  → `ModelVersion.image_{cpu,gpu}_digest` gộp thành **1** `image` (ref pin digest
+  manifest-list). `DeployModelPayload` chỉ còn 1 `image`; server **không** chọn
+  variant theo `capabilities.backend` nữa (`backend` vẫn dùng cho
+  `composed` vs `deepstream` runtime).
+
+### `FleetRegistry` — thay `devices` (runtime) + `deployments` (current)
+
+- `app/modules/fleet/registry.py` — `class FleetRegistry` (in-memory, 1 instance
+  ở `app/core/`).
+- Subscribe `agent/devices/+/state` (**retained**, QoS 1) + LWT.
+- `{device_id: DeviceState}` với `DeviceState = caps + last_heartbeat +
+  reported_image + reported_cameras + reported_config + online`.
+- Không có DB. Restart → nhận lại toàn bộ retained `state`.
+- `evaluate_status()` (đã có) tính online/stale/offline từ `last_seen` + LWT.
+  Bỏ `PresenceRegistry` (xem "Còn mở" trong REFACTOR_TODO — nay chốt: bỏ).
+
+### `device_config` — desired state (Postgres, bảng mới)
+
+```
+device_config
+  device_id        TEXT PRIMARY KEY        -- = DEVICE_ID trên box
+  display_name     TEXT
+  site             TEXT
+  labels           JSONB
+  desired_image    TEXT NULL               -- model ref, hoặc null
+  cameras          JSONB                   -- [{id, source, zone, roi, fps_limit, enabled, overrides}]
+  inference        JSONB                   -- override thưa: {conf_threshold?, iou?, ...} — null field = kế thừa
+  agent            JSONB                   -- override thưa: {telemetry_interval_s?, log_level?, ...}
+  created_at, updated_at, updated_by
+```
+
+Gộp `cameras` + `camera_groups` cũ vào đây. Bảng *config*, ít ghi.
+
+### Config phân tầng (thresholds, inference, agent...)
+
+Không cấu hình toàn cục HAY theo device — **cả hai, dạng phân tầng**. Dưới đè lên trên:
+
+```
+1. Model defaults   ← image labels  ai.edge-ops.model.{conf,iou,imgsz,classes}   (CI nướng vào)
+2. Global policy     ← app_settings  khối "inference_policy" (cái gì tính vi phạm,
+                       ngưỡng alert, dedup window, evidence retention, severity map)
+3. Per-device        ← device_config.inference / .agent   (field null = kế thừa)
+4. Per-camera        ← device_config.cameras[].overrides   (source, zone, roi, ngưỡng góc khó)
+```
+
+- Server tính `effective = merge(1..4)` → gửi **giá trị đã resolve** trong
+  `DeployModelPayload.config` / `UpdateConfigPayload`. **Agent không merge** — chỉ
+  nhận dict cuối.
+- Global block: thêm `GET/PATCH /system/settings` khối `inference_policy` (dùng
+  `app_settings` sẵn có).
+- UI: trang **"Fleet defaults"** + panel override per-device/-camera hiện
+  `0.45 (kế thừa)` vs `0.6 (override)`.
+
+| Tầng | Ví dụ | Vì sao ở đây |
+|---|---|---|
+| Global | "helmet + vest tính vi phạm", ngưỡng confidence để alert, dedup 30s | nhất quán toàn đội |
+| Per-model | conf/iou tối ưu, imgsz, class list | thuộc tính model |
+| Per-device | `fps_limit`, `log_level` (debug 1 box), telemetry interval | phụ thuộc phần cứng / vận hành |
+| Per-camera | source, zone, ROI, ngưỡng riêng góc ngược sáng | mỗi camera 1 hiện trường |
+
+### Deploy = bắn command, không ghi row
+
+- `POST /deployments {device_id, image}` → set `device_config.desired_image` +
+  publish `T_DEPLOY_MODEL` → trả về ngay.
+- Tiến trình: browser theo dõi stream `ack` + `state` qua WS.
+- Sự thật cuối: `reported_image` trong FleetRegistry.
+- Lịch sử "ai deploy cái gì lúc nào" → `audit_logs` (không phải bảng riêng).
+
+### Fleet view = union 2 nguồn
+
+- **Known**: có `device_config` (operator đã thêm) — hiện cả khi offline.
+- **Online**: đang publish retained `state`.
+- Device lạ báo `state` mà chưa có `device_config` → auto tạo row rỗng
+  (`display_name = device_id`), operator điền camera/model sau.
+
+---
+
+## DB đích
+
+| Giữ | Bỏ |
+|---|---|
+| `device_config` (mới) | `devices`, `metric_samples` |
+| `violations`, `snapshots` | `models`, `model_versions` |
+| `alerts` | `deployments` |
+| `users`, `roles`, `permissions`, `user_roles`, `role_permissions` | `cameras`, `camera_groups` |
+| `audit_logs` | `chat_messages` |
+| `app_settings` | |
+
+`init_db()` giữ nguyên (bảng ít + ổn định, chưa cần Alembic).
+`backend/schema.sql` viết lại cho khớp.
+
+---
+
+## Thay đổi contract
+
+### edge_protocol
+
+- `StateReportPayload`: bỏ `active_model_version_id` / `deployment_id`; thêm
+  `reported_image: str | None`, `cameras: list[IpcCameraSpec]`,
+  `config: dict`, `runtime_status`, `detail`. **Publish retained.**
+- `DeployModelPayload`: bỏ `deployment_id` + `model_version_id`; giữ
+  `command_id`, `image`, `config`.
+- `HeartbeatPayload.active_model_version_id` → `active_image: str | None`.
+- `DeviceCapabilities`: thêm `name`, `site`, `labels` (agent đọc từ `.env.edge`
+  — hoặc để trống, operator đặt trong `device_config`).
+
+### MQTT
+
+- Agent: `state` publish `retain=True, qos=1`; set LWT
+  `agent/devices/{id}/state` = `{"online": false}` retained.
+- Server: subscribe `agent/devices/+/state` nhận retained lúc connect.
+- EMQX: `emqx_data` volume đã bền — retained store sống qua restart. ✓
+
+### DEVICE_ID = string, khóa chính ở mọi nơi
+
+- Bỏ `Device.id` (int). `device_id` (string, vd `plant-a-cam-01`) xuyên suốt
+  protocol / API / `device_config` / `violations.device_id`.
+- Sửa `device_id_from_envelope()` — trả string, bỏ `int(...)`.
+- Fix bug hiện tại (agent gửi `edge-dev-1`, server ép int) luôn ở đây.
+
+### API — giữ shape response, đổi backing
+
+| Endpoint | Trước | Sau |
+|---|---|---|
+| `GET /models` | query `models` table | `ModelCatalog.list()` |
+| `GET /models/{ref}` | DB | catalog + labels |
+| `POST /models` | tạo row | **bỏ** (model do CI push, không tạo từ UI) |
+| `GET /agent/devices` | `devices` table | union `device_config` + `FleetRegistry` |
+| `POST /agent/devices` | tạo Device | tạo `device_config` (provision) |
+| `PATCH /agent/devices/{id}` | update Device | update `device_config` + push delta |
+| `GET /agent/cameras` | `cameras` table | flatten từ `device_config.cameras` |
+| `POST/PATCH /agent/cameras` | CRUD | sửa `device_config.cameras` + push |
+| `GET/POST /deployments` | `deployments` table | set `desired_image` + publish cmd |
+| `GET /agent/devices/{id}/metrics` | `metric_samples` | proxy Prometheus, hoặc 501 (xem PR-S6) |
+| `/violations` `/users` `/system/*` | — | **không đổi** |
+
+### Frontend
+
+**Types (`frontend/src/shared/api/types/`):**
+
+| Type | Đổi |
+|---|---|
+| `ai.ts` `ModelRecord.id` | `number` → `string` (image ref, vd `ghcr.io/.../ppe:1.3.0`) |
+| `ai.ts` `ModelVersionRecord` / `ModelWithVersionsRecord` | reshape: 1 model = repo, versions = tags; field từ image labels (`map50_95`, `classes`, `params_m`, `latency_ms`, `digest`, `pushed_at`) |
+| `ai.ts` `DeploymentRecord` | `device_id: number → string`; `model_version_id → image: string`; bỏ `progressPct` (tiến trình = WS stream) |
+| `agent.ts` `BackendDevice` | `id: number → string`; `active_model_version_id → active_image: string \| null`; thêm `desired_image`, `known: boolean`, `cameras`, `config` |
+| `agent.ts` `BackendMetricSample` | giữ shape cho Prometheus proxy, hoặc bỏ tới S6 |
+| `agent.ts` `BackendCamera` | `id: number → string`; thêm `device_id: string`, `fps_limit` |
+| `agent.ts` `CreateDevicePayload` | thêm `device_id: string` (operator gõ, = `DEVICE_ID` trên box) |
+
+**Services (`shared/api/services/{ai,agent}.ts`):**
+- `/models/${id}` → `/models/${encodeURIComponent(ref)}`; bỏ `post('/models')`.
+- `/deployments` body → `{ device_id: string, image: string }`.
+- `/agent/cameras` → không CRUD rời; sửa qua `PATCH /agent/devices/{id}`.
+
+**Pages:**
+- `ai/pages/ModelsPage.tsx` — list từ registry catalog; **bỏ form "register
+  model"**; hiện labels (mAP, classes, digest, pushed-at).
+- `ai/pages/DeploymentsPage.tsx` — deploy = chọn device(s) + image tag; tiến
+  trình đọc từ WS (`ack` + `state` frames), không phải `progressPct` từ DB.
+- `agent/pages/{EdgeDevicesPage,DevicesPage}.tsx` — device = merge
+  `device_config` (known) + `FleetRegistry` (online); "add device" = provision
+  `device_config` với `device_id`; hiện **drift** desired vs reported.
+- `agent/pages/{Cameras,CamerasPage}.tsx` — camera nằm *trong* 1 device
+  (`device_config.cameras`), sửa inline; `CameraGroupsPage` → client-only hoặc bỏ.
+- `overview/pages/{LiveMonitor,AnalyticsPage}.tsx` +
+  `agent/components/LiveMonitorPanel.tsx` — chart live qua WS ring buffer;
+  history qua Prometheus proxy (ẩn tới S6).
+
+---
+
+## Kế hoạch PR
+
+| PR | Backend / protocol | Frontend | Rủi ro |
+|---|---|---|---|
+| **S0** | `backend/inference`: gộp `Dockerfile.cpu`+`.gpu` → `Dockerfile` (amd64, CUDA torch + CPU fallback) + `Dockerfile.jetson` (arm64/l4t); CI buildx `--platform linux/amd64,linux/arm64` 1 manifest; thêm labels `ai.edge-ops.model.*`; tạo GHCR PAT `read:packages` → secret | — | 0 |
+| **S1** | `DEVICE_ID` string: `edge_protocol` payloads + `device_id_from_envelope` (bỏ `int()`) + `violations.device_id` TEXT; sửa test | `BackendDevice.id`, `DeploymentRecord.device_id`, `BackendCamera` id → `string`; `CreateDevicePayload.device_id` | tb — đụng nhiều chỗ, cơ học |
+| **S2** | `ModelCatalog` (GHCR API) + `Settings.model_registry`; `GET /models*` đổi backing; bỏ `POST /models`; xoá `models`/`model_versions` ORM + repo + `ModelRegistryService` | `types/ai.ts` reshape (`ModelRecord.id: string`, versions=tags, fields từ labels); `ModelsPage` bỏ form register, hiện labels | tb |
+| **S3** | Bảng `device_config` + service; `POST/PATCH /agent/devices` + `/agent/cameras` map sang đó; khối `inference_policy` global (`/system/settings`) + `ConfigResolver.merge(model, global, device, camera)`; seed migrate | `EdgeDevicesPage`/`DevicesPage` provision bằng `device_id`; `Cameras*` sửa inline; trang **Fleet defaults** + panel override (kế thừa vs override); `CameraGroupsPage` client-only/bỏ | tb |
+| **S4** | `FleetRegistry` in-memory; agent `state` retained+LWT (`network/link.py`); `GET /agent/devices` = union known+online; bỏ `PresenceRegistry` | device list = merge known+online; hiện **drift** desired vs reported; WS live update | **cao** — đường sống fleet |
+| **S5** | `/deployments` = set `desired_image` + publish `T_DEPLOY_MODEL`; xoá `deployments` ORM; history → `audit_logs` | `DeploymentsPage`: chọn device(s)+image tag; tiến trình từ WS (`ack`+`state`), bỏ `progressPct` | tb |
+| **S6** | Prometheus service vào `compose.infra.yml`; agent expose `/metrics` (scrape); `GET .../metrics` proxy Prometheus hoặc 501; xoá `metric_samples` | chart live qua WS ring buffer; history qua proxy | thấp (phụ) |
+| **S7** | Xoá `chat_messages` nếu không dùng; viết lại `backend/schema.sql`; dọn `docs/ARCHITECTURE.md` + flows | dọn type/service chết | 0 |
+
+Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S1→S5 theo thứ tự
+(phụ thuộc nhau); S6/S7 độc lập.
+
+---
+
+## KHÔNG làm
+
+- **Alembic** — schema nhỏ đi, `init_db()` đủ.
+- **Bỏ Postgres hoàn toàn** — violations + users cần nó (đã chốt).
+- **Camera config trên `.env.edge`** — operator sửa từ dashboard, server push
+  (đã chốt: "server push, giữ config nhỏ").
+- **Sửa máy reconcile của agent** — đã đủ, chỉ đổi payload.
+- **Giữ bảng `deployments` cho history** — dùng `audit_logs`.
+
+## Đã chốt (2026-09-09)
+
+- Violations/snapshots → **Postgres nhỏ**.
+- Users/auth → **Postgres nhỏ** (không `users.yaml`).
+- Camera config → **server push, giữ config nhỏ** (`device_config.cameras`).
+- Metrics history → **sink Prometheus**, server vẫn stateless.
+- Registry → **GHCR** (PAT `read:packages`, API GitHub Packages).
+- Model image → **1 multi-arch manifest** (amd64 + arm64/Jetson), 1 tag; GPU/CPU
+  do runtime tự dò, không phải manifest.
+
+## Còn mở
+
+- Prometheus đã có hạ tầng sẵn hay dựng mới trong `compose.infra.yml`? (quyết ở S6)
+- `chat_messages` / assistant có còn dùng không? (quyết ở S7)
