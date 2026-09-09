@@ -29,7 +29,7 @@ class Device(Base, TimestampMixin):
     # reported by the agent on every heartbeat (see AgentGateway._on_heartbeat)
     agent_version: Mapped[str | None] = mapped_column(String(32), default=None)
     uptime_s: Mapped[float | None] = mapped_column(Float, default=None)
-    active_model_version_id: Mapped[int | None] = mapped_column(default=None)
+    active_image: Mapped[str | None] = mapped_column(String(512), default=None)
     # probed hardware — decides which model image variant the server sends
     backend: Mapped[str | None] = mapped_column(String(32), default=None)  # composed | deepstream
     arch: Mapped[str | None] = mapped_column(String(32), default=None)  # x86_64 | aarch64 | ...

@@ -15,7 +15,7 @@ import datetime as dt
 import time
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from app.core.config import ModelRegistryConfig
 
@@ -37,6 +37,14 @@ class ModelImage(BaseModel):
     ref: str  # host/owner/package:tag
     digest: str  # manifest (list) digest, sha256:...
     created_at: dt.datetime | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def pinned_ref(self) -> str:
+        """Digest-pinned ref for an immutable pull on the edge."""
+        base = self.ref.rsplit(":", 1)[0]
+        return f"{base}@{self.digest}" if self.digest else self.ref
+
     platforms: list[str] = Field(default_factory=list)
     size_bytes: int = 0
     # from labels

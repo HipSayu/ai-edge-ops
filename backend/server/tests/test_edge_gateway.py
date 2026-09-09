@@ -46,7 +46,7 @@ async def test_heartbeat_over_bus_updates_device_and_presence(gateway, session):
             source=str(device_id),
             payload=protocol.HeartbeatPayload(
                 inference_latency_ms=15.0,
-                active_model_version_id=7,
+                active_image="ghcr.io/acme/model@sha256:7",
                 capabilities=protocol.DeviceCapabilities(
                     agent_version="1.2.3", ip_address="10.0.0.5", uptime_s=42.0
                 ),
@@ -62,7 +62,7 @@ async def test_heartbeat_over_bus_updates_device_and_presence(gateway, session):
     assert device.agent_version == "1.2.3"
     assert device.ip_address == "10.0.0.5"
     assert device.uptime_s == 42.0
-    assert device.active_model_version_id == 7
+    assert device.active_image == "ghcr.io/acme/model@sha256:7"
 
 
 async def test_telemetry_over_bus_fans_out_and_downsamples(gateway, session):
@@ -126,29 +126,10 @@ async def test_violation_over_bus_records_and_alerts(gateway, session):
     assert any(a.type.value == "ppe_violation" for a in alerts)
 
 
-async def test_deploy_activation_picks_image_variant_by_device_backend(gateway, session):
+async def test_deployment_activated_sends_the_image(gateway, session):
     from app.modules.deployment.event import DeploymentActivated
-    from app.modules.model_registry.rules import ModelFormat, ModelTask
-    from app.modules.model_registry.schemas import ModelCreate, ModelVersionCreate
-    from app.modules.model_registry.service import ModelRegistryService
 
     device_id = await _new_device(session)
-    device = await AgentService(session).get_device(device_id)
-    device.backend = "deepstream"
-    await session.commit()
-
-    mr = ModelRegistryService(session)
-    model = await mr.create_model(ModelCreate(name="ppe", task=ModelTask.DETECTION, architecture="y"))
-    version = await mr.add_version(
-        model.id,
-        ModelVersionCreate(
-            version="1.0.0",
-            format=ModelFormat.TENSORRT,
-            image_repo="reg/models/ppe",
-            image_cpu_digest="sha256:cpu",
-            image_gpu_digest="sha256:gpu",
-        ),
-    )
 
     sent: list = []
     await gateway.bus.subscribe(
@@ -156,9 +137,15 @@ async def test_deploy_activation_picks_image_variant_by_device_backend(gateway, 
         lambda e: sent.append(e) or _noop(),
     )
     await gateway._on_deployment_activated(
-        DeploymentActivated(deployment_id=5, device_id=device_id, model_version_id=version.id, config={})
+        DeploymentActivated(
+            deployment_id=5,
+            device_id=device_id,
+            image="ghcr.io/acme/model@sha256:gpu",
+            config={"conf_threshold": 0.4},
+        )
     )
 
     assert sent, "no deploy command sent"
     payload = protocol.DeployModelPayload.model_validate(sent[-1].payload)
-    assert payload.image == "reg/models/ppe@sha256:gpu"
+    assert payload.image == "ghcr.io/acme/model@sha256:gpu"
+    assert payload.config == {"conf_threshold": 0.4}

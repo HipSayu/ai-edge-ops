@@ -24,8 +24,7 @@ async def status(request: Request):
         {
             "device_id": agent.settings.device_id,
             "runtime_status": st.reported.runtime_status,
-            "active_model_version_id": st.reported.active_model_version_id,
-            "desired_model_version_id": st.desired.model_version_id,
+            "active_image": st.reported.active_image,
             "desired_image": st.desired.image,
             "in_sync": st.in_sync(),
             "inference_connected": bool(inference and inference.connected),

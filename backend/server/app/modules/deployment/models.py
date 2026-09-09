@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 
 from dqh.svc_core.persistence.sqlalchemy import DbEnum, TimestampMixin
-from sqlalchemy import JSON, DateTime, ForeignKey, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -19,9 +19,8 @@ class Deployment(Base, TimestampMixin):
     device_id: Mapped[int] = mapped_column(
         ForeignKey("devices.id", ondelete="CASCADE"), index=True
     )
-    model_version_id: Mapped[int] = mapped_column(
-        ForeignKey("model_versions.id", ondelete="RESTRICT"), index=True
-    )
+    # digest-pinned OCI ref of the model image (resolved from the catalog)
+    image: Mapped[str] = mapped_column(String(512))
     status: Mapped[DeploymentStatus] = mapped_column(
         DbEnum(DeploymentStatus), default=DeploymentStatus.PENDING, index=True
     )

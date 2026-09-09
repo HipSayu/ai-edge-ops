@@ -26,7 +26,6 @@ from app.modules.agent.presence_registry import PresenceRegistry
 from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.telemetry_relay import publish_sample
 from app.modules.deployment.event import DeploymentActivated, DeploymentFailed
-from app.modules.model_registry import ModelRegistryService
 from app.modules.streaming.service import StreamingService
 from app.shared.helpers.protocol import device_id_from_envelope
 
@@ -102,7 +101,7 @@ class AgentGateway:
                     uptime_s=caps.uptime_s if caps else None,
                     backend=caps.backend if caps else None,
                     arch=caps.arch if caps else None,
-                    active_model_version_id=p.active_model_version_id,
+                    active_image=p.active_image,
                 ),
             )
         if caps is not None:
@@ -220,46 +219,22 @@ class AgentGateway:
 
     # --- outbound (server -> edge) -------------------------------------
     async def _on_deployment_activated(self, event: DeploymentActivated) -> None:
-        async with self._session() as session:
-            device = await AgentService(session).get_device(event.device_id)
-            version = await ModelRegistryService(session).get_version(event.model_version_id)
-            config = {
-                **(dict(version.metrics.get("runtime", {})) if version.metrics else {}),
-                **event.config,
-            }
-            image = self._select_model_image(version, backend=device.backend)
-            if image is None:
-                await event_bus.publish(
-                    DeploymentFailed(
-                        deployment_id=event.deployment_id,
-                        device_id=event.device_id,
-                        reason=(
-                            f"model version {version.id} has no image for backend "
-                            f"{device.backend!r}"
-                        ),
-                    )
+        if not event.image:
+            await event_bus.publish(
+                DeploymentFailed(
+                    deployment_id=event.deployment_id,
+                    device_id=event.device_id,
+                    reason="deployment has no model image",
                 )
-                return
-            payload = protocol.DeployModelPayload(
-                command_id=uuid4().hex,
-                deployment_id=event.deployment_id,
-                model_version_id=event.model_version_id,
-                image=image,
-                config=config,
             )
-        await self.send_command(event.device_id, protocol.T_DEPLOY_MODEL, payload)
-
-    @staticmethod
-    def _select_model_image(version, *, backend: str | None) -> str | None:
-        """Digest-pinned OCI ref for this device's backend, or None if not set."""
-        if not version.image_repo:
-            return None
-        digest = (
-            version.image_gpu_digest
-            if backend == "deepstream"
-            else version.image_cpu_digest
+            return
+        payload = protocol.DeployModelPayload(
+            command_id=uuid4().hex,
+            deployment_id=event.deployment_id,
+            image=event.image,
+            config=dict(event.config),
         )
-        return f"{version.image_repo}@{digest}" if digest else None
+        await self.send_command(event.device_id, protocol.T_DEPLOY_MODEL, payload)
 
     async def send_command(self, device_id: int, message_type: str, payload) -> None:
         envelope = Envelope(

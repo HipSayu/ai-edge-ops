@@ -14,7 +14,7 @@ from app.modules.agent.rules import DeviceStatus
 async def list_devices(site: str | None = None, status: str | None = None, limit: int = 50) -> dict:
     """List edge devices, optionally filtered by site or status
     (provisioning|online|degraded|offline). Returns id, name, site, status,
-    last_seen_at, agent_version, active_model_version_id."""
+    last_seen_at, agent_version, active_image."""
     st = DeviceStatus(status) if status else None
     async with session_scope() as session:
         page = await AgentService(session).list_devices(
@@ -31,7 +31,7 @@ async def list_devices(site: str | None = None, status: str | None = None, limit
                     "backend": d.backend,
                     "last_seen_at": d.last_seen_at.isoformat() if d.last_seen_at else None,
                     "agent_version": d.agent_version,
-                    "active_model_version_id": d.active_model_version_id,
+                    "active_image": d.active_image,
                 }
                 for d in page.items
             ],
@@ -54,7 +54,7 @@ async def get_device(device_id: int) -> dict:
             "last_seen_at": d.last_seen_at.isoformat() if d.last_seen_at else None,
             "agent_version": d.agent_version,
             "uptime_s": d.uptime_s,
-            "active_model_version_id": d.active_model_version_id,
+            "active_image": d.active_image,
             "labels": d.labels,
         }
 

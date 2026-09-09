@@ -8,7 +8,7 @@ from typing import Any
 class DeploymentActivated:
     deployment_id: int
     device_id: int
-    model_version_id: int
+    image: str
     config: dict[str, Any]
 
 

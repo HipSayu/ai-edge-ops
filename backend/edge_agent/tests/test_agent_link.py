@@ -69,7 +69,7 @@ async def test_deploy_without_image_acks_failed(wired):
             type=p.T_DEPLOY_MODEL,
             source="agent-gateway",
             payload=p.DeployModelPayload(
-                command_id="c1", deployment_id=7, model_version_id=42
+                command_id="c1", deployment_id=7, image=""
             ).model_dump(mode="json"),
         ),
     )

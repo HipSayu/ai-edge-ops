@@ -64,7 +64,6 @@ class Agent:
             )
         st = self.store.state
         st.desired.deployment_id = cmd.deployment_id
-        st.desired.model_version_id = cmd.model_version_id
         st.desired.image = cmd.image
         st.desired.config = cmd.config
         st.reported.config = cmd.config
@@ -81,7 +80,7 @@ class Agent:
             return await self._fail(cmd, result.detail)
 
         st.reported.runtime_status = "active"
-        st.reported.active_model_version_id = cmd.model_version_id
+        st.reported.active_image = cmd.image
         st.reported.detail = None
         self.store.save()
         await self._report_state()
@@ -120,12 +119,11 @@ class Agent:
             return  # a deploy is in flight
         if self.deployer.current_image() == st.desired.image:
             return  # image already running; nothing to re-pull
-        logger.info("reconcile: re-applying desired model %s", st.desired.model_version_id)
+        logger.info("reconcile: re-applying desired image %s", st.desired.image)
         await self._deploy(
             p.DeployModelPayload(
                 command_id="reconcile",
                 deployment_id=st.desired.deployment_id or 0,
-                model_version_id=st.desired.model_version_id or 0,
                 image=st.desired.image,
                 config=st.desired.config,
             )
@@ -138,7 +136,7 @@ class Agent:
         r = self.store.state.reported
         await self.link.send_state(
             p.StateReportPayload(
-                active_model_version_id=r.active_model_version_id,
+                active_image=r.active_image,
                 deployment_id=r.deployment_id,
                 runtime_status=r.runtime_status,
                 config=r.config,
@@ -149,7 +147,7 @@ class Agent:
     def _diagnostics(self) -> str:
         r = self.store.state.reported
         return (
-            f"runtime_status={r.runtime_status} model={r.active_model_version_id} "
+            f"runtime_status={r.runtime_status} "
             f"image={self.deployer.current_image()} "
             f"at {dt.datetime.now(tz=dt.timezone.utc).isoformat()}"
         )

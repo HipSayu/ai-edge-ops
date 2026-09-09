@@ -1,12 +1,12 @@
 export interface ModelArtifact {
-  id: string
-  versionId?: string
+  id: string            // the image tag, e.g. "1.3.0"
+  ref: string           // digest-pinned ref the edge pulls
   name: string
   version: string
-  architecture: string
-  format: 'TensorRT FP16' | 'ONNX FP16' | 'TensorRT INT8' | 'TorchScript'
+  architecture: string  // base model
+  format: string        // platforms, e.g. "linux/amd64 + linux/arm64"
   sizeMb: number
-  mAP50: number
+  mAP50: number         // mAP@50-95
   latencyBenchmarkMs: number
   inputResolution: string
   targetHardware: string

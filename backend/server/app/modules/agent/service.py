@@ -71,7 +71,7 @@ class AgentService:
             "agent_version",
             "ip_address",
             "uptime_s",
-            "active_model_version_id",
+            "active_image",
             "backend",
             "arch",
         }

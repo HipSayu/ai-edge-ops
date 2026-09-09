@@ -19,7 +19,7 @@ export interface CameraGroup {
 export type BackendDevice = {
 	id: number; name: string; hardware: string; ip_address: string | null
 	status: 'online' | 'degraded' | 'offline' | 'provisioning'; last_seen_at: string | null
-	agent_version: string | null; uptime_s: number | null; active_model_version_id: number | null
+	agent_version: string | null; uptime_s: number | null; active_image: string | null
 }
 export type BackendMetricSample = {
 	id: number; device_id: number; recorded_at: string

@@ -56,11 +56,11 @@ export default function DeploymentsPage() {
     e.preventDefault()
     const model = models.find((item) => item.name === selectedModel)
     const device = devices[0]
-    if (!model?.versionId || !device) {
-      setActionNotice('Select a model version and ensure an edge device is available.')
+    if (!model || !device) {
+      setActionNotice('Select a model and ensure an edge device is available.')
       return
     }
-    aiService.createDeployment({ device_id: Number(device.id), model_version_id: Number(model.versionId), config: { strategy: selectedStrategy } })
+    aiService.createDeployment({ device_id: Number(device.id), image: model.id, config: { strategy: selectedStrategy } })
       .then(() => aiService.listDeployments())
       .then(setDeployments)
       .then(() => { setShowDeployModal(false); setActionNotice('Deployment queued by backend.'); setTimeout(() => setActionNotice(null), 3500) })

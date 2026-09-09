@@ -56,7 +56,7 @@ async def run(settings: AgentSettings | None = None) -> None:
 
     def heartbeat() -> p.HeartbeatPayload:
         hb = collect_metrics(hardware=hw)
-        hb.active_model_version_id = store.state.reported.active_model_version_id
+        hb.active_image = store.state.reported.active_image
         if hb.capabilities is not None:
             hb.capabilities.agent_version = agent_version()
             hb.capabilities.ip_address = primary_ip()

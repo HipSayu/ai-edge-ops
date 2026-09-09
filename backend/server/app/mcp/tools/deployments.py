@@ -13,7 +13,7 @@ def _row(d) -> dict:
     return {
         "id": d.id,
         "device_id": d.device_id,
-        "model_version_id": d.model_version_id,
+        "image": d.image,
         "status": str(d.status),
         "note": d.note,
         "activated_at": d.activated_at.isoformat() if d.activated_at else None,

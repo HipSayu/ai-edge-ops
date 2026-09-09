@@ -1,10 +1,9 @@
-"""Model registry context: models and their versioned, compressed artifacts.
-
-Public surface for other modules: :class:`ModelRegistryService`.
+"""Model registry context — the catalog is read live from an OCI registry
+(GHCR), there is no local DB. See :class:`ModelCatalog`.
 """
 
 from __future__ import annotations
 
-from app.modules.model_registry.service import ModelRegistryService
+from app.modules.model_registry.catalog import ModelCatalog, ModelImage
 
-__all__ = ["ModelRegistryService"]
+__all__ = ["ModelCatalog", "ModelImage"]

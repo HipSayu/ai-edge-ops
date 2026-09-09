@@ -35,7 +35,7 @@ class HeartbeatPayload(BaseModel):
     temperature_c: float | None = None
     fps: float | None = None
     inference_latency_ms: float | None = None
-    active_model_version_id: int | None = None
+    active_image: str | None = None  # OCI ref the inference container is running
     capabilities: DeviceCapabilities | None = None
     recorded_at: dt.datetime | None = None
 
@@ -100,7 +100,7 @@ class LogPayload(BaseModel):
 
 
 class StateReportPayload(BaseModel):
-    active_model_version_id: int | None = None
+    active_image: str | None = None
     deployment_id: int | None = None
     runtime_status: str = "unknown"  # applying | active | failed
     config: dict = Field(default_factory=dict)
@@ -118,10 +118,9 @@ class CommandAckPayload(BaseModel):
 class DeployModelPayload(BaseModel):
     command_id: str
     deployment_id: int
-    model_version_id: int
     # Digest-pinned OCI ref the edge pulls and runs as its `inference` compose
-    # service. The server picks the cpu/gpu variant from capabilities.backend.
-    image: str  # "registry/org/models/ppe@sha256:..."
+    # service. Multi-arch image — the runtime picks CPU/GPU itself.
+    image: str  # "ghcr.io/org/ai-edge-ops-model@sha256:..."
     config: dict = Field(default_factory=dict)
 
 
