@@ -33,17 +33,18 @@ Chi tiết kế hoạch: [`REFACTOR_stateless.md`](REFACTOR_stateless.md).
 
 ---
 
-## C. Chặn — xử trước khi làm S1+
+## C. Chặn — trạng thái
 
-- [ ] **WIP MCP/assistant chưa commit** đang nằm trong working tree
-      (`app/mcp/`, `mcp_main.py`, `assistant/{commands,operator_agent,toolset}.py`,
-      sửa `assistant/*`, `gateway.py`, `model_registry/{models,schemas}.py`,
-      `edge_protocol/messages.py`, tests, `frontend/.../ModelsPage.tsx`,
-      `docs/ROLES.md`). **`server` test đang đỏ**: `ModuleNotFoundError:
-      mcp.server.mcpserver`.
-  → commit / stash / sửa import cho xanh. S1–S5 đụng đúng các file này.
-- [ ] `svc_core` submodule có WIP `ai_core/commands/` — quyết định commit trong
-      submodule + bump con trỏ, hay để nguyên.
+- [x] **WIP MCP/assistant** — đã commit `9f080f9`: fix `MCPServer→FastMCP`,
+      smoke test dùng `/help`. `server` test **26 pass / 1 fail**
+      (`test_violation_over_bus_records_and_alerts` — bug WIP có sẵn, ghi ở
+      `REFACTOR_TODO.md`).
+- [x] **artifact_uri/S3 cleanup** — commit `c950797`.
+- [ ] Frontend WIP còn treo (6 file sửa + `LogsEventSidebar.tsx`,
+      `PageLayout.tsx`) — chưa rõ ranh giới với MCP feature; S2b sẽ đụng
+      `ModelsPage.tsx` nên gộp/xử ở đó.
+- [ ] `svc_core` submodule có WIP `ai_core/commands/` + `S3Config` `__all__` (mình
+      dọn) — quyết định commit trong submodule + bump con trỏ, hay để nguyên.
 
 ---
 
@@ -58,12 +59,14 @@ Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc
   - FE types: `BackendDevice.id`, `DeploymentRecord.device_id`,
     `BackendCamera.id` → `string`; `CreateDevicePayload.device_id`
   - sửa test; fix luôn bug hiện tại (agent gửi `edge-dev-1`, server ép int)
-- [ ] **S2 — `ModelCatalog` đọc GHCR**
-  - `model_registry/catalog.py` + `Settings.model_registry`
-  - `GET /models*` đổi backing; **bỏ `POST /models`**
-  - xoá ORM `models`/`model_versions` + repo + `ModelRegistryService`
-  - FE: `types/ai.ts` reshape (id=string, versions=tags, field từ labels);
-    `ModelsPage` bỏ form register, hiện labels
+- [~] **S2 — `ModelCatalog` đọc GHCR**
+  - [x] S2a `model_registry/catalog.py` (`ModelCatalog` + `ModelImage`) +
+        `Settings.model_registry` + `app/core/model_catalog.py` + test (commit `56a328a`)
+  - [ ] S2b: `GET /models*` đổi backing; **bỏ `POST /models`**; xoá ORM
+        `models`/`model_versions` + repo + `ModelRegistryService`; `deployment`
+        + `gateway` dùng `image` string thay `model_version_id`
+  - [ ] FE: `types/ai.ts` reshape (id=string, versions=tags, field từ labels);
+        `ModelsPage` bỏ form register, hiện labels
 - [ ] **S3 — `device_config` (desired) + config phân tầng**
   - bảng `device_config` + service; `POST/PATCH /agent/devices` +
     `/agent/cameras` map vào đó
