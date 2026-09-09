@@ -86,3 +86,10 @@ async def test_latest_tag_is_hidden(catalog: ModelCatalog):
 async def test_unconfigured_catalog_is_empty():
     empty = ModelCatalog(ModelRegistryConfig())
     assert await empty.list_models() == []
+
+
+async def test_get_model_404_raises_not_found(catalog: ModelCatalog):
+    from dqh.svc_core.contracts.errors import NotFoundError
+
+    with pytest.raises(NotFoundError):
+        await catalog.get_model("nope")

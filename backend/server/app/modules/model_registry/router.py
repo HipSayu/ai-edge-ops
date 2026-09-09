@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import httpx
-from dqh.svc_core.contracts.errors import NotFoundError
 from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter
 
@@ -20,7 +18,5 @@ async def list_models(refresh: bool = False) -> ApiResponse[list[ModelImage]]:
 
 @router.get("/{tag}", response_model=ApiResponse[ModelImage])
 async def get_model(tag: str, refresh: bool = False) -> ApiResponse[ModelImage]:
-    try:
-        return ok(await model_catalog.get_model(tag, refresh=refresh))
-    except httpx.HTTPStatusError as exc:
-        raise NotFoundError(f"model image {tag!r} not found") from exc
+    # HttpClient maps a registry 404 -> NotFoundError -> HTTP 404
+    return ok(await model_catalog.get_model(tag, refresh=refresh))

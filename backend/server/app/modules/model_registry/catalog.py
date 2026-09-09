@@ -15,6 +15,7 @@ import datetime as dt
 import time
 
 import httpx
+from dqh.svc_core.transports.http import HttpClient
 
 from app.core.config import ModelRegistryConfig
 from app.modules.model_registry.label_values import parse_datetime, split_csv, to_float
@@ -35,7 +36,7 @@ class ModelCatalog:
         self, config: ModelRegistryConfig, *, transport: httpx.AsyncBaseTransport | None = None
     ) -> None:
         self._cfg = config
-        self._transport = transport  # tests inject httpx.MockTransport
+        self._http = HttpClient(f"https://{config.host}", timeout=15.0, transport=transport)
         self._cache: dict[str, tuple[float, ModelImage]] = {}
         self._tags_cache: tuple[float, list[str]] | None = None
         self._bearer: str | None = None
@@ -53,35 +54,28 @@ class ModelCatalog:
     async def get_model(self, tag: str, *, refresh: bool = False) -> ModelImage:
         return await self._image(tag, refresh=refresh)
 
-    # --- registry v2 ---------------------------------------------------------
-    async def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            base_url=f"https://{self._cfg.host}", timeout=15.0, transport=self._transport
-        )
-
-    async def _token(self, client: httpx.AsyncClient) -> str:
+    # --- registry v2 -------------------------------------------------------
+    async def _token(self) -> str:
         if self._bearer:
             return self._bearer
         headers = {}
         if self._cfg.token:
-            basic = base64.b64encode(f"x:{self._cfg.token}".encode()).decode()
-            headers["Authorization"] = f"Basic {basic}"
-        r = await client.get(
+            headers["Authorization"] = "Basic " + base64.b64encode(
+                f"x:{self._cfg.token}".encode()
+            ).decode()
+        r = await self._http.get(
             "/token",
             params={"service": self._cfg.host, "scope": f"repository:{self._cfg.repo}:pull"},
             headers=headers,
         )
-        r.raise_for_status()
         self._bearer = r.json().get("token") or r.json().get("access_token", "")
         return self._bearer
 
-    async def _get(self, client: httpx.AsyncClient, path: str, *, accept: str | None = None):
-        headers = {"Authorization": f"Bearer {await self._token(client)}"}
+    async def _get(self, path: str, *, accept: str | None = None) -> httpx.Response:
+        headers = {"Authorization": f"Bearer {await self._token()}"}
         if accept:
             headers["Accept"] = accept
-        r = await client.get(f"/v2/{self._cfg.repo}{path}", headers=headers)
-        r.raise_for_status()
-        return r
+        return await self._http.get(f"/v2/{self._cfg.repo}{path}", headers=headers)
 
     async def _tags(self, *, refresh: bool) -> list[str]:
         if not self._cfg.configured:
@@ -89,8 +83,7 @@ class ModelCatalog:
         now = time.monotonic()
         if not refresh and self._tags_cache and now < self._tags_cache[0]:
             return self._tags_cache[1]
-        async with await self._client() as client:
-            r = await self._get(client, "/tags/list")
+        r = await self._get("/tags/list")
         tags = [t for t in r.json().get("tags", []) if t != "latest"]
         self._tags_cache = (now + self._cfg.ttl_s, tags)
         return tags
@@ -99,25 +92,24 @@ class ModelCatalog:
         now = time.monotonic()
         if not refresh and (hit := self._cache.get(tag)) and now < hit[0]:
             return hit[1]
-        async with await self._client() as client:
-            top = await self._get(client, f"/manifests/{tag}", accept=_MANIFEST_ACCEPT)
-            top_digest = top.headers.get("docker-content-digest", "")
-            doc = top.json()
 
-            platforms: list[str] = []
-            if "manifests" in doc:  # index / manifest list
-                for m in doc["manifests"]:
-                    p = m.get("platform", {})
-                    if p.get("os") and p.get("architecture"):
-                        platforms.append(f"{p['os']}/{p['architecture']}")
-                child = doc["manifests"][0]["digest"]
-                img = (await self._get(client, f"/manifests/{child}", accept=_MANIFEST_ACCEPT)).json()
-            else:
-                img = doc
+        top = await self._get(f"/manifests/{tag}", accept=_MANIFEST_ACCEPT)
+        top_digest = top.headers.get("docker-content-digest", "")
+        doc = top.json()
 
-            size = sum(int(layer.get("size", 0)) for layer in img.get("layers", []))
-            cfg = await self._get(client, f"/blobs/{img['config']['digest']}")
-        blob = cfg.json()
+        platforms: list[str] = []
+        if "manifests" in doc:  # index / manifest list
+            for m in doc["manifests"]:
+                p = m.get("platform", {})
+                if p.get("os") and p.get("architecture"):
+                    platforms.append(f"{p['os']}/{p['architecture']}")
+            child = doc["manifests"][0]["digest"]
+            img = (await self._get(f"/manifests/{child}", accept=_MANIFEST_ACCEPT)).json()
+        else:
+            img = doc
+
+        size = sum(int(layer.get("size", 0)) for layer in img.get("layers", []))
+        blob = (await self._get(f"/blobs/{img['config']['digest']}")).json()
         labels = (blob.get("config", {}) or {}).get("Labels") or {}
 
         image = ModelImage(

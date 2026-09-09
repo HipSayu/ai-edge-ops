@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import httpx
 import pytest
 from dqh.svc_core.contracts.errors import NotFoundError
 
@@ -25,9 +24,7 @@ _PINNED = "ghcr.io/acme/ai-edge-ops-model@sha256:abc"
 class _FakeCatalog:
     async def get_model(self, tag: str, *, refresh: bool = False) -> ModelImage:
         if tag not in ("1.0.0", _IMAGE.ref):
-            raise httpx.HTTPStatusError(
-                "404", request=httpx.Request("GET", "x"), response=httpx.Response(404)
-            )
+            raise NotFoundError(f"no such image {tag!r}")
         return _IMAGE
 
 
