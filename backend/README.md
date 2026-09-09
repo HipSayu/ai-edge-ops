@@ -22,12 +22,21 @@ files. Prod: `docker-compose.prod.yml` + `Caddyfile` + `mediamtx.prod.yml` (see
 `server` and `edge_agent` both depend on `dqh-svc-core` and `edge-protocol`
 (installed editable from `packages/` and `libs/`).
 
-## Dev setup (one venv for all four)
+## Dev setup (uv workspace — one env for all five)
+
+The repo root is a `uv` workspace (`[tool.uv.workspace]` in `/pyproject.toml`);
+`server`, `edge_agent`, `libs/edge_protocol`, `packages/svc_core`,
+`packages/ai_core` are members with a single root `uv.lock`.
 
 ```bash
-cd backend
-python -m venv .venv
-.venv/Scripts/pip install -e "packages/svc_core[fastapi,mqtt,dev]" \
+uv sync --all-extras          # from the repo root — builds everything
+```
+
+Or plain pip (what CI and the Dockerfiles do):
+
+```bash
+cd backend && python -m venv .venv
+.venv/Scripts/pip install -e "packages/svc_core[fastapi,mqtt,redis,sqlalchemy,security,dev]" \
                           -e "libs/edge_protocol[dev]" \
                           -e "server[dev]" \
                           -e "edge_agent[dev]"
@@ -36,10 +45,10 @@ python -m venv .venv
 ## Test
 
 ```bash
-cd backend/packages/svc_core   && ../../.venv/Scripts/python -m pytest -q   # 29
-cd backend/libs/edge_protocol  && ../../.venv/Scripts/python -m pytest -q   # 2
-cd backend/server              && ../.venv/Scripts/python -m pytest -q      # 11
-cd backend/edge_agent          && ../.venv/Scripts/python -m pytest -q      # 7
+cd backend/packages/svc_core   && uv run --all-extras pytest -q
+cd backend/libs/edge_protocol  && uv run --extra dev pytest -q
+cd backend/server              && uv run --extra dev pytest -q
+cd backend/edge_agent          && uv run --extra dev pytest -q
 ```
 
 ## Run

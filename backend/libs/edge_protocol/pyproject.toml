@@ -12,7 +12,7 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [tool.uv.sources]
-dqh-svc-core = { path = "../../packages/svc_core", editable = true }
+dqh-svc-core = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
