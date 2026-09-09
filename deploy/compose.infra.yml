@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# INFRA — backing services (Postgres, Redis, EMQX/MQTT, MinIO, MediaMTX).
+# The BASE stack: runs the same everywhere, every other stack layers on it.
+#
+#   dev  :  docker compose up                              (compose.yml pulls this in)
+#   dev  :  docker compose -f compose.infra.yml up -d       (infra only, server bare-metal)
+#   prod :  docker compose -f compose.infra.yml -f compose.app.yml up -d
+#   VPS  :  docker compose -f compose.infra.yml up -d
+#
+# Every value comes from deploy/.env — see .env.example. No literals here.
+# ─────────────────────────────────────────────────────────────────────────────
+name: ${COMPOSE_PROJECT_NAME}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: ["${DB_PORT}:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # empty REDIS_PASSWORD = auth disabled (dev)
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    ports: ["${REDIS_PORT}:6379"]
+    volumes: ["redisdata:/data"]
+
+  mqtt:
+    image: emqx/emqx:5.8
+    restart: unless-stopped
+    environment:
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD}
+    ports:
+      - "${MQTT_PORT}:1883"
+      - "${MQTT_TLS_PORT}:8883"
+      - "${MQTT_DASHBOARD_PORT}:18083"
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_etc:/opt/emqx/etc
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.9.3
+    restart: unless-stopped
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_HOST}
+      MTX_WEBRTCLOCALUDPADDRESS: ":${MEDIAMTX_ICE_PORT}"
+      MTX_AUTHMETHOD: ${MEDIAMTX_AUTH_METHOD}
+      MTX_AUTHHTTPADDRESS: ${MEDIAMTX_AUTH_URL}
+    ports:
+      - "${MEDIAMTX_HTTP_PORT}:8889"
+      - "${MEDIAMTX_ICE_PORT}:${MEDIAMTX_ICE_PORT}/udp"
+    volumes:
+      - ./config/mediamtx.yml:/mediamtx.yml:ro
+
+volumes:
+  pgdata:
+  redisdata:
+  emqx_data:
+  emqx_etc:

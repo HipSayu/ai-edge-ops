@@ -9,23 +9,31 @@ GitHub push to main
    └─ Deploy (.github/workflows/deploy.yml)
         ├─ build ghcr.io/<owner>/ai-edge-ops-server:<sha>   (context: backend/, needs the submodule)
         ├─ build ghcr.io/<owner>/ai-edge-ops-frontend:<sha> (context: frontend/, nginx SPA)
-        └─ ssh to $DEPLOY_HOST → scp docker-compose.prod.yml + Caddyfile +
-           mediamtx.prod.yml to /opt/ai-edge-ops, then docker compose pull && up -d
+        └─ ssh to $DEPLOY_HOST → scp deploy/compose.infra.yml + compose.app.yml +
+           config/ to /opt/ai-edge-ops, then docker compose pull && up -d
 ```
 
-Caddy terminates TLS and routes `/api/*` → `server:8000`, everything else →
+The prod stack is the infra base (`compose.infra.yml`) **plus** the app overlay
+(`compose.app.yml` — Caddy + frontend + server). Caddy terminates TLS and routes
+`/api/*` → `server:8000`, `/*/whip|whep` → `mediamtx:8889`, everything else →
 `frontend:80`.
 
 ## One-time host setup
 
 ```bash
 sudo mkdir -p /opt/ai-edge-ops && cd /opt/ai-edge-ops
-# CI scp's docker-compose.prod.yml + Caddyfile + mediamtx.prod.yml here on every
-# deploy (and symlinks docker-compose.yml -> docker-compose.prod.yml). Copy once for
-# the first run.
-cp .env.prod.example .env     # from the repo root
-$EDITOR .env                  # DOMAIN, POSTGRES_PASSWORD, MINIO_ROOT_*
-docker compose -f docker-compose.prod.yml up -d
+# CI scp's compose.infra.yml + compose.app.yml + config/ here on every deploy.
+# Copy the env templates once (from app/deploy/ in the repo):
+cp .env.infra.example .env.infra
+cp .env.app.example   .env.app
+$EDITOR .env.infra .env.app    # POSTGRES_PASSWORD, EMQX_DASHBOARD_PASSWORD,
+                               # REDIS_PASSWORD, JWT_SECRET, DOMAIN, MQTT_USERNAME/PASSWORD,
+                               # SERVER_ENVIRONMENT=production, SERVER_MQTT_TLS=true,
+                               # SERVER_MQTT_PORT=8883, SERVER_CORS_ORIGINS=["https://$DOMAIN"],
+                               # SERVER_MEDIAMTX_WHEP_URL=https://$DOMAIN, MEDIAMTX_WEBRTC_HOST=$DOMAIN
+export COMPOSE_FILE=compose.infra.yml:compose.app.yml
+export COMPOSE_ENV_FILES=.env.infra,.env.app
+docker compose up -d
 ```
 
 Apply the reference schema after the database is healthy:
@@ -37,8 +45,9 @@ docker compose exec -T db psql -U ppe -d ai_edge_ops < /opt/ai-edge-ops/schema.s
 Run this explicitly for every schema release. The server's `init_db()` is only
 intended for local/test startup and does not alter existing tables.
 
-DNS: point `DOMAIN` A/AAAA at the host. Open `80`, `443`, and `8883` (MQTT TLS for
-edge devices). Keep `5432`/`6379`/`9000`/`18083` closed to the internet.
+DNS: point `DOMAIN` A/AAAA at the host. Open `80`, `443`, and the MQTT-TLS port
+(`MQTT_TLS_PORT`, default `58883`). Keep the Postgres / Redis / EMQX-dashboard
+host ports closed to the internet.
 
 ### MQTT mTLS and per-device ACL
 
@@ -78,8 +87,8 @@ PAT, or set the `ai-edge-ops-server` / `-frontend` packages' visibility so the
 
 ```bash
 cd /opt/ai-edge-ops
-sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<previous-sha>/' .env
-docker compose pull && docker compose up -d
+sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<previous-sha>/' .env.app
+docker compose pull && docker compose up -d      # COMPOSE_FILE / COMPOSE_ENV_FILES from your shell rc
 ```
 
 ## Backups

@@ -93,14 +93,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ship compose + Caddyfile to the host
+      - name: Ship the deploy bundle to the host
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "docker-compose.prod.yml,Caddyfile,mediamtx.prod.yml"
+          source: "deploy/compose.infra.yml,deploy/compose.app.yml,deploy/config/*"
           target: "/opt/ai-edge-ops"
+          strip_components: 1
 
       - name: Pull new images and roll
         uses: appleboy/ssh-action@v1
@@ -111,15 +112,16 @@ jobs:
           script: |
             set -e
             cd /opt/ai-edge-ops
-            ln -sf docker-compose.prod.yml docker-compose.yml
+            export COMPOSE_FILE=compose.infra.yml:compose.app.yml
+            export COMPOSE_ENV_FILES=.env.infra,.env.app
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             TAG=$(echo "${{ github.sha }}" | cut -c1-7)
-            # .env on the host holds DOMAIN / POSTGRES_PASSWORD / MINIO_* (never in the repo)
-            grep -q '^IMAGE_PREFIX=' .env || echo "IMAGE_PREFIX=${{ env.IMAGE_PREFIX }}" >> .env
-            if grep -q '^IMAGE_TAG=' .env; then
-              sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${TAG}|" .env
+            # .env.infra / .env.app on the host hold DOMAIN / *_PASSWORD / JWT_SECRET (never in the repo)
+            grep -q '^IMAGE_PREFIX=' .env.app || echo "IMAGE_PREFIX=${{ env.IMAGE_PREFIX }}" >> .env.app
+            if grep -q '^IMAGE_TAG=' .env.app; then
+              sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${TAG}|" .env.app
             else
-              echo "IMAGE_TAG=${TAG}" >> .env
+              echo "IMAGE_TAG=${TAG}" >> .env.app
             fi
             docker compose pull
             docker compose up -d --remove-orphans

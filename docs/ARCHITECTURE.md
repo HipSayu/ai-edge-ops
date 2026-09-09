@@ -13,7 +13,7 @@ flowchart LR
         MQ["MQTT Broker<br/>(EMQX)"]
         MTX["MediaMTX<br/>WebRTC SFU"]
         PG[("PostgreSQL")]
-        S3[("MinIO / S3<br/>model artifacts · evidence")]
+        REG[("OCI registry<br/>model images")]
         RD[("Redis<br/>WS fan-out")]
     end
 
@@ -34,8 +34,9 @@ flowchart LR
     MTX -->|"WHEP (WebRTC playback)"| UI
     MTX -->|"auth webhook (HTTP)"| REST
     GW --> MOD --> PG
-    MOD --> S3
-    EA -->|"artifact download / evidence upload (HTTP)"| REST
+    MOD -->|"catalog / tags / digests"| REG
+    EA -->|"docker compose pull (model image)"| REG
+    EA -->|"evidence upload (HTTP)"| REST
     WSH <-->|"pub/sub"| RD
     UI <-->|"REST (JSON)"| REST
     UI <-->|"WebSocket (Envelope frames)"| WSH
@@ -62,7 +63,7 @@ Design rule: **anything needing delivery guarantees (commands, ACKs, violations)
 main.py            FastAPI lifespan: configure logging, init_db, register_event_handlers,
                    connect ws_hub, start EdgePlane
 core/
-  config.py        single Settings object (env: DB__* MQTT__* REDIS__* S3__*)
+  config.py        single Settings object (env: DB__* MQTT__* REDIS__*)
   database.py      async SQLAlchemy session + init_db (creates tables on boot)
   events.py        in-process event_bus (publish/subscribe dataclasses)
   ws.py            ws_hub = build_realtime_bus()  (memory | redis)
@@ -147,22 +148,26 @@ analytics/ppe.py   detections -> violation types (no_helmet, ...)
 | Store | Holds | Notes |
 |---|---|---|
 | PostgreSQL | devices, metric samples (downsampled to ~1/min), deployments, model versions, violations, alerts, users/roles, cameras | tables created by `init_db()` on boot; reference DDL in `schema.sql` |
-| MinIO / S3 | model artifacts (`artifact_uri`), evidence images (prod) | edge downloads artifacts by presigned URL |
-| Local disk (server) | evidence images (dev, `settings.evidence_dir`) | served from `/evidence/{filename}` |
+| Container registry (GHCR) | model artifacts — each model version is an OCI image | edge deploys by `docker compose pull` of the `inference` image |
+| Local disk (server) | evidence images (`settings.evidence_dir`) | served from `/evidence/{filename}` |
 | Local disk (edge) | `state.json` (desired/reported), downloaded model weights, outbox | survives restart; drives reconcile |
 | Redis | transient WS pub/sub only | no durable data; used when `REALTIME_TRANSPORT=redis` |
 | MediaMTX | in-flight WebRTC tracks | no persistence |
 
 ## Deployment topology
 
-Local dev — `docker compose` from `app/`:
+All compose lives in `app/deploy/`. Local dev — from `deploy/`:
 
 ```
-docker compose -f docker-compose.data.yml up -d   # Postgres, EMQX, MinIO, Redis, MediaMTX
-docker compose up --build                         # + server
-docker compose --profile edge up --build          # + edge-agent (end-to-end demo)
+export COMPOSE_ENV_FILES=.env.infra,.env.app
+docker compose -f compose.infra.yml up -d          # Postgres, EMQX, Redis, MediaMTX
+docker compose up --build                          # + server (compose.yml includes the infra)
+COMPOSE_ENV_FILES=.env.infra,.env.app,.env.edge \
+  docker compose --profile edge up --build         # + edge-agent + inference (end-to-end)
 ```
 
-`docker-compose.yml` just `include:`s `docker-compose.data.yml` + `backend/server/compose.yml`
-+ `backend/edge_agent/compose.yml`. Per-service env sits next to each package; shared infra
-creds/ports in `app/.env`. The VPS deployment adds the `nginx/` reverse-proxy bundle on top.
+`compose.yml` `include:`s `compose.infra.yml`. Prod = `compose.infra.yml` +
+`compose.app.yml` (Caddy + frontend + server). Config is per concern:
+`.env.infra` / `.env.app` / `.env.edge` — compose files are pure `${VAR}`
+templates with no fallbacks. A backing-services-only VPS runs `compose.infra.yml`
+plus the `deploy/vps-proxy/` system-nginx snippets.
