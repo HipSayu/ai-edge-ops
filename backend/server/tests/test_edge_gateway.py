@@ -122,8 +122,8 @@ async def test_violation_over_bus_records_and_alerts(gateway, session):
     assert any(a.type.value == "ppe_violation" for a in alerts)
 
 
-async def test_deployment_activated_sends_the_image(gateway, session):
-    from app.modules.deployment.event import DeploymentActivated
+async def test_deploy_requested_sends_the_image(gateway, session):
+    from app.modules.deployment.event import DeployRequested
 
     device_id = await _new_device(session)
 
@@ -132,9 +132,8 @@ async def test_deployment_activated_sends_the_image(gateway, session):
         protocol.TOPIC_CMD.render(device_id=str(device_id)),
         lambda e: sent.append(e) or _noop(),
     )
-    await gateway._on_deployment_activated(
-        DeploymentActivated(
-            deployment_id=5,
+    await gateway._on_deploy_requested(
+        DeployRequested(
             device_id=device_id,
             image="ghcr.io/acme/model@sha256:gpu",
             config={"conf_threshold": 0.4},

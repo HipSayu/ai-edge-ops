@@ -1,4 +1,4 @@
-"""Deployment API contract."""
+"""Deployment API contract — deploy is a command, not a stored row."""
 
 from __future__ import annotations
 
@@ -6,33 +6,26 @@ import datetime as dt
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.deployment.rules import DeploymentStatus
-from app.shared.schema import ORMSchema
 
-
-class DeploymentCreate(BaseModel):
+class DeployRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     device_id: str
     image: str = Field(min_length=1, max_length=512)  # a model tag or full ref
     config: dict = Field(default_factory=dict)
     note: str | None = None
-    activate_now: bool = False
 
 
-class DeploymentOut(ORMSchema):
-    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+class DeploymentView(BaseModel):
+    """Current deploy state of one device, derived from desired vs reported."""
 
-    id: int
     device_id: str
-    image: str
-    status: DeploymentStatus
-    config: dict
-    note: str | None
-    activated_at: dt.datetime | None
-    ended_at: dt.datetime | None
-    created_at: dt.datetime
-    updated_at: dt.datetime
+    name: str
+    desired_image: str | None
+    active_image: str | None
+    runtime_status: str
+    in_sync: bool
+    updated_at: dt.datetime | None = None
 
 
 class DeploymentFailIn(BaseModel):

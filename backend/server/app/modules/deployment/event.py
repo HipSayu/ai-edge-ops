@@ -1,19 +1,20 @@
-"""Events published by the deployment module."""
+"""Events for the deployment flow — there is no deployment table."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
 @dataclass(frozen=True)
-class DeploymentActivated:
-    deployment_id: int
+class DeployRequested:
+    """The operator set a device's desired model image — send the command."""
+
     device_id: str
-    image: str
-    config: dict[str, Any]
+    image: str  # digest-pinned OCI ref
+    config: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class DeploymentFailed:
-    deployment_id: int
     device_id: str
     reason: str
+    deployment_id: int | None = None

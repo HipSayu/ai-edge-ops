@@ -20,28 +20,31 @@ const mapModel = (m: ModelImageRecord): ModelArtifact => ({
 })
 
 const mapDeployment = (d: DeploymentRecord): Deployment => {
-  const status = d.status.toLowerCase()
-  const shortImage = d.image.split('/').pop() ?? d.image
+  const short = (r: string | null) => r?.split('/').pop()?.split('@')[0] ?? '-'
+  const status: Deployment['status'] = d.in_sync
+    ? 'Active'
+    : d.runtime_status === 'failed'
+      ? 'Failed'
+      : 'In Progress'
   return {
-    id: String(d.id),
-    modelName: shortImage,
-    modelVersion: shortImage,
-    targetDevices: [String(d.device_id)],
+    id: d.device_id,
+    modelName: short(d.desired_image),
+    modelVersion: short(d.active_image),
+    targetDevices: [d.name],
     strategy: 'Immediate',
-    status: status === 'active' ? 'Active' : status === 'failed' ? 'Failed' : 'In Progress',
-    progressPct: status === 'active' ? 100 : 0,
+    status,
+    progressPct: d.in_sync ? 100 : d.runtime_status === 'applying' ? 50 : 0,
     deployedBy: 'Backend',
-    deployedAt: d.activated_at ?? d.created_at,
+    deployedAt: d.updated_at ?? '',
   }
 }
 
 export const aiService = {
   listModels: async () => (await apiClient.get<ModelImageRecord[]>('/models')).map(mapModel),
   getModel: (tag: string) => apiClient.get<ModelImageRecord>(`/models/${encodeURIComponent(tag)}`).then(mapModel),
-  listDeployments: async () => (await apiClient.get<{ items: DeploymentRecord[] }>('/deployments')).items.map(mapDeployment),
-  createDeployment: (payload: { device_id: string; image: string; config?: Record<string, unknown>; activate_now?: boolean }) =>
+  listDeployments: async () => (await apiClient.get<DeploymentRecord[]>('/deployments')).map(mapDeployment),
+  createDeployment: (payload: { device_id: string; image: string; config?: Record<string, unknown> }) =>
     apiClient.post<DeploymentRecord>('/deployments', payload),
-  getDeployment: (id: string) => apiClient.get<Deployment>(`/deployments/${id}`),
   listInferenceSamples: (cameraId?: string) => apiClient.get<InferenceSample[]>('/violations', { query: { device_id: cameraId } }),
   updateClassConfig: (payload: unknown) => apiClient.patch<unknown>('/models/class-config', payload),
 }

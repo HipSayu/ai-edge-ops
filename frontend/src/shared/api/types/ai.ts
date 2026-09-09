@@ -21,6 +21,6 @@ export type ModelImageRecord = {
   latency_ms: number | null
   base: string | null
 }
-export type DeploymentRecord = { id: number; device_id: string; image: string; status: string; created_at: string; activated_at: string | null }
+export type DeploymentRecord = { device_id: string; name: string; desired_image: string | null; active_image: string | null; runtime_status: string; in_sync: boolean; updated_at: string | null }
 export type InferenceRecord = InferenceSample
 export const DEFAULT_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
