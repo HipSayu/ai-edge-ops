@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Activity, Zap, CheckCircle2, Shield, Camera, LayoutGrid, Grid2X2, Grid3X3, AlertTriangle, Check, X } from 'lucide-react'
+import { LayoutGrid, Grid2X2, Grid3X3 } from 'lucide-react'
 import type { InferenceSample } from '@/modules/ai/types'
 import { aiService } from '@/shared/api/services/ai'
-import KpiCard from '@/shared/components/KpiCard'
 import type { Camera as CameraType } from '@/modules/agent/types'
 import { agentService } from '@/shared/api/services/agent'
 import LiveMonitorPanel from '@/modules/agent/components/LiveMonitorPanel'
@@ -63,11 +62,6 @@ export default function InferencePage() {
   useEffect(() => { aiService.listInferenceSamples().then(setSamples).catch(() => setSamples([])) }, [])
 
   const activeCamera = cameras.find((c) => c.id === selectedCamId) ?? cameras[0]
-  const objectCount = samples.reduce((total, sample) => total + sample.objects.length, 0)
-  const confidenceValues = samples.flatMap((sample) => sample.objects.map((object) => object.confidence))
-  const meanConfidence = confidenceValues.length
-    ? confidenceValues.reduce((sum, confidence) => sum + confidence, 0) / confidenceValues.length
-    : null
 
   if (!activeCamera) return <div className="av-panel">No camera data available.</div>
 

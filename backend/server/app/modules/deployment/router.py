@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import DbSession, Pagination
 from app.core.bearer_auth import require_permission
-from app.modules.deployment.domain import DeploymentStatus
+from app.modules.deployment.rules import DeploymentStatus
 from app.modules.deployment.schemas import DeploymentCreate, DeploymentFailIn, DeploymentOut
 from app.modules.deployment.service import DeploymentService
 

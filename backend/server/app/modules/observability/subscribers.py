@@ -13,8 +13,8 @@ from app.core.database import session_scope
 from app.core.events import event_bus
 from app.modules.agent.event import DeviceLatencyDegraded, DeviceWentOffline
 from app.modules.deployment.event import DeploymentFailed
-from app.modules.observability.domain import AlertSeverity, AlertType
 from app.modules.observability.event import AlertRaised, ViolationRecorded
+from app.modules.observability.rules import AlertSeverity, AlertType
 from app.modules.observability.schemas import AlertOut
 from app.modules.observability.service import AlertService
 

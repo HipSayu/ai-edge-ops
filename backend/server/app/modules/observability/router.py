@@ -16,7 +16,7 @@ from app.api.deps import DbSession, Pagination
 from app.core.config import settings
 from app.core.ws import ws_hub
 from app.core.ws_auth import authenticate_ws
-from app.modules.observability.domain import AlertStatus, AlertType
+from app.modules.observability.rules import AlertStatus, AlertType
 from app.modules.observability.schemas import (
     AlertOut,
     LabelCount,

@@ -14,7 +14,7 @@ from app.api.deps import DbSession, Pagination
 from app.core.ws import ws_hub
 from app.core.ws_auth import authenticate_ws
 from app.modules.agent import telemetry_relay
-from app.modules.agent.domain import DeviceStatus
+from app.modules.agent.rules import DeviceStatus
 from app.modules.agent.schemas import (
     AgentHealth,
     DeviceCreate,

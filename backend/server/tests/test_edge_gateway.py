@@ -5,7 +5,7 @@ from dqh.svc_core.messaging import Envelope, InMemoryMessageBus
 
 import edge_protocol as protocol
 from app.edge.gateway import AgentGateway
-from app.modules.agent.domain import DeviceStatus
+from app.modules.agent.rules import DeviceStatus
 from app.modules.agent.schemas import DeviceCreate
 from app.modules.agent.service import AgentService
 from app.core.ws import ws_hub

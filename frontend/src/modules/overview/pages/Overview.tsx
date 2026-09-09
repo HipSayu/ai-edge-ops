@@ -1,39 +1,37 @@
 import { useState, useEffect, useId } from 'react'
-import { Link } from 'react-router-dom'
 import {
   Cpu,
   Camera,
   Boxes,
   Rocket,
-  AlertTriangle,
   Activity,
-  ArrowRight,
   Radio,
   Zap,
   Truck,
-  ShieldAlert,
   Heart,
 } from 'lucide-react'
 import KpiCard from '@/shared/components/KpiCard'
 import type { EdgeDevice } from '@/modules/agent/types'
 import { agentService } from '@/shared/api/services/agent'
 import { aiService } from '@/shared/api/services/ai'
-import { observabilityService } from '@/shared/api/services/observability'
-import type { AnalyticsOverview } from '@/shared/api/types/observability'
+
+type AnalyticsOverview = {
+  violations_24h: number
+  avg_inference_latency_ms: number | null
+}
 
 type ChartMetric = 'fps' | 'latency' | 'detections'
 
 export default function Overview() {
   const [activeMetric, setActiveMetric] = useState<ChartMetric>('fps')
   const [telemetry, setTelemetry] = useState<{ time: string; fps: number; latency: number; detections: number }[]>([])
-  const [detectionClasses, setDetectionClasses] = useState<{ name: string; pct: number; count: number; color: string }[]>([])
+  const [detectionClasses] = useState<{ name: string; pct: number; count: number; color: string }[]>([])
   const [analyticsOverview, setAnalyticsOverview] = useState<AnalyticsOverview | null>(null)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [hoveredClass, setHoveredClass] = useState<number | null>(null)
   const [deviceStats, setDeviceStats] = useState<EdgeDevice[]>([])
   const [cameras, setCameras] = useState<import('@/modules/agent/types').Camera[]>([])
   const [deployments, setDeployments] = useState<import('@/modules/ai/types').Deployment[]>([])
-  const [incidents, setIncidents] = useState<import('@/modules/observability/types').Incident[]>([])
 
   const gradId = useId()
 
@@ -52,17 +50,7 @@ export default function Overview() {
     }).catch(() => { setDeviceStats([]); setTelemetry([]) })
     agentService.listCameras().then(setCameras).catch(() => setCameras([]))
     aiService.listDeployments().then(setDeployments).catch(() => setDeployments([]))
-    observabilityService.listIncidents().then(setIncidents).catch(() => setIncidents([]))
-    observabilityService.getAnalyticsOverview().then(setAnalyticsOverview).catch(() => setAnalyticsOverview(null))
-    observabilityService.getViolationsByType().then((rows) => {
-      const total = rows.reduce((sum, row) => sum + row.count, 0)
-      setDetectionClasses(rows.map((row, index) => ({
-        name: row.label,
-        count: row.count,
-        pct: total === 0 ? 0 : (row.count / total) * 100,
-        color: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5],
-      })))
-    }).catch(() => setDetectionClasses([]))
+    setAnalyticsOverview({ violations_24h: 0, avg_inference_latency_ms: null })
   }, [])
 
   // Compute metrics for the active stream
@@ -129,7 +117,6 @@ export default function Overview() {
 
   const onlineDevices = deviceStats.filter((d) => d.status === 'online').length
   const onlineCameras = cameras.filter((c) => c.online).length
-  const criticalAlerts = incidents.filter((i) => i.severity === 'critical').length
 
   return (
     <div>
@@ -186,20 +173,6 @@ export default function Overview() {
           chartType="sparkline"
           chartColor="#f59e0b"
           chartData={telemetry.map((point) => point.latency)}
-        />
-        <KpiCard
-          label="Security Incidents"
-          value={String(incidents.length)}
-          badge={`${criticalAlerts} critical`}
-          sub="Facility Safety"
-          icon={<ShieldAlert size={22} />}
-          iconBg="rgba(239, 68, 68, 0.12)"
-          iconColor="#ef4444"
-          deltaText="Current alert count"
-          isUp={false}
-          chartType="bars"
-          chartColor="#ef4444"
-          chartData={incidents.map((incident) => incident.confidence)}
         />
         <KpiCard
           label="Agent Health"
@@ -739,49 +712,6 @@ export default function Overview() {
           </div>
         </section>
 
-        {/* Real-Time Security Incidents Feed */}
-        <section className="av-panel">
-          <div className="av-panel-header">
-            <span className="av-panel-title">
-              <AlertTriangle size={16} />
-              <span>Live Security & Safety Alerts</span>
-            </span>
-            <Link to="/observability/alerts" className="av-link-action" style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span>Triage Center</span>
-              <ArrowRight size={13} />
-            </Link>
-          </div>
-          <div className="av-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {incidents.slice(0, 4).map((inc) => (
-              <div
-                key={inc.id}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  padding: '11px 13px',
-                  background: 'var(--panel-2)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border)',
-                  alignItems: 'center',
-                }}
-              >
-                <span className={`av-dot ${inc.severity === 'critical' ? 'critical' : inc.severity === 'warning' ? 'warning' : 'good'}`} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 2 }}>
-                    <span style={{ fontWeight: 700 }}>{inc.event}</span>
-                    <span className="av-mono" style={{ fontSize: 11, color: 'var(--text-faint)' }}>{inc.time}</span>
-                  </div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {inc.camera} • Person {inc.personId}
-                  </div>
-                </div>
-                <span className={`av-status-pill ${inc.status === 'Reviewed' ? 'reviewed' : inc.status === 'New' ? 'new' : 'escalated'}`} style={{ fontSize: 10 }}>
-                  {inc.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   )

@@ -6,8 +6,8 @@ from dqh.svc_core.persistence.sqlalchemy import BaseRepository
 from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy import select
 
-from app.modules.deployment.domain import DeploymentStatus
 from app.modules.deployment.models import Deployment
+from app.modules.deployment.rules import DeploymentStatus
 
 
 class DeploymentRepository(BaseRepository[Deployment]):

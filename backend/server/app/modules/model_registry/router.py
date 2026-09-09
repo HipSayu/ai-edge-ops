@@ -6,7 +6,7 @@ from dqh.svc_core.transports.http import ApiResponse, Page, ok
 from fastapi import APIRouter, Body, status
 
 from app.api.deps import DbSession, Pagination
-from app.modules.model_registry.domain import ModelTask, ModelVersionStatus
+from app.modules.model_registry.rules import ModelTask, ModelVersionStatus
 from app.modules.model_registry.schemas import (
     ModelCreate,
     ModelOut,

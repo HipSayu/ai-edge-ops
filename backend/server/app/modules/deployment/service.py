@@ -15,10 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
 from app.modules.agent.service import AgentService
-from app.modules.deployment.domain import DeploymentStatus, can_transition
 from app.modules.deployment.event import DeploymentActivated, DeploymentFailed
 from app.modules.deployment.models import Deployment
 from app.modules.deployment.repository import DeploymentRepository
+from app.modules.deployment.rules import DeploymentStatus, can_transition
 from app.modules.deployment.schemas import DeploymentCreate
 from app.modules.model_registry.service import ModelRegistryService
 

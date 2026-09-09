@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.events import event_bus
-from app.modules.agent.domain import DeviceStatus, evaluate_status
 from app.modules.agent.event import (
     DeviceLatencyDegraded,
     DeviceRegistered,
@@ -21,6 +20,7 @@ from app.modules.agent.event import (
 )
 from app.modules.agent.models import Device, MetricSample
 from app.modules.agent.repository import DeviceRepository, MetricSampleRepository
+from app.modules.agent.rules import DeviceStatus, evaluate_status
 from app.modules.agent.schemas import AgentHealth, DeviceCreate, DeviceUpdate, HeartbeatIn
 
 

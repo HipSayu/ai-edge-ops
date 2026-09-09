@@ -9,8 +9,8 @@ from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy import cast, func, select
 from sqlalchemy.types import Date
 
-from app.modules.observability.domain import AlertStatus, AlertType
 from app.modules.observability.models import Alert, Violation
+from app.modules.observability.rules import AlertStatus, AlertType
 
 
 class ViolationRepository(BaseRepository[Violation]):
