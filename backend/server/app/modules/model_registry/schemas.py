@@ -28,7 +28,6 @@ class ModelVersionCreate(BaseModel):
     version: str = Field(min_length=1, max_length=32)
     format: ModelFormat
     compression: CompressionMethod = CompressionMethod.NONE
-    artifact_uri: str | None = Field(default=None, max_length=512)
     image_repo: str | None = Field(default=None, max_length=512)
     image_cpu_digest: str | None = Field(default=None, max_length=128)
     image_gpu_digest: str | None = Field(default=None, max_length=128)
@@ -45,7 +44,6 @@ class ModelVersionOut(ORMSchema):
     format: ModelFormat
     compression: CompressionMethod
     status: ModelVersionStatus
-    artifact_uri: str | None
     image_repo: str | None
     image_cpu_digest: str | None
     image_gpu_digest: str | None

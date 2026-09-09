@@ -5,7 +5,6 @@ One :class:`Settings` instance, nested connection groups from
 
     DB__URL, DB__POOL_SIZE
     MQTT__HOST, MQTT__PORT, MQTT__TLS
-    S3__ENDPOINT_URL, S3__BUCKET
     REDIS__URL
 
 Top-level values (ENVIRONMENT, CORS_ORIGINS, ...) have no prefix.
@@ -20,7 +19,6 @@ from dqh.svc_core.config import (
     DatabaseConfig,
     MqttConfig,
     RedisConfig,
-    S3Config,
 )
 from pydantic import Field
 
@@ -50,11 +48,10 @@ class Settings(BaseAppSettings):
     mediamtx_whep_url: str = "http://localhost:8889"
     stream_token_seconds: int = 30
 
-    # --- backing services (env: DB__* / MQTT__* / REDIS__* / S3__*) ------
+    # --- backing services (env: DB__* / MQTT__* / REDIS__*) ----------------
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)
     mqtt: MqttConfig = Field(default_factory=MqttConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
-    s3: S3Config = Field(default_factory=S3Config)
 
 
 @lru_cache

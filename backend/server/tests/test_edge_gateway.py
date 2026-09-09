@@ -162,4 +162,3 @@ async def test_deploy_activation_picks_image_variant_by_device_backend(gateway, 
     assert sent, "no deploy command sent"
     payload = protocol.DeployModelPayload.model_validate(sent[-1].payload)
     assert payload.image == "reg/models/ppe@sha256:gpu"
-    assert payload.artifact_uri is None

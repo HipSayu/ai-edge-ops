@@ -20,7 +20,12 @@ async def _published_version(session):
     )
     version = await reg.add_version(
         model.id,
-        ModelVersionCreate(version="1.0.0", format=ModelFormat.TENSORRT, artifact_uri="s3://m/1"),
+        ModelVersionCreate(
+            version="1.0.0",
+            format=ModelFormat.TENSORRT,
+            image_repo="reg/models/ppe",
+            image_cpu_digest="sha256:abc",
+        ),
     )
     await reg.transition_version(version.id, ModelVersionStatus.VALIDATED)
     await reg.transition_version(version.id, ModelVersionStatus.PUBLISHED)
@@ -34,7 +39,12 @@ async def test_cannot_deploy_unpublished_version(session):
     )
     version = await reg.add_version(
         model.id,
-        ModelVersionCreate(version="0.1.0", format=ModelFormat.ONNX, artifact_uri="s3://m/0"),
+        ModelVersionCreate(
+            version="0.1.0",
+            format=ModelFormat.ONNX,
+            image_repo="reg/models/ppe",
+            image_cpu_digest="sha256:old",
+        ),
     )
     device = await AgentService(session).register_device(
         DeviceCreate(name="cam-01", site="A", hardware="Orin")
