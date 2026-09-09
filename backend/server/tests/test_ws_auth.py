@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import datetime as dt
+
 import pytest
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
-
-import datetime as dt
 
 from app.core.config import settings
 from app.core.token_codec import token_codec

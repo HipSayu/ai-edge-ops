@@ -20,13 +20,13 @@ from app.core import database
 from app.core.config import settings
 from app.core.events import event_bus
 from app.core.ws import ws_hub
+from app.modules.agent import AgentService
 from app.modules.agent.presence_records import PresenceEvent
 from app.modules.agent.presence_registry import PresenceRegistry
 from app.modules.agent.schemas import HeartbeatIn
-from app.modules.agent.service import AgentService
 from app.modules.agent.telemetry_relay import publish_sample
 from app.modules.deployment.event import DeploymentActivated
-from app.modules.model_registry.service import ModelRegistryService
+from app.modules.model_registry import ModelRegistryService
 from app.modules.streaming.service import StreamingService
 from app.shared.helpers.protocol import device_id_from_envelope
 

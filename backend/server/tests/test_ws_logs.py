@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 
+import edge_protocol as protocol
+from dqh.svc_core.messaging import Envelope
 from starlette.testclient import TestClient
 
-import edge_protocol as protocol
 from app.core.ws import ws_hub
 from app.main import create_app
-from dqh.svc_core.messaging import Envelope
 
 
 async def test_edge_log_is_pushed_to_frontend(_engine):

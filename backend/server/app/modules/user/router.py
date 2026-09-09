@@ -6,7 +6,7 @@ from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter, Depends, status
 
 from app.api.deps import DbSession
-from app.core.bearer_auth import require_permission
+from app.modules.auth.bearer_auth import require_permission
 from app.modules.user.schemas import UserCreate, UserOut, UserUpdate
 from app.modules.user.service import UserService
 
