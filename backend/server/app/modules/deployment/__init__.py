@@ -1,10 +1,10 @@
-"""Deployment context: binding a published model version to an edge device.
+"""Deployment context — deploy is a command; state = desired vs reported.
 
-Public surface for other modules: :class:`DeploymentService`.
+Public surface: :class:`DeployService`.
 """
 
 from __future__ import annotations
 
-from app.modules.deployment.service import DeploymentService
+from app.modules.deployment.service import DeployService
 
-__all__ = ["DeploymentService"]
+__all__ = ["DeployService"]

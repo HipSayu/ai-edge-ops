@@ -24,7 +24,7 @@ from app.modules.agent import AgentService
 from app.modules.agent.event import DeviceWentOffline
 from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.telemetry_relay import publish_sample
-from app.modules.deployment.event import DeploymentActivated, DeploymentFailed
+from app.modules.deployment.event import DeploymentFailed, DeployRequested
 from app.modules.streaming.service import StreamingService
 from app.shared.helpers.protocol import device_id_from_envelope
 
@@ -64,7 +64,7 @@ class AgentGateway:
         self._subs.append(
             await self._rpc.bind(protocol.SUB_STREAM_TOKEN, self._on_stream_token_request)
         )
-        event_bus.subscribe(DeploymentActivated, self._on_deployment_activated)
+        event_bus.subscribe(DeployRequested, self._on_deploy_requested)
         logger.info("agent gateway started (bus=%s)", type(self.bus).__name__)
 
     async def stop(self) -> None:
@@ -212,19 +212,15 @@ class AgentGateway:
         )
 
     # --- outbound (server -> edge) -------------------------------------
-    async def _on_deployment_activated(self, event: DeploymentActivated) -> None:
+    async def _on_deploy_requested(self, event: DeployRequested) -> None:
         if not event.image:
             await event_bus.publish(
-                DeploymentFailed(
-                    deployment_id=event.deployment_id,
-                    device_id=event.device_id,
-                    reason="deployment has no model image",
-                )
+                DeploymentFailed(device_id=event.device_id, reason="no model image")
             )
             return
         payload = protocol.DeployModelPayload(
             command_id=uuid4().hex,
-            deployment_id=event.deployment_id,
+            deployment_id=0,
             image=event.image,
             config=dict(event.config),
         )

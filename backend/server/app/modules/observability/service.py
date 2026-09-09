@@ -144,14 +144,14 @@ class AnalyticsService:
 
     async def overview(self) -> OverviewKpis:
         from app.modules.agent import AgentService
-        from app.modules.deployment import DeploymentService
+        from app.modules.deployment import DeployService
 
         now = utcnow()
         day_ago = now - dt.timedelta(hours=24)
 
         health = await AgentService(self.session).agent_health()
         avg_latency = await AgentService(self.session).avg_inference_latency_ms(day_ago)
-        active_deployments = await DeploymentService(self.session).count_active()
+        active_deployments = await DeployService(self.session).count_active()
 
         return OverviewKpis(
             devices_total=health.total,

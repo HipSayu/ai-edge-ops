@@ -1,14 +1,13 @@
-"""Deployment HTTP endpoints."""
+"""Deployment HTTP endpoints — deploy a model image to a device."""
 
 from __future__ import annotations
 
-from dqh.svc_core.transports.http import ApiResponse, Page, ok
+from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter, Depends, status
 
-from app.api.deps import DbSession, Pagination
-from app.modules.deployment.rules import DeploymentStatus
-from app.modules.deployment.schemas import DeploymentCreate, DeploymentFailIn, DeploymentOut
-from app.modules.deployment.service import DeploymentService
+from app.api.deps import DbSession
+from app.modules.deployment.schemas import DeploymentView, DeployRequest
+from app.modules.deployment.service import DeployService
 from app.modules.iam.bearer_auth import require_permission
 
 router = APIRouter(prefix="/deployments", tags=["deployments"])
@@ -16,55 +15,13 @@ router = APIRouter(prefix="/deployments", tags=["deployments"])
 _manage = Depends(require_permission("deployments.manage"))
 
 
-@router.post("", response_model=ApiResponse[DeploymentOut], status_code=status.HTTP_201_CREATED)
+@router.get("", response_model=ApiResponse[list[DeploymentView]])
+async def list_deployments(db: DbSession, _: object = _manage) -> ApiResponse[list[DeploymentView]]:
+    return ok(await DeployService(db).list())
+
+
+@router.post("", response_model=ApiResponse[DeploymentView], status_code=status.HTTP_201_CREATED)
 async def create_deployment(
-    data: DeploymentCreate, db: DbSession, _: object = _manage
-) -> ApiResponse[DeploymentOut]:
-    return ok(DeploymentOut.model_validate(await DeploymentService(db).create(data)))
-
-
-@router.get("", response_model=ApiResponse[Page[DeploymentOut]])
-async def list_deployments(
-    db: DbSession,
-    params: Pagination,
-    device_id: str | None = None,
-    deployment_status: DeploymentStatus | None = None,
-    _: object = _manage,
-) -> ApiResponse[Page[DeploymentOut]]:
-    page = await DeploymentService(db).list(
-        device_id=device_id, status=deployment_status, params=params
-    )
-    return ok(
-        Page.of(
-            [DeploymentOut.model_validate(d) for d in page.items], total=page.total, params=params
-        )
-    )
-
-
-@router.get("/{deployment_id}", response_model=ApiResponse[DeploymentOut])
-async def get_deployment(
-    deployment_id: int, db: DbSession, _: object = _manage
-) -> ApiResponse[DeploymentOut]:
-    return ok(DeploymentOut.model_validate(await DeploymentService(db).get(deployment_id)))
-
-
-@router.post("/{deployment_id}/activate", response_model=ApiResponse[DeploymentOut])
-async def activate_deployment(
-    deployment_id: int, db: DbSession, _: object = _manage
-) -> ApiResponse[DeploymentOut]:
-    return ok(DeploymentOut.model_validate(await DeploymentService(db).activate(deployment_id)))
-
-
-@router.post("/{deployment_id}/fail", response_model=ApiResponse[DeploymentOut])
-async def fail_deployment(
-    deployment_id: int, data: DeploymentFailIn, db: DbSession, _: object = _manage
-) -> ApiResponse[DeploymentOut]:
-    deployment = await DeploymentService(db).mark_failed(deployment_id, data.reason)
-    return ok(DeploymentOut.model_validate(deployment))
-
-
-@router.post("/{deployment_id}/rollback", response_model=ApiResponse[DeploymentOut])
-async def rollback_deployment(
-    deployment_id: int, db: DbSession, _: object = _manage
-) -> ApiResponse[DeploymentOut]:
-    return ok(DeploymentOut.model_validate(await DeploymentService(db).rollback(deployment_id)))
+    data: DeployRequest, db: DbSession, _: object = _manage
+) -> ApiResponse[DeploymentView]:
+    return ok(await DeployService(db).deploy(data))
