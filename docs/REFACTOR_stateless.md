@@ -42,7 +42,7 @@ Reconcile: `desired` (server) ⇄ `reported` (device) — agent đã có sẵn m
     manifest list → chọn config blob → `GET .../blobs/{digest}` → `.config.Labels`.
   - Config: `MODEL_REGISTRY__OWNER`, `MODEL_REGISTRY__PACKAGE`,
     `MODEL_REGISTRY__TOKEN` (env `MODEL_REGISTRY__*`, nhóm mới trong `Settings`).
-- Metadata nướng vào **image labels** lúc CI build:
+- Metadata nướng vào **image labels** lúc build model image (pipeline riêng):
   `org.opencontainers.image.{version,created,revision}` +
   `ai.edge-ops.model.{task,classes,map50_95,params_m,latency_ms,base}`.
 - Cache TTL ~30s; `GET /models?refresh=1` để ép làm mới.
@@ -87,7 +87,7 @@ Gộp `cameras` + `camera_groups` cũ vào đây. Bảng *config*, ít ghi.
 Không cấu hình toàn cục HAY theo device — **cả hai, dạng phân tầng**. Dưới đè lên trên:
 
 ```
-1. Model defaults   ← image labels  ai.edge-ops.model.{conf,iou,imgsz,classes}   (CI nướng vào)
+1. Model defaults   ← image labels  ai.edge-ops.model.{conf,iou,imgsz,classes}   (pipeline model nướng vào)
 2. Global policy     ← app_settings  khối "inference_policy" (cái gì tính vi phạm,
                        ngưỡng alert, dedup window, evidence retention, severity map)
 3. Per-device        ← device_config.inference / .agent   (field null = kế thừa)
@@ -224,7 +224,7 @@ Không cấu hình toàn cục HAY theo device — **cả hai, dạng phân tầ
 
 | PR | Backend / protocol | Frontend | Rủi ro |
 |---|---|---|---|
-| **S0** | `backend/inference`: gộp `Dockerfile.cpu`+`.gpu` → `Dockerfile` (amd64, CUDA torch + CPU fallback) + `Dockerfile.jetson` (arm64/l4t); CI buildx `--platform linux/amd64,linux/arm64` 1 manifest; thêm labels `ai.edge-ops.model.*`; tạo GHCR PAT `read:packages` → secret | — | 0 |
+| **S0** ✅ | `backend/inference`: gộp `Dockerfile.cpu`+`.gpu` → **1** `Dockerfile` (multi-arch, `_resolve_device` dò CUDA/MPS/CPU) + `Dockerfile.jetson` (future). Dockerfile mang **contract labels** `ai.edge-ops.model.*`. `.env.app` thêm `MODEL_REGISTRY__*`. **Build model→image KHÔNG nằm trong app** — pipeline riêng dùng Dockerfile này làm contract. Còn lại: tạo GHCR PAT `read:packages` → secret | — | 0 |
 | **S1** | `DEVICE_ID` string: `edge_protocol` payloads + `device_id_from_envelope` (bỏ `int()`) + `violations.device_id` TEXT; sửa test | `BackendDevice.id`, `DeploymentRecord.device_id`, `BackendCamera` id → `string`; `CreateDevicePayload.device_id` | tb — đụng nhiều chỗ, cơ học |
 | **S2** | `ModelCatalog` (GHCR API) + `Settings.model_registry`; `GET /models*` đổi backing; bỏ `POST /models`; xoá `models`/`model_versions` ORM + repo + `ModelRegistryService` | `types/ai.ts` reshape (`ModelRecord.id: string`, versions=tags, fields từ labels); `ModelsPage` bỏ form register, hiện labels | tb |
 | **S3** | Bảng `device_config` + service; `POST/PATCH /agent/devices` + `/agent/cameras` map sang đó; khối `inference_policy` global (`/system/settings`) + `ConfigResolver.merge(model, global, device, camera)`; seed migrate | `EdgeDevicesPage`/`DevicesPage` provision bằng `device_id`; `Cameras*` sửa inline; trang **Fleet defaults** + panel override (kế thừa vs override); `CameraGroupsPage` client-only/bỏ | tb |
@@ -246,6 +246,9 @@ Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S1→S5 theo t
   (đã chốt: "server push, giữ config nhỏ").
 - **Sửa máy reconcile của agent** — đã đủ, chỉ đổi payload.
 - **Giữ bảng `deployments` cho history** — dùng `audit_logs`.
+- **Build model → image trong app CI** — đó là việc của pipeline model (repo/
+  quy trình riêng). App chỉ giữ `backend/inference/Dockerfile` làm *contract*
+  (code vision_runtime + label schema) và *consume* image từ registry.
 
 ## Đã chốt (2026-09-09)
 

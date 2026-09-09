@@ -54,7 +54,7 @@ services:
     image: ${INFERENCE_IMAGE}
     build:
       context: ../backend
-      dockerfile: inference/Dockerfile.cpu
+      dockerfile: inference/Dockerfile
     environment:
       SOCKET_PATH: /run/edge/inference.sock
       RUNTIME: ${INFERENCE_RUNTIME}

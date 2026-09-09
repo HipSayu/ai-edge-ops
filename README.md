@@ -112,7 +112,7 @@ docker compose up -d
 docker compose logs -f edge-agent
 ```
 
-Jetson: swap `inference/Dockerfile.cpu` for the `l4t` GPU build and set
+Jetson: use `inference/Dockerfile.jetson` (DeepStream) and set
 `INFERENCE_RUNTIME`.
 
 ---
@@ -150,7 +150,7 @@ shared libs):
 docker build -t ghcr.io/hopquangdo/ai-edge-ops-server:dev   -f backend/server/Dockerfile   backend
 docker build -t ghcr.io/hopquangdo/ai-edge-ops-frontend:dev  frontend
 docker build -t ai-edge-ops/edge-agent:dev -f backend/edge_agent/Dockerfile backend
-docker build -t ai-edge-ops/inference:dev  -f backend/inference/Dockerfile.cpu backend
+docker build -t ai-edge-ops/inference:dev  -f backend/inference/Dockerfile backend
 ```
 
 `docker compose build` drives the same Dockerfiles.

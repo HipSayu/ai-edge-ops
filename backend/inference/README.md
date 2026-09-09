@@ -1,8 +1,14 @@
 # inference — the vision runtime (`vision_runtime`)
 
-Camera capture → model inference → PPE rule → WHIP video publish. Built by CI into
-a **per-model OCI image** (one variant per edge backend: `*-cpu`, `*-gpu`) and run
-as the `inference` compose service next to the edge agent.
+Camera capture → model inference → PPE rule → WHIP video publish. Baked (with the
+weights) into a **per-model OCI image** and run as the `inference` compose
+service next to the edge agent.
+
+> **Building the model image is a separate concern — not part of this app.**
+> The model/training pipeline (its own repo/process) exports weights and uses
+> `Dockerfile` here as the contract: it must fill the `ai.edge-ops.model.*`
+> labels. This app only *consumes* the resulting images from a registry
+> (`ModelCatalog` reads those labels; the agent `docker compose pull`s the ref).
 
 ```
 backend/inference/
@@ -16,7 +22,9 @@ backend/inference/
     worker.py            VisionWorker — owns cameras, serves the agent IPC channel
     main.py              serve the unix socket, run the worker forever
   package/ultralytics/   vendored YOLO (submodule), used by the [inference] extra
-  Dockerfile.cpu  Dockerfile.gpu
+  Dockerfile             the model-image contract — one multi-arch image (amd64 +
+                         arm64), runtime auto-detects CUDA / MPS / CPU
+  Dockerfile.jetson      future: DeepStream/TensorRT path for Jetson GPU
 ```
 
 ## IPC with the agent
@@ -35,18 +43,33 @@ worker has no control-plane credential.
 
 ## Model image
 
-CI, per `model_version`, builds **both** variants from the exported weights and
-records the digests on the row:
+One multi-arch image per model version, tagged `…/ai-edge-ops-model:<version>`:
 
 ```
-docker build -f Dockerfile.cpu --build-arg MODEL_VERSION=42 -t registry/org/models/ppe:v42-cpu backend
-docker build -f Dockerfile.gpu --build-arg MODEL_VERSION=42 -t registry/org/models/ppe:v42-gpu backend
-# model_versions.image_repo / image_cpu_digest / image_gpu_digest
+docker buildx build -f backend/inference/Dockerfile \
+  --platform linux/amd64,linux/arm64 \
+  --build-arg MODEL_VERSION=1.3.0 \
+  --build-arg MODEL_CLASSES=helmet,vest,person \
+  --build-arg MODEL_MAP50_95=0.41 \
+  -t ghcr.io/hopquangdo/ai-edge-ops-model:1.3.0 --push backend
 ```
 
-Deploy is then just: server picks the variant by `device.backend`, sends the
-digest; the agent's `ComposeRunner` rewrites `INFERENCE_IMAGE` and
-`docker compose up -d --wait inference`. See `docs/flows/edge-server/deploy-model.md`.
+GPU vs CPU is **not** a build choice — `_resolve_device` probes
+`torch.cuda.is_available()` at start. Deploy: server sends the ref, the agent's
+`ComposeRunner` rewrites `INFERENCE_IMAGE` and `docker compose up -d --wait
+inference`. See `docs/flows/edge-server/deploy-model.md`.
+
+### Labels the pipeline must set
+
+| label | example |
+|---|---|
+| `org.opencontainers.image.version` | `1.3.0` |
+| `ai.edge-ops.model.task` | `detect` |
+| `ai.edge-ops.model.classes` | `helmet,vest,person` |
+| `ai.edge-ops.model.map50_95` | `0.41` |
+| `ai.edge-ops.model.params_m` | `2.6` |
+| `ai.edge-ops.model.latency_ms` | `7.8` |
+| `ai.edge-ops.model.base` | `yolo11n` |
 
 ## Dev / test
 
