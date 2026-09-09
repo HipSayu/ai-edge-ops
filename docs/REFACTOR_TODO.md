@@ -17,17 +17,16 @@ server, (c) áp rule code-style mới.
 | `a4fea82` / — | PR2.3 — `class AuthService` tách khỏi `auth/router.py` |
 | `ee93407` / `36cd7e2` | PR4.1 — xoá `app/domain/`: presence → `modules/agent/presence_*`, reconcile → svc_core `[reconcile]` 0.6.0 |
 | `ce01015` / — | PR4.2 — `bearer_auth`/`ws_auth` → `modules/auth/`; sửa cross-module reach-in; **`.importlinter` 3 contract xanh**; CI chạy `lint-imports` |
+| `ae1231c` / — | PR2.4 — gộp `user`+`auth`+`access_control` → **`modules/iam/`** (1 bounded context); wire `observability.router` vào `api_router` (trước bị bỏ quên → fix 2 test) |
 
 **XONG:** PHẦN 1 đầy đủ (1.1–1.7), PHẦN 2 (rename + AuthService), PHẦN 4 (dời
 `app/domain/` + import-linter). svc_core **0.1.0 → 0.6.0, 46 test pass**. server
 **20 pass / 3 fail**.
 
-**3 test đỏ = bug có sẵn trong WIP chưa commit, KHÔNG do refactor** (đã xác minh:
-revert sạch mọi thay đổi refactor → vẫn đỏ đúng 3 test):
-- `test_edge_gateway::test_violation_over_bus_records_and_alerts` + `test_api_smoke::test_violation_flow…`
-  — violation không route qua bus (edge_protocol/gateway WIP đang dở)
-- `test_ws_alerts::test_alert_raised_is_pushed_over_websocket` — WS đóng khi connect
-  (ws-auth WIP trong `observability/router.py`)
+**Test đỏ còn lại: 1** (`test_edge_gateway::test_violation_over_bus_records_and_alerts`)
+— `T_VIOLATION` không được route qua bus, bug edge_protocol/gateway WIP đang dở.
+(2 test đỏ kia đã xanh sau PR2.4: chỉ vì `observability.router` chưa được include
+vào `api_router` — `/violations` `/alerts` `/ws/alerts` `/analytics/*` chưa mount.)
 
 **KHÔNG làm / hoãn:**
 - PHẦN 3 (xẻ edge gateway) — **user huỷ**, giữ nguyên `app/edge/gateway.py`.
