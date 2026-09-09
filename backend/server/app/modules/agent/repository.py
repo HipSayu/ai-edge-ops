@@ -31,9 +31,7 @@ class DeviceRepository(BaseRepository[Device]):
         self, *, site: str | None, status: DeviceStatus | None, params: PageParams
     ) -> tuple[list[Device], int]:
         clauses = self._filters(site, status)
-        items = await self.list(*clauses, order_by=Device.name, params=params)
-        total = await self.count(*clauses)
-        return items, total
+        return await self.page(*clauses, order_by=Device.name, params=params)
 
     async def count_by_status(self) -> dict[DeviceStatus, int]:
         stmt = select(Device.status, func.count()).group_by(Device.status)
@@ -58,9 +56,7 @@ class MetricSampleRepository(BaseRepository[MetricSample]):
         clauses = [MetricSample.device_id == device_id]
         if since:
             clauses.append(MetricSample.recorded_at >= since)
-        items = await self.list(*clauses, order_by=MetricSample.recorded_at.desc(), params=params)
-        total = await self.count(*clauses)
-        return items, total
+        return await self.page(*clauses, order_by=MetricSample.recorded_at.desc(), params=params)
 
     async def avg_latency_since(self, since: dt.datetime) -> float | None:
         stmt = select(func.avg(MetricSample.inference_latency_ms)).where(

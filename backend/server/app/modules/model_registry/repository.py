@@ -29,9 +29,7 @@ class ModelRepository(BaseRepository[Model]):
         self, *, task: ModelTask | None, params: PageParams
     ) -> tuple[list[Model], int]:
         clauses = [Model.task == task] if task else []
-        items = await self.list(*clauses, order_by=Model.name, params=params)
-        total = await self.count(*clauses)
-        return items, total
+        return await self.page(*clauses, order_by=Model.name, params=params)
 
 
 class ModelVersionRepository(BaseRepository[ModelVersion]):
