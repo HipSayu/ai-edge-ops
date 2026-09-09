@@ -26,7 +26,7 @@ const mapDevice = (device: BackendDevice, latest?: BackendMetricSample): EdgeDev
   diskUsage: round(latest?.disk_percent ?? 0),
   tempC: round(latest?.temperature_c ?? 0),
   assignedCameras: 0,
-  modelRunning: device.active_model_version_id ? `Model v${device.active_model_version_id}` : 'No model reported',
+  modelRunning: device.active_image ? (device.active_image.split('/').pop() ?? device.active_image) : 'No model reported',
   lastHeartbeat: device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : 'Never',
 })
 

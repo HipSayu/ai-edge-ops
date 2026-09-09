@@ -1,11 +1,13 @@
 """Deployment use-cases.
 
-Cross-module reads go through the *public services* of ``agent`` and
-``model_registry`` (never their repositories).
+The model image is resolved against the live registry catalog
+(:data:`app.core.model_catalog.model_catalog`); the deploy row only stores the
+digest-pinned ref it sent.
 """
 
 from __future__ import annotations
 
+import httpx
 from dqh.svc_core.contracts.errors import BadRequestError as BusinessRuleError
 from dqh.svc_core.contracts.errors import NotFoundError
 from dqh.svc_core.helpers.time import utcnow
@@ -14,13 +16,13 @@ from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
+from app.core.model_catalog import model_catalog
 from app.modules.agent import AgentService
 from app.modules.deployment.event import DeploymentActivated, DeploymentFailed
 from app.modules.deployment.models import Deployment
 from app.modules.deployment.repository import DeploymentRepository
 from app.modules.deployment.rules import DeploymentStatus, can_transition
 from app.modules.deployment.schemas import DeploymentCreate
-from app.modules.model_registry import ModelRegistryService
 
 
 class DeploymentService:
@@ -28,7 +30,6 @@ class DeploymentService:
         self.session = session
         self.repo = DeploymentRepository(session)
         self.agent = AgentService(session)
-        self.registry = ModelRegistryService(session)
 
     async def get(self, deployment_id: int) -> Deployment:
         deployment = await self.repo.get(deployment_id)
@@ -50,11 +51,15 @@ class DeploymentService:
 
     async def create(self, data: DeploymentCreate) -> Deployment:
         await self.agent.get_device(data.device_id)  # 404 if missing
-        await self.registry.ensure_deployable(data.model_version_id)  # 400 if not published
+        tag = data.image.rsplit(":", 1)[-1] if "@" not in data.image else data.image
+        try:
+            image = await model_catalog.get_model(tag)
+        except httpx.HTTPStatusError as exc:
+            raise NotFoundError(f"model image {data.image!r} not in the registry") from exc
 
         deployment = Deployment(
             device_id=data.device_id,
-            model_version_id=data.model_version_id,
+            image=image.pinned_ref,
             config=data.config,
             note=data.note,
         )
@@ -82,7 +87,7 @@ class DeploymentService:
             DeploymentActivated(
                 deployment_id=deployment.id,
                 device_id=deployment.device_id,
-                model_version_id=deployment.model_version_id,
+                image=deployment.image,
                 config=dict(deployment.config),
             )
         )

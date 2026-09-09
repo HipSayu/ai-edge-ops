@@ -10,7 +10,6 @@ from pathlib import Path
 @dataclass
 class DesiredState:
     deployment_id: int | None = None
-    model_version_id: int | None = None
     image: str | None = None  # digest-pinned OCI ref the inference service runs
     config: dict = field(default_factory=dict)
 
@@ -18,7 +17,7 @@ class DesiredState:
 @dataclass
 class ReportedState:
     deployment_id: int | None = None
-    active_model_version_id: int | None = None
+    active_image: str | None = None
     runtime_status: str = "idle"          # idle | applying | active | failed
     detail: str | None = None
     config: dict = field(default_factory=dict)
@@ -31,7 +30,7 @@ class AgentState:
 
     def in_sync(self) -> bool:
         return (
-            self.desired.model_version_id == self.reported.active_model_version_id
+            self.desired.image == self.reported.active_image
             and self.reported.runtime_status == "active"
         )
 

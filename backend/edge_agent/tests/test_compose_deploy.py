@@ -71,7 +71,7 @@ async def wired(tmp_path):
 
 async def _send_deploy(bus, **kw):
     payload = p.DeployModelPayload(
-        command_id="c1", deployment_id=7, model_version_id=42, **kw
+        command_id="c1", deployment_id=7, **kw
     ).model_dump(mode="json")
     await bus.publish(
         p.TOPIC_CMD.render(device_id="dev-1"),
@@ -86,7 +86,7 @@ async def test_image_deploy_pulls_and_reports_active(wired):
 
     assert deployer.deployed == ["reg/models/ppe@sha256:abc"]
     assert agent.store.state.reported.runtime_status == "active"
-    assert agent.store.state.reported.active_model_version_id == 42
+    assert agent.store.state.reported.active_image == "reg/models/ppe@sha256:abc"
     assert agent.store.state.desired.image == "reg/models/ppe@sha256:abc"
     assert p.CommandAckPayload.model_validate(acks[-1].payload).status == "succeeded"
 

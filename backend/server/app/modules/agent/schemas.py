@@ -36,7 +36,7 @@ class DeviceOut(ORMSchema):
     last_seen_at: dt.datetime | None
     agent_version: str | None = None
     uptime_s: float | None = None
-    active_model_version_id: int | None = None
+    active_image: str | None = None
     created_at: dt.datetime
     updated_at: dt.datetime
 
@@ -58,7 +58,7 @@ class HeartbeatIn(BaseModel):
     agent_version: str | None = None
     ip_address: str | None = None
     uptime_s: float | None = Field(default=None, ge=0)
-    active_model_version_id: int | None = None
+    active_image: str | None = None
 
 
 class MetricSampleOut(ORMSchema):

@@ -14,7 +14,7 @@ class DeploymentCreate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     device_id: int
-    model_version_id: int
+    image: str = Field(min_length=1, max_length=512)  # a model tag or full ref
     config: dict = Field(default_factory=dict)
     note: str | None = None
     activate_now: bool = False
@@ -25,7 +25,7 @@ class DeploymentOut(ORMSchema):
 
     id: int
     device_id: int
-    model_version_id: int
+    image: str
     status: DeploymentStatus
     config: dict
     note: str | None
