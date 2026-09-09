@@ -39,7 +39,7 @@ export const aiService = {
   listModels: async () => (await apiClient.get<ModelImageRecord[]>('/models')).map(mapModel),
   getModel: (tag: string) => apiClient.get<ModelImageRecord>(`/models/${encodeURIComponent(tag)}`).then(mapModel),
   listDeployments: async () => (await apiClient.get<{ items: DeploymentRecord[] }>('/deployments')).items.map(mapDeployment),
-  createDeployment: (payload: { device_id: number; image: string; config?: Record<string, unknown>; activate_now?: boolean }) =>
+  createDeployment: (payload: { device_id: string; image: string; config?: Record<string, unknown>; activate_now?: boolean }) =>
     apiClient.post<DeploymentRecord>('/deployments', payload),
   getDeployment: (id: string) => apiClient.get<Deployment>(`/deployments/${id}`),
   listInferenceSamples: (cameraId?: string) => apiClient.get<InferenceSample[]>('/violations', { query: { device_id: cameraId } }),

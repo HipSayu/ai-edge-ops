@@ -31,9 +31,9 @@ def _noop():
 
 async def _new_device(session) -> int:
     device = await AgentService(session).register_device(
-        DeviceCreate(name="cam-01", site="Plant A", hardware="Jetson Orin Nano")
+        DeviceCreate(device_id="cam-01", name="cam-01", site="Plant A", hardware="Jetson Orin Nano")
     )
-    return device.id
+    return device.device_id
 
 
 async def test_heartbeat_over_bus_updates_device_and_presence(gateway, session):

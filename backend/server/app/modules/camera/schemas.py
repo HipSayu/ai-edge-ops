@@ -11,7 +11,7 @@ class CameraCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     source: str = Field(min_length=1, max_length=512)
     zone: str = Field(default="default", max_length=128)
-    device_id: int | None = None
+    device_id: str | None = None
     enabled: bool = True
     metadata_json: dict = Field(default_factory=dict)
 
@@ -20,7 +20,7 @@ class CameraUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=128)
     source: str | None = Field(default=None, min_length=1, max_length=512)
     zone: str | None = Field(default=None, max_length=128)
-    device_id: int | None = None
+    device_id: str | None = None
     enabled: bool | None = None
     metadata_json: dict | None = None
 

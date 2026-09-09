@@ -36,10 +36,10 @@ class AgentService:
         device = Device(**data.model_dump())
         await self.devices.add(device)
         await self.session.commit()
-        await event_bus.publish(DeviceRegistered(device_id=device.id, name=device.name))
+        await event_bus.publish(DeviceRegistered(device_id=device.device_id, name=device.name))
         return device
 
-    async def get_device(self, device_id: int) -> Device:
+    async def get_device(self, device_id: str) -> Device:
         device = await self.devices.get(device_id)
         if device is None:
             raise NotFoundError(f"device {device_id} not found")
@@ -51,19 +51,19 @@ class AgentService:
         items, total = await self.devices.list_page(site=site, status=status, params=params)
         return Page.of(items, total=total, params=params)
 
-    async def update_device(self, device_id: int, data: DeviceUpdate) -> Device:
+    async def update_device(self, device_id: str, data: DeviceUpdate) -> Device:
         device = await self.get_device(device_id)
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(device, field, value)
         await self.session.commit()
         return device
 
-    async def delete_device(self, device_id: int) -> None:
+    async def delete_device(self, device_id: str) -> None:
         device = await self.get_device(device_id)
         await self.devices.delete(device)
         await self.session.commit()
 
-    async def record_heartbeat(self, device_id: int, hb: HeartbeatIn) -> tuple[Device, MetricSample]:
+    async def record_heartbeat(self, device_id: str, hb: HeartbeatIn) -> tuple[Device, MetricSample]:
         device = await self.get_device(device_id)
         now = utcnow()
         recorded_at = hb.recorded_at or now
@@ -76,7 +76,7 @@ class AgentService:
             "arch",
         }
         sample = MetricSample(
-            device_id=device_id,
+            device_id=device.device_id,
             recorded_at=recorded_at,
             **hb.model_dump(exclude={"recorded_at", *_DEVICE_FIELDS}),
         )
@@ -99,14 +99,14 @@ class AgentService:
         if device.status is DeviceStatus.DEGRADED and previous is not DeviceStatus.DEGRADED:
             await event_bus.publish(
                 DeviceLatencyDegraded(
-                    device_id=device_id,
+                    device_id=device.device_id,
                     inference_latency_ms=hb.inference_latency_ms or 0.0,
                     slo_ms=settings.latency_slo_ms,
                 )
             )
         await event_bus.publish(
             HeartbeatRecorded(
-                device_id=device_id,
+                device_id=device.device_id,
                 recorded_at=recorded_at,
                 cpu_percent=hb.cpu_percent,
                 gpu_percent=hb.gpu_percent,
@@ -122,7 +122,7 @@ class AgentService:
         return device, sample
 
     async def list_metrics(
-        self, device_id: int, *, since: dt.datetime | None, params: PageParams
+        self, device_id: str, *, since: dt.datetime | None, params: PageParams
     ) -> Page[MetricSample]:
         await self.get_device(device_id)
         items, total = await self.metrics.list_for_device(device_id, since=since, params=params)
@@ -136,7 +136,7 @@ class AgentService:
         await self.session.commit()
         for device in stale:
             await event_bus.publish(
-                DeviceWentOffline(device_id=device.id, last_seen_at=device.last_seen_at)
+                DeviceWentOffline(device_id=device.device_id, last_seen_at=device.last_seen_at)
             )
         return len(stale)
 

@@ -40,7 +40,7 @@ class DeploymentService:
     async def list(
         self,
         *,
-        device_id: int | None,
+        device_id: str | None,
         status: DeploymentStatus | None,
         params: PageParams,
     ) -> Page[Deployment]:

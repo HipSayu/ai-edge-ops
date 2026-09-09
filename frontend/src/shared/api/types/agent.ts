@@ -17,16 +17,16 @@ export interface CameraGroup {
 	onlineCameras: number; activeAlerts: number; aggregateFps: number; primaryModel: string
 }
 export type BackendDevice = {
-	id: number; name: string; hardware: string; ip_address: string | null
+	device_id: string; name: string; hardware: string; ip_address: string | null
 	status: 'online' | 'degraded' | 'offline' | 'provisioning'; last_seen_at: string | null
 	agent_version: string | null; uptime_s: number | null; active_image: string | null
 }
 export type BackendMetricSample = {
-	id: number; device_id: number; recorded_at: string
+	id: number; device_id: string; recorded_at: string
 	cpu_percent: number | null; gpu_percent: number | null; mem_percent: number | null
 	mem_used_mb: number | null; mem_total_mb: number | null; disk_percent: number | null
 	temperature_c: number | null; fps: number | null; inference_latency_ms: number | null
 }
 export type BackendCamera = { id: number; name: string; source: string; zone: string; enabled: boolean }
 export type BackendCameraGroup = { id: number; name: string; description: string | null; site: string; camera_ids: number[] }
-export type CreateDevicePayload = { name: string; site: string; hardware: string; ip_address?: string }
+export type CreateDevicePayload = { device_id: string; name: string; site: string; hardware: string; ip_address?: string }

@@ -16,9 +16,7 @@ class Camera(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     source: Mapped[str] = mapped_column(String(512))
     zone: Mapped[str] = mapped_column(String(128), default="default")
-    device_id: Mapped[int | None] = mapped_column(
-        ForeignKey("devices.id", ondelete="SET NULL"), nullable=True
-    )
+    device_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
 

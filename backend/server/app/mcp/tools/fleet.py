@@ -38,7 +38,7 @@ async def list_devices(site: str | None = None, status: str | None = None, limit
         }
 
 
-async def get_device(device_id: int) -> dict:
+async def get_device(device_id: str) -> dict:
     """Full detail for one device by id."""
     async with session_scope() as session:
         d = await AgentService(session).get_device(device_id)
@@ -76,7 +76,7 @@ async def fleet_health() -> dict:
         }
 
 
-async def device_metrics(device_id: int, hours: int = 6, limit: int = 100) -> dict:
+async def device_metrics(device_id: str, hours: int = 6, limit: int = 100) -> dict:
     """Recent telemetry samples for a device (cpu/gpu/mem/fps/latency)."""
     since = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
     async with session_scope() as session:

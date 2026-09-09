@@ -50,7 +50,7 @@ class ViolationService:
     async def list(
         self,
         *,
-        device_id: int | None,
+        device_id: str | None,
         violation_type: str | None,
         since: dt.datetime | None,
         params: PageParams,
@@ -73,7 +73,7 @@ class AlertService:
         severity: AlertSeverity,
         title: str,
         description: str | None = None,
-        device_id: int | None = None,
+        device_id: str | None = None,
         deployment_id: int | None = None,
         context: dict | None = None,
         dedupe: bool = True,
@@ -110,7 +110,7 @@ class AlertService:
         *,
         status: AlertStatus | None,
         alert_type: AlertType | None,
-        device_id: int | None,
+        device_id: str | None,
         params: PageParams,
     ) -> Page[Alert]:
         items, total = await self.repo.list_page(

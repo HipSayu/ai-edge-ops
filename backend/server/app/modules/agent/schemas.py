@@ -11,6 +11,7 @@ from app.shared.schema import ORMSchema
 
 
 class DeviceCreate(BaseModel):
+    device_id: str = Field(min_length=1, max_length=64)  # operator-assigned, = box's DEVICE_ID
     name: str = Field(min_length=1, max_length=128)
     site: str = Field(min_length=1, max_length=128)
     hardware: str = Field(min_length=1, max_length=64)
@@ -26,7 +27,7 @@ class DeviceUpdate(BaseModel):
 
 
 class DeviceOut(ORMSchema):
-    id: int
+    device_id: str
     name: str
     site: str
     hardware: str
@@ -63,7 +64,7 @@ class HeartbeatIn(BaseModel):
 
 class MetricSampleOut(ORMSchema):
     id: int
-    device_id: int
+    device_id: str
     recorded_at: dt.datetime
     cpu_percent: float | None
     gpu_percent: float | None
@@ -77,7 +78,7 @@ class MetricSampleOut(ORMSchema):
 
 
 class HeartbeatAck(BaseModel):
-    device_id: int
+    device_id: str
     status: DeviceStatus
     sample: MetricSampleOut
 

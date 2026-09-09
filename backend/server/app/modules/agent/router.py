@@ -83,17 +83,17 @@ async def list_devices(
 
 
 @router.get("/devices/{device_id}", response_model=ApiResponse[DeviceOut])
-async def get_device(device_id: int, db: DbSession) -> ApiResponse[DeviceOut]:
+async def get_device(device_id: str, db: DbSession) -> ApiResponse[DeviceOut]:
     return ok(DeviceOut.model_validate(await AgentService(db).get_device(device_id)))
 
 
 @router.patch("/devices/{device_id}", response_model=ApiResponse[DeviceOut])
-async def update_device(device_id: int, data: DeviceUpdate, db: DbSession) -> ApiResponse[DeviceOut]:
+async def update_device(device_id: str, data: DeviceUpdate, db: DbSession) -> ApiResponse[DeviceOut]:
     return ok(DeviceOut.model_validate(await AgentService(db).update_device(device_id, data)))
 
 
 @router.delete("/devices/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_device(device_id: int, db: DbSession) -> None:
+async def delete_device(device_id: str, db: DbSession) -> None:
     await AgentService(db).delete_device(device_id)
 
 
@@ -103,12 +103,12 @@ async def delete_device(device_id: int, db: DbSession) -> None:
     status_code=status.HTTP_201_CREATED,
 )
 async def record_heartbeat(
-    device_id: int, hb: HeartbeatIn, db: DbSession
+    device_id: str, hb: HeartbeatIn, db: DbSession
 ) -> ApiResponse[HeartbeatAck]:
     device, sample = await AgentService(db).record_heartbeat(device_id, hb)
     return ok(
         HeartbeatAck(
-            device_id=device.id,
+            device_id=device.device_id,
             status=device.status,
             sample=MetricSampleOut.model_validate(sample),
         )
@@ -117,7 +117,7 @@ async def record_heartbeat(
 
 @router.get("/devices/{device_id}/metrics", response_model=ApiResponse[Page[MetricSampleOut]])
 async def list_device_metrics(
-    device_id: int,
+    device_id: str,
     db: DbSession,
     params: Pagination,
     since: dt.datetime | None = None,

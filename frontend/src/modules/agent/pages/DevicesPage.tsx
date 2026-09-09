@@ -18,7 +18,7 @@ import { agentService } from '@/shared/api/services/agent'
 import { useRealtimeChannel, type RealtimeEnvelope } from '@/shared/contexts/RealtimeContext'
 
 type DeviceTelemetry = {
-  device_id: number
+  device_id: string
   cpu_percent: number | null
   gpu_percent: number | null
   mem_used_mb: number | null
@@ -63,7 +63,7 @@ export default function DevicesPage() {
     const t = message.payload as DeviceTelemetry
     setDeviceList((current) =>
       current.map((dev) =>
-        dev.id === String(t.device_id)
+        dev.id === t.device_id
           ? {
               ...dev,
               cpuUsage: round(t.cpu_percent ?? dev.cpuUsage),
@@ -113,7 +113,7 @@ export default function DevicesPage() {
 
   function handleAddDevice(e: React.FormEvent) {
     e.preventDefault()
-    agentService.createDevice({ name: newDevice.name.trim(), site: 'default', hardware: newDevice.hardware, ip_address: newDevice.ip.trim() || undefined })
+    agentService.createDevice({ device_id: newDevice.id.trim(), name: newDevice.name.trim(), site: 'default', hardware: newDevice.hardware, ip_address: newDevice.ip.trim() || undefined })
       .then((addedDev) => {
         setDeviceList((current) => [addedDev, ...current])
         setShowAddModal(false)

@@ -7,7 +7,7 @@ from typing import Any
 @dataclass(frozen=True)
 class DeploymentActivated:
     deployment_id: int
-    device_id: int
+    device_id: str
     image: str
     config: dict[str, Any]
 
@@ -15,5 +15,5 @@ class DeploymentActivated:
 @dataclass(frozen=True)
 class DeploymentFailed:
     deployment_id: int
-    device_id: int
+    device_id: str
     reason: str
