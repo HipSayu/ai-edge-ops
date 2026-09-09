@@ -18,6 +18,8 @@ server, (c) áp rule code-style mới.
 | `ee93407` / `36cd7e2` | PR4.1 — xoá `app/domain/`: presence → `modules/agent/presence_*`, reconcile → svc_core `[reconcile]` 0.6.0 |
 | `ce01015` / — | PR4.2 — `bearer_auth`/`ws_auth` → `modules/auth/`; sửa cross-module reach-in; **`.importlinter` 3 contract xanh**; CI chạy `lint-imports` |
 | `ae1231c` / — | PR2.4 — gộp `user`+`auth`+`access_control` → **`modules/iam/`** (1 bounded context); wire `observability.router` vào `api_router` (trước bị bỏ quên → fix 2 test) |
+| `c03249d` / `0.7.0` | dedup — `BaseRepository.page()` thay khối `items/total/return tuple` lặp ở 6 `list_page()` |
+| `a3b9a53` / — | PR4.3 — root thành **`uv workspace`** (5 member, 1 `uv.lock`); Dockerfile/CI dùng pip nên không đổi |
 
 **XONG:** PHẦN 1 đầy đủ (1.1–1.7), PHẦN 2 (rename + AuthService), PHẦN 4 (dời
 `app/domain/` + import-linter). svc_core **0.1.0 → 0.6.0, 46 test pass**. server
@@ -28,14 +30,22 @@ server, (c) áp rule code-style mới.
 (2 test đỏ kia đã xanh sau PR2.4: chỉ vì `observability.router` chưa được include
 vào `api_router` — `/violations` `/alerts` `/ws/alerts` `/analytics/*` chưa mount.)
 
-**KHÔNG làm / hoãn:**
+**KHÔNG làm:**
 - PHẦN 3 (xẻ edge gateway) — **user huỷ**, giữ nguyên `app/edge/gateway.py`.
-- `[tool.uv.workspace]` ở root — hoãn: mỗi member phải đổi `[tool.uv.sources]`
-  sang `{ workspace = true }` (đụng `edge_agent` + `ai_core` đang có WIP). Làm khi
-  động vào 2 package đó. Hiện `[tool.uv.sources]` path/editable ở từng package vẫn chạy tốt.
-- Thêm `repository.py` cho camera/system/user/streaming — bỏ: các service này
-  query 1–2 dòng inline, thêm lớp repo là ceremony thuần, rủi ro > lợi. `auth` +
-  `access_control` là nền IAM (không nằm trong contract "feature module độc lập").
+- Refactor `edge_agent` — user huỷ (đã khá gọn, có DeepStream WIP).
+- Thêm `repository.py` cho camera/system/streaming — bỏ: service query 1–2 dòng
+  inline, thêm lớp repo là ceremony thuần, rủi ro > lợi.
+- `camera` router `prefix="/agent"` — KHÔNG phải bug: frontend hard-code
+  `/agent/cameras` (Cameras nằm trong khu "fleet" của sản phẩm). Chủ ý.
+
+**Còn mở — cần quyết định sản phẩm:**
+- **`PresenceRegistry` (`modules/agent/presence_*`) vs `evaluate_status`** — 2 hệ
+  thống tính "device còn sống", `PresenceRegistry` (+ trạng thái `STALE`, events,
+  `sweep_presence()`) gần như code chết: không scheduler nào gọi
+  `sweep_presence()`/`sweep_offline()`. Cần biết có kế hoạch dùng `PresenceRegistry`
+  không → nếu không thì bỏ, thống nhất về `evaluate_status` + nối 1 sweep vào timer.
+- Log agent không lưu đâu (chỉ WS live-tail) — thêm `agent_logs` table + retention
+  nếu cần tra cứu lịch sử.
 
 ---
 
