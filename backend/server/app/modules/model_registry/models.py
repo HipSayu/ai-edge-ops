@@ -45,7 +45,12 @@ class ModelVersion(Base, TimestampMixin):
     status: Mapped[ModelVersionStatus] = mapped_column(
         DbEnum(ModelVersionStatus), default=ModelVersionStatus.DRAFT, index=True
     )
-    artifact_uri: Mapped[str] = mapped_column(String(512))
+    artifact_uri: Mapped[str | None] = mapped_column(String(512), default=None)
+    # OCI model-image refs (digest-pinned), one per edge backend variant. CI
+    # builds both from the same weights; the gateway picks by device.backend.
+    image_repo: Mapped[str | None] = mapped_column(String(512), default=None)
+    image_cpu_digest: Mapped[str | None] = mapped_column(String(128), default=None)
+    image_gpu_digest: Mapped[str | None] = mapped_column(String(128), default=None)
     size_mb: Mapped[float | None] = mapped_column(Float, default=None)
     # free-form eval metrics: {"mAP50_95": 0.41, "latency_ms": 7.8, "params_m": 2.1}
     metrics: Mapped[dict] = mapped_column(JSON, default=dict)

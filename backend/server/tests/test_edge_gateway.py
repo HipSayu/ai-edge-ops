@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import edge_protocol as protocol
 import pytest
 from dqh.svc_core.messaging import Envelope, InMemoryMessageBus
@@ -21,6 +23,10 @@ async def gateway(_engine):
     await gw.start()
     yield gw
     await gw.stop()
+
+
+def _noop():
+    return asyncio.sleep(0)
 
 
 async def _new_device(session) -> int:
@@ -118,3 +124,42 @@ async def test_violation_over_bus_records_and_alerts(gateway, session):
     assert len(violations) == 1
     assert violations[0].device_id == device_id
     assert any(a.type.value == "ppe_violation" for a in alerts)
+
+
+async def test_deploy_activation_picks_image_variant_by_device_backend(gateway, session):
+    from app.modules.deployment.event import DeploymentActivated
+    from app.modules.model_registry.rules import ModelFormat, ModelTask
+    from app.modules.model_registry.schemas import ModelCreate, ModelVersionCreate
+    from app.modules.model_registry.service import ModelRegistryService
+
+    device_id = await _new_device(session)
+    device = await AgentService(session).get_device(device_id)
+    device.backend = "deepstream"
+    await session.commit()
+
+    mr = ModelRegistryService(session)
+    model = await mr.create_model(ModelCreate(name="ppe", task=ModelTask.DETECTION, architecture="y"))
+    version = await mr.add_version(
+        model.id,
+        ModelVersionCreate(
+            version="1.0.0",
+            format=ModelFormat.TENSORRT,
+            image_repo="reg/models/ppe",
+            image_cpu_digest="sha256:cpu",
+            image_gpu_digest="sha256:gpu",
+        ),
+    )
+
+    sent: list = []
+    await gateway.bus.subscribe(
+        protocol.TOPIC_CMD.render(device_id=str(device_id)),
+        lambda e: sent.append(e) or _noop(),
+    )
+    await gateway._on_deployment_activated(
+        DeploymentActivated(deployment_id=5, device_id=device_id, model_version_id=version.id, config={})
+    )
+
+    assert sent, "no deploy command sent"
+    payload = protocol.DeployModelPayload.model_validate(sent[-1].payload)
+    assert payload.image == "reg/models/ppe@sha256:gpu"
+    assert payload.artifact_uri is None

@@ -67,7 +67,14 @@ class AgentService:
         device = await self.get_device(device_id)
         now = utcnow()
         recorded_at = hb.recorded_at or now
-        _DEVICE_FIELDS = {"agent_version", "ip_address", "uptime_s", "active_model_version_id"}
+        _DEVICE_FIELDS = {
+            "agent_version",
+            "ip_address",
+            "uptime_s",
+            "active_model_version_id",
+            "backend",
+            "arch",
+        }
         sample = MetricSample(
             device_id=device_id,
             recorded_at=recorded_at,

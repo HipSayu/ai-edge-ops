@@ -38,6 +38,18 @@ class StreamingConfig(BaseModel):
     bitrate_kbps: int = 2000
 
 
+class ComposeConfig(BaseModel):
+    """Image-based model deploy: the agent drives ``docker compose`` to pull and
+    run the model image as the ``inference`` service."""
+
+    project_dir: str = "/project"          # where compose.yml + env_file live
+    env_file: str = "/project/.env"        # agent rewrites INFERENCE_IMAGE= here
+    image_var: str = "INFERENCE_IMAGE"
+    service: str = "inference"
+    up_timeout_s: float = 180.0
+    keep_previous_images: int = 1           # prune older than the last-known-good
+
+
 class VisionConfig(BaseModel):
     """How this device turns cameras into detections + published video.
 
@@ -93,6 +105,7 @@ class AgentSettings(BaseAppSettings):
     telemetry: TelemetryConfig = Field(default_factory=TelemetryConfig)
     vision: VisionConfig = Field(default_factory=VisionConfig)
     streaming: StreamingConfig = Field(default_factory=StreamingConfig)
+    compose: ComposeConfig = Field(default_factory=ComposeConfig)
     cameras: list[CameraConfig] = Field(default_factory=list)
 
 
