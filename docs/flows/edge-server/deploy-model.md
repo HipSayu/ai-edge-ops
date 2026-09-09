@@ -1,35 +1,38 @@
 # Flow: deploy model
 
+> **Rewritten for the stateless refactor** (see [`REFACTOR_stateless.md`](../../REFACTOR_stateless.md)).
+> The mermaid diagrams further down still show the old `Deployment` row / variant
+> pick and are pending a redraw.
+
 ## 1. Overview
 
 **Purpose:**
-Push a specific model version to a specific edge device — remotely, no one touching
-the box. The operator's action is one REST call to activate a `Deployment`; everything
-after is asynchronous and eventually-consistent.
+Push a model to an edge device remotely. Deploy is a **command, not a stored row**:
+`POST /deployments {device_id, image}` sets `Device.desired_image` and fires
+`DeployRequested`; everything after is asynchronous, reconciled by the agent.
 
-The model ships as a **digest-pinned OCI image** (built by CI, one variant per edge
-backend — `cpu` / `gpu`). The server picks the variant from the device's reported
-`capabilities.backend` and sends only the image ref. The edge runs it as the
-`inference` service of its local `docker compose` stack: rewrite `INFERENCE_IMAGE`,
+The model is one **multi-arch OCI image** per version (`linux/amd64` + `linux/arm64`),
+published by a separate pipeline to GHCR with `ai.edge-ops.model.*` labels. The
+runtime picks CPU/GPU itself — the server sends one digest-pinned ref. The edge
+runs it as the `inference` compose service: rewrite `INFERENCE_IMAGE`,
 `docker compose pull`, `up -d --wait`, health-check, roll back on failure.
 
-A **legacy artifact path** (`artifact_uri` → download → `runtime.load`) still exists
-for model versions that have no image digests yet; it is selected automatically and
-will be removed once every version is image-backed.
+**Config** sent with the command is resolved server-side:
+`model labels < app_settings["inference_policy"] < Device.inference`
+(`ConfigResolver`). Editing `Device.inference` later re-resolves and pushes
+`T_UPDATE_CONFIG` (no image re-pull).
 
-**Scope:**
-Starts at `DeploymentService.activate(deployment_id)`. Ends when the device reports
-`runtime_status: active` (or `failed`) and the deployment row settles.
+**Scope:** `DeployService.deploy()` → device reports `runtime_status: active|failed`
+(FleetRegistry). Progress is watched over the WS `ack` / `state` stream.
 
 **Actors / Components:**
 
-* Frontend — activate call, status polling
-* Backend — `DeploymentService`, `AgentGateway`, `ModelRegistryService`, `AgentService`
+* Frontend — `POST /deployments`, WS progress
+* Backend — `DeployService`, `ConfigResolver`, `ModelCatalog` (GHCR), `AgentGateway`
 * MQTT — `agent/devices/{id}/cmd` and `/state`
 * Edge Agent — `Agent._deploy`, `ComposeRunner`
-* Container runtime — `docker compose` on the edge host
-* Registry — OCI registry holding `models/<name>@sha256:...`
-* Storage — PostgreSQL (deployments, versions, `devices.backend`), edge `state.json` + `.env`
+* Registry — GHCR `…/ai-edge-ops-model@sha256:…`
+* Storage — Postgres (`Device.desired_image`, `audit_logs`), edge `state.json` + `.env.edge`
 
 ---
 

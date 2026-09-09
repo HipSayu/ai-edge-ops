@@ -3,6 +3,29 @@
 Ngày lập: 2026-09-09. Nối tiếp [`REFACTOR_TODO.md`](REFACTOR_TODO.md) (đã xong
 phần svc_core extract) và [model deploy = image](../deploy/compose.edge.yml).
 
+## Tiến độ (2026-09-09)
+
+| | commit | |
+|---|---|---|
+| ✅ | `01957e8` | S0 — 1 multi-arch Dockerfile, `_resolve_device` |
+| ✅ | `c950797` | bỏ artifact_uri/S3 path |
+| ✅ | `56a328a`+`393a2af` | S2 — `ModelCatalog` đọc GHCR; xoá ORM `models`/`model_versions`; deploy theo `image` |
+| ✅ | `a984068` | `ModelCatalog` dùng `svc_core.HttpClient` (svc_core 0.8.0) |
+| ✅ | `3b2c37d` | S1/S3.1 — `DEVICE_ID` string PK khắp nơi |
+| ✅ | `add9d86` | S3.2+S4 — `Device` = desired config; `FleetRegistry` in-memory; bỏ `PresenceRegistry` |
+| ✅ | `293481c` | S5 — deploy = command; xoá ORM `Deployment`; `GET /deployments` = per-device view |
+| ✅ | `0ca775b` | S3.3 (một phần) — `ConfigResolver` (model labels < policy < device) + `T_UPDATE_CONFIG` |
+| ✅ | `847244c` | S6 — metrics = ring buffer in-memory; xoá `metric_samples` |
+| ✅ | (S7) | `backend/schema.sql` regen; dọn `ARCHITECTURE.md` + flow |
+
+**Còn lại:**
+- S3.3 phần camera: gộp `cameras`/`camera_groups` vào `Device.cameras`
+  (streaming dùng `camera_id: int` → cần đổi trước). FE "Fleet defaults" page.
+- MQTT retained `state` publish (cần `svc_core` MessageBus `publish(retain=)`);
+  LWT set được ngay qua `MQTT__WILL_*`.
+- Prometheus remote-write (S6 nâng cấp).
+- `edge_agent` chưa string-hoá hết đâu? (đã dùng string sẵn, ok).
+
 ## Mục tiêu
 
 Server **không persist thứ gì có thể dựng lại được**:
