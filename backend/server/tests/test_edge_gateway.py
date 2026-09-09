@@ -144,3 +144,27 @@ async def test_deploy_requested_sends_the_image(gateway, session):
     payload = protocol.DeployModelPayload.model_validate(sent[-1].payload)
     assert payload.image == "ghcr.io/acme/model@sha256:gpu"
     assert payload.config == {"conf_threshold": 0.4}
+
+
+async def test_config_change_pushes_update_config(gateway, session):
+    from app.modules.agent.schemas import DeviceCreate, DeviceUpdate
+    from app.modules.deployment.subscribers import DeploymentSubscribers
+
+    DeploymentSubscribers().register()
+    await AgentService(session).register_device(
+        DeviceCreate(device_id="cam-9", name="cam-9", site="A")
+    )
+
+    sent: list = []
+    await gateway.bus.subscribe(
+        protocol.TOPIC_CMD.render(device_id="cam-9"),
+        lambda e: sent.append(e) or _noop(),
+    )
+    await AgentService(session).update_device(
+        "cam-9", DeviceUpdate(inference={"conf_threshold": 0.6})
+    )
+    await asyncio.sleep(0.02)
+
+    assert sent, "no T_UPDATE_CONFIG sent"
+    p = protocol.UpdateConfigPayload.model_validate(sent[-1].payload)
+    assert p.config == {"conf_threshold": 0.6}

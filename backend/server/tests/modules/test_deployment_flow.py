@@ -66,3 +66,26 @@ async def test_in_sync_once_the_device_reports_the_image(session):
     listed = await DeployService(session).list()
     assert listed[0].in_sync is True
     assert await DeployService(session).count_active() == 1
+
+
+async def test_config_resolver_layers_model_then_policy_then_device(session):
+    await _device(session)
+    from app.modules.deployment.config_resolver import ConfigResolver
+    from app.modules.system.service import SystemService
+
+    _IMAGE.conf = 0.25
+    _IMAGE.iou = 0.5
+    _IMAGE.classes = ["helmet", "vest"]
+    await SystemService(session).update_settings({"inference_policy": {"conf_threshold": 0.4}})
+    device = await AgentService(session).get_device("cam-01")
+    device.inference = {"imgsz": 960}
+
+    eff = await ConfigResolver(session).resolve(_IMAGE, device)
+    assert eff == {
+        "conf_threshold": 0.4,   # policy overrides the model default 0.25
+        "iou_threshold": 0.5,    # model default, untouched
+        "imgsz": 960,            # per-device override
+        "classes": ["helmet", "vest"],
+    }
+    _IMAGE.conf = _IMAGE.iou = None
+    _IMAGE.classes = []

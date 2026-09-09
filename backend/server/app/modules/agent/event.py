@@ -17,6 +17,13 @@ class DeviceWentOffline:
 
 
 @dataclass(frozen=True)
+class DeviceConfigChanged:
+    """Operator changed a device's inference / camera config - re-push it."""
+
+    device_id: str
+
+
+@dataclass(frozen=True)
 class DeviceLatencyDegraded:
     device_id: str
     inference_latency_ms: float

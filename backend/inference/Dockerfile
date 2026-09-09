@@ -45,6 +45,9 @@ ARG MODEL_MAP50_95=""
 ARG MODEL_PARAMS_M=""
 ARG MODEL_LATENCY_MS=""
 ARG MODEL_BASE=""
+ARG MODEL_CONF=""
+ARG MODEL_IOU=""
+ARG MODEL_IMGSZ=""
 ARG VCS_REF=""
 ARG BUILD_DATE=""
 LABEL org.opencontainers.image.title="ai-edge-ops model" \
@@ -57,6 +60,9 @@ LABEL org.opencontainers.image.title="ai-edge-ops model" \
       ai.edge-ops.model.map50_95="${MODEL_MAP50_95}" \
       ai.edge-ops.model.params_m="${MODEL_PARAMS_M}" \
       ai.edge-ops.model.latency_ms="${MODEL_LATENCY_MS}" \
-      ai.edge-ops.model.base="${MODEL_BASE}"
+      ai.edge-ops.model.base="${MODEL_BASE}" \
+      ai.edge-ops.model.conf="${MODEL_CONF}" \
+      ai.edge-ops.model.iou="${MODEL_IOU}" \
+      ai.edge-ops.model.imgsz="${MODEL_IMGSZ}"
 
 CMD ["vision-runtime"]

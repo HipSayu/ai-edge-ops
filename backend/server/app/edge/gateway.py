@@ -24,7 +24,7 @@ from app.modules.agent import AgentService
 from app.modules.agent.event import DeviceWentOffline
 from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.telemetry_relay import publish_sample
-from app.modules.deployment.event import DeploymentFailed, DeployRequested
+from app.modules.deployment.event import ConfigResolved, DeploymentFailed, DeployRequested
 from app.modules.streaming.service import StreamingService
 from app.shared.helpers.protocol import device_id_from_envelope
 
@@ -65,6 +65,7 @@ class AgentGateway:
             await self._rpc.bind(protocol.SUB_STREAM_TOKEN, self._on_stream_token_request)
         )
         event_bus.subscribe(DeployRequested, self._on_deploy_requested)
+        event_bus.subscribe(ConfigResolved, self._on_config_resolved)
         logger.info("agent gateway started (bus=%s)", type(self.bus).__name__)
 
     async def stop(self) -> None:
@@ -225,6 +226,10 @@ class AgentGateway:
             config=dict(event.config),
         )
         await self.send_command(event.device_id, protocol.T_DEPLOY_MODEL, payload)
+
+    async def _on_config_resolved(self, event: ConfigResolved) -> None:
+        payload = protocol.UpdateConfigPayload(command_id=uuid4().hex, config=dict(event.config))
+        await self.send_command(event.device_id, protocol.T_UPDATE_CONFIG, payload)
 
     async def send_command(self, device_id: str, message_type: str, payload) -> None:
         envelope = Envelope(

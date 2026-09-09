@@ -18,6 +18,11 @@ class SystemService:
         rows = (await self.session.scalars(select(AppSetting).order_by(AppSetting.key))).all()
         return {row.key: row for row in rows}
 
+    async def get_setting(self, key: str) -> object | None:
+        """The unwrapped value for one key (settings are stored as {"value": ...})."""
+        row = await self.session.get(AppSetting, key)
+        return row.value.get("value") if row else None
+
     async def update_settings(self, payload: dict[str, object]) -> dict[str, AppSetting]:
         for key, value in payload.items():
             setting = await self.session.get(AppSetting, key)
