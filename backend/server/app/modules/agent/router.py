@@ -20,7 +20,7 @@ from app.modules.agent.schemas import (
     DeviceUpdate,
     HeartbeatAck,
     HeartbeatIn,
-    MetricSampleOut,
+    MetricSample,
 )
 from app.modules.agent.service import AgentService
 from app.modules.iam.ws_auth import authenticate_ws
@@ -103,26 +103,17 @@ async def record_heartbeat(
         HeartbeatAck(
             device_id=device.device_id,
             status=device.status,
-            sample=MetricSampleOut.model_validate(sample),
+            sample=MetricSample.model_validate(sample),
         )
     )
 
 
-@router.get("/devices/{device_id}/metrics", response_model=ApiResponse[Page[MetricSampleOut]])
+@router.get("/devices/{device_id}/metrics", response_model=ApiResponse[list[MetricSample]])
 async def list_device_metrics(
-    device_id: str,
-    db: DbSession,
-    params: Pagination,
-    since: dt.datetime | None = None,
-) -> ApiResponse[Page[MetricSampleOut]]:
-    page = await AgentService(db).list_metrics(device_id, since=since, params=params)
-    return ok(
-        Page.of(
-            [MetricSampleOut.model_validate(s) for s in page.items],
-            total=page.total,
-            params=params,
-        )
-    )
+    device_id: str, db: DbSession, since: dt.datetime | None = None, limit: int = 900
+) -> ApiResponse[list[MetricSample]]:
+    rows = AgentService(db).list_metrics(device_id, since=since, limit=limit)
+    return ok([MetricSample.model_validate(r) for r in rows])
 
 
 @router.get("/health-summary", response_model=ApiResponse[AgentHealth])

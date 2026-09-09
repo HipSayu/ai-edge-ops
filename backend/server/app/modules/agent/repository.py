@@ -1,14 +1,11 @@
-"""Agent data access — Device is the desired-config table now."""
+"""Agent data access - Device is the desired-config table."""
 
 from __future__ import annotations
 
-import datetime as dt
-
 from dqh.svc_core.persistence.sqlalchemy import BaseRepository
-from dqh.svc_core.transports.http import PaginationParams as PageParams
-from sqlalchemy import func, select
+from sqlalchemy import select
 
-from app.modules.agent.models import Device, MetricSample
+from app.modules.agent.models import Device
 
 
 class DeviceRepository(BaseRepository[Device]):
@@ -24,22 +21,3 @@ class DeviceRepository(BaseRepository[Device]):
         if site:
             stmt = stmt.where(Device.site == site)
         return list((await self.session.execute(stmt)).scalars().all())
-
-
-class MetricSampleRepository(BaseRepository[MetricSample]):
-    model = MetricSample
-
-    async def list_for_device(
-        self, device_id: str, *, since: dt.datetime | None, params: PageParams
-    ) -> tuple[list[MetricSample], int]:
-        clauses = [MetricSample.device_id == device_id]
-        if since:
-            clauses.append(MetricSample.recorded_at >= since)
-        return await self.page(*clauses, order_by=MetricSample.recorded_at.desc(), params=params)
-
-    async def avg_latency_since(self, since: dt.datetime) -> float | None:
-        stmt = select(func.avg(MetricSample.inference_latency_ms)).where(
-            MetricSample.recorded_at >= since
-        )
-        value = (await self.session.execute(stmt)).scalar_one_or_none()
-        return float(value) if value is not None else None

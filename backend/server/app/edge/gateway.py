@@ -38,10 +38,6 @@ class AgentGateway:
         self.router = MessageRouter()
         self._subs: list[Subscription] = []
         self._rpc = RpcServer(bus, source="server")
-        # device_id -> monotonic-ish ts of the last telemetry sample persisted;
-        # fast telemetry fans out live but only lands in the DB once a minute.
-        self._telemetry_persisted_at: dict[str, dt.datetime] = {}
-        self._telemetry_persist_gap = dt.timedelta(seconds=60)
 
     def _session(self):
         """Resolve the session factory at call time (tests swap the module global)."""
@@ -111,8 +107,8 @@ class AgentGateway:
             )
 
     async def _on_telemetry(self, env: Envelope) -> None:
-        """Fast metric stream: fan every sample out to dashboards over WS, but
-        only persist one per minute so the history table stays small."""
+        """Fast metric stream: fan every sample out to dashboards over WS and
+        keep the newest in the FleetRegistry ring buffer (~15 min, in-memory)."""
         device_id = device_id_from_envelope(env)
         payload = protocol.TelemetryPayload.model_validate(env.payload)
         if not payload.samples:
@@ -137,30 +133,6 @@ class AgentGateway:
                     "inference_latency_ms": sample.inference_latency_ms,
                 },
             )
-
-        last_persisted = self._telemetry_persisted_at.get(device_id)
-        if last_persisted is None or now - last_persisted >= self._telemetry_persist_gap:
-            self._telemetry_persisted_at[device_id] = now
-            latest = payload.samples[-1]
-            try:
-                async with self._session() as session:
-                    await AgentService(session).record_heartbeat(
-                        device_id,
-                        HeartbeatIn(
-                            recorded_at=latest.recorded_at,
-                            cpu_percent=latest.cpu_percent,
-                            gpu_percent=latest.gpu_percent,
-                            mem_percent=latest.mem_percent,
-                            mem_used_mb=latest.mem_used_mb,
-                            mem_total_mb=latest.mem_total_mb,
-                            disk_percent=latest.disk_percent,
-                            temperature_c=latest.temperature_c,
-                            fps=latest.fps,
-                            inference_latency_ms=latest.inference_latency_ms,
-                        ),
-                    )
-            except Exception:  # noqa: BLE001 - live fan-out already happened; DB is best-effort
-                logger.exception("telemetry downsample-persist failed for device %s", device_id)
 
     async def _on_state_report(self, env: Envelope) -> None:
         p = protocol.StateReportPayload.model_validate(env.payload)

@@ -20,19 +20,16 @@ from app.modules.agent.event import (
     DeviceRegistered,
     HeartbeatRecorded,
 )
-from app.modules.agent.models import Device, MetricSample
-from app.modules.agent.repository import DeviceRepository, MetricSampleRepository
+from app.modules.agent.models import Device
+from app.modules.agent.repository import DeviceRepository
 from app.modules.agent.rules import DeviceStatus
 from app.modules.agent.schemas import AgentHealth, DeviceCreate, DeviceOut, DeviceUpdate, HeartbeatIn
-
-_REPORTED = {"recorded_at", "agent_version", "ip_address", "uptime_s", "active_image", "backend", "arch"}
 
 
 class AgentService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.devices = DeviceRepository(session)
-        self.metrics = MetricSampleRepository(session)
 
     # --- desired config ------------------------------------------------------
     async def register_device(self, data: DeviceCreate) -> DeviceOut:
@@ -84,16 +81,8 @@ class AgentService:
         fleet.forget(device_id)
 
     # --- reported runtime --------------------------------------------------
-    async def record_heartbeat(self, device_id: str, hb: HeartbeatIn) -> tuple[DeviceOut, MetricSample]:
+    async def record_heartbeat(self, device_id: str, hb: HeartbeatIn) -> tuple[DeviceOut, dict]:
         recorded_at = hb.recorded_at or dt.datetime.now(dt.timezone.utc)
-        sample = MetricSample(
-            device_id=device_id,
-            recorded_at=recorded_at,
-            **hb.model_dump(exclude=_REPORTED),
-        )
-        await self.metrics.add(sample)
-        await self.session.commit()
-
         transition = fleet.record_heartbeat(device_id, hb)
         status = fleet.get(device_id).status()
 
@@ -121,15 +110,10 @@ class AgentService:
             )
         )
         device = await self.devices.get(device_id)
-        return self._view(device, device_id=device_id), sample
+        return self._view(device, device_id=device_id), fleet.recent_samples(device_id, limit=1)[-1]
 
-    async def list_metrics(
-        self, device_id: str, *, since: dt.datetime | None, params
-    ):
-        from dqh.svc_core.transports.http import Page
-
-        items, total = await self.metrics.list_for_device(device_id, since=since, params=params)
-        return Page.of(items, total=total, params=params)
+    def list_metrics(self, device_id: str, *, since: dt.datetime | None, limit: int = 900) -> list[dict]:
+        return fleet.recent_samples(device_id, since=since, limit=limit)
 
     async def agent_health(self) -> AgentHealth:
         """Counts over the union of known (config) + seen (fleet) devices."""
@@ -144,8 +128,8 @@ class AgentService:
             provisioning=counts.get(DeviceStatus.PROVISIONING, 0),
         )
 
-    async def avg_inference_latency_ms(self, since: dt.datetime) -> float | None:
-        return await self.metrics.avg_latency_since(since)
+    def avg_inference_latency_ms(self, since: dt.datetime) -> float | None:
+        return fleet.avg_latency(since)
 
     # --- merge -----------------------------------------------------------
     @staticmethod
