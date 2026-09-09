@@ -31,9 +31,7 @@ class ViolationRepository(BaseRepository[Violation]):
             clauses.append(Violation.violation_type == violation_type)
         if since:
             clauses.append(Violation.recorded_at >= since)
-        items = await self.list(*clauses, order_by=Violation.recorded_at.desc(), params=params)
-        total = await self.count(*clauses)
-        return items, total
+        return await self.page(*clauses, order_by=Violation.recorded_at.desc(), params=params)
 
     async def count_since(self, since: dt.datetime) -> int:
         return await self.count(Violation.recorded_at >= since)
@@ -73,9 +71,7 @@ class AlertRepository(BaseRepository[Alert]):
             clauses.append(Alert.type == alert_type)
         if device_id is not None:
             clauses.append(Alert.device_id == device_id)
-        items = await self.list(*clauses, order_by=Alert.created_at.desc(), params=params)
-        total = await self.count(*clauses)
-        return items, total
+        return await self.page(*clauses, order_by=Alert.created_at.desc(), params=params)
 
     async def find_open(self, alert_type: AlertType, device_id: int | None) -> Alert | None:
         stmt = select(Alert).where(

@@ -25,9 +25,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
             clauses.append(Deployment.device_id == device_id)
         if status is not None:
             clauses.append(Deployment.status == status)
-        items = await self.list(*clauses, order_by=Deployment.created_at.desc(), params=params)
-        total = await self.count(*clauses)
-        return items, total
+        return await self.page(*clauses, order_by=Deployment.created_at.desc(), params=params)
 
     async def active_for_device(self, device_id: int) -> Deployment | None:
         stmt = select(Deployment).where(

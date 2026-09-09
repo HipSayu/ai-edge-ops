@@ -6,10 +6,10 @@ from dqh.svc_core.transports.http import ApiResponse, Page, ok
 from fastapi import APIRouter, Depends, status
 
 from app.api.deps import DbSession, Pagination
-from app.modules.iam.bearer_auth import require_permission
 from app.modules.deployment.rules import DeploymentStatus
 from app.modules.deployment.schemas import DeploymentCreate, DeploymentFailIn, DeploymentOut
 from app.modules.deployment.service import DeploymentService
+from app.modules.iam.bearer_auth import require_permission
 
 router = APIRouter(prefix="/deployments", tags=["deployments"])
 
