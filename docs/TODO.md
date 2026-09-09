@@ -52,13 +52,8 @@ Chi tiết kế hoạch: [`REFACTOR_stateless.md`](REFACTOR_stateless.md).
 
 Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc lập.
 
-- [ ] **S1 — `DEVICE_ID` là string PK ở mọi nơi**
-  - `edge_protocol`: payload dùng `device_id: str`
-  - `device_id_from_envelope()` bỏ `int()`
-  - `violations.device_id` → TEXT (+ chỗ FK còn lại)
-  - FE types: `BackendDevice.id`, `DeploymentRecord.device_id`,
-    `BackendCamera.id` → `string`; `CreateDevicePayload.device_id`
-  - sửa test; fix luôn bug hiện tại (agent gửi `edge-dev-1`, server ép int)
+- [x] **S1/S3.1 — `DEVICE_ID` string PK** (commit `3b2c37d`) — protocol + server
+  + FE + `device_id_from_envelope` bỏ `int()` (fix bug agent gửi `edge-dev-1`).
 - [x] **S2 — `ModelCatalog` đọc GHCR** (commit `56a328a` + `393a2af`)
   - S2a `catalog.py` (`ModelCatalog`/`ModelImage`) + `Settings.model_registry` + test
   - S2b `GET /models` + `/models/{tag}` từ catalog; bỏ `POST /models`/versions/status;
@@ -66,19 +61,22 @@ Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc
     `gateway` dùng `image` ref; `active_model_version_id` → `active_image` (protocol
     + agent + Device); FE types + `ai.ts` service + `ModelsPage`/`DeploymentsPage`
   - còn: 5 dòng E501 pre-existing trong `deployment/router.py` (không đụng ở S2b)
-- [ ] **S3 — `device_config` (desired) + config phân tầng**
-  - bảng `device_config` + service; `POST/PATCH /agent/devices` +
-    `/agent/cameras` map vào đó
-  - khối `inference_policy` global (`/system/settings`) +
-    `ConfigResolver.merge(model, global, device, camera)`
-  - FE: provision bằng `device_id`; sửa camera inline; trang **Fleet defaults**
-    + panel override (kế thừa vs override); `CameraGroupsPage` client-only/bỏ
-- [ ] **S4 — `FleetRegistry` in-memory** *(rủi ro cao)*
-  - agent `state` publish `retain=True, qos=1` + LWT (`network/link.py`)
-  - server subscribe `agent/devices/+/state`; `GET /agent/devices` = union
-    known (`device_config`) + online (retained)
-  - bỏ `PresenceRegistry`; dùng `evaluate_status`
-  - FE: hiện **drift** desired vs reported; live update qua WS
+- [~] **S3.2 + S4 — `Device` = desired config; `FleetRegistry` in-memory**
+      (commit `add9d86`)
+  - [x] `Device` ORM giờ chỉ desired (device_id, name, site, labels,
+        desired_image, cameras, inference/agent overrides). Bỏ mọi cột reported.
+  - [x] `FleetRegistry` (`app/modules/agent/fleet_registry.py` + `app/core/fleet.py`)
+        — dict in-memory, dựng lại từ heartbeat + state report. Không persist.
+  - [x] `AgentService` merge `DeviceOut` (config + runtime + `known` + `in_sync`);
+        device lạ báo MQTT → view chưa provision. Bỏ `PresenceRegistry` (xoá 3 file
+        + test_presence).
+  - [x] gateway: state report → `fleet.record_state`; `sweep_presence` →
+        `fleet.sweep()` → `DeviceWentOffline`.
+  - [ ] **còn**: agent publish `state` retained + LWT — cần svc_core
+        `publish(retain=)` (submodule). LWT có thể set qua `MQTT__WILL_*` config
+        ngay. Chưa làm → restart server mất ~1 nhịp heartbeat để roster về.
+  - [ ] **S3.3 còn**: gộp `cameras`/`camera_groups` vào `Device.cameras`;
+        `ConfigResolver.merge()` + `inference_policy` global; FE Fleet defaults page.
 - [ ] **S5 — deploy = command, không ghi row**
   - `/deployments` = set `device_config.desired_image` + publish `T_DEPLOY_MODEL`
   - xoá ORM `deployments`; history → `audit_logs`
