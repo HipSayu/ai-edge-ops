@@ -119,8 +119,13 @@ class DeployModelPayload(BaseModel):
     command_id: str
     deployment_id: int
     model_version_id: int
-    artifact_uri: str  # presigned URL or s3:// ref
-    format: str
+    # New (image-based) path: a digest-pinned OCI ref the edge pulls and runs as
+    # its `inference` compose service. The server has already picked the cpu/gpu
+    # variant from the device's reported `capabilities.backend`.
+    image: str | None = None  # "registry/org/models/ppe@sha256:..."
+    # Legacy (artifact) path — kept until every model version has image digests.
+    artifact_uri: str | None = None  # presigned URL or s3:// ref
+    format: str | None = None
     checksum_sha256: str | None = None
     config: dict = Field(default_factory=dict)
 

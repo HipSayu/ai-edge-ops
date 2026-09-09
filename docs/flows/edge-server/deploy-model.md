@@ -3,12 +3,19 @@
 ## 1. Overview
 
 **Purpose:**
-Push a specific model version to a specific edge device and have the device load it into
-its inference runtime — remotely, with no one touching the box. The operator's action is
-a single REST call to activate a `Deployment`; everything after is asynchronous and
-eventually-consistent. The server never uploads the model over MQTT — it sends a small
-command with an `artifact_uri` pointer; the edge downloads it over HTTP, verifies the
-checksum, and loads it.
+Push a specific model version to a specific edge device — remotely, no one touching
+the box. The operator's action is one REST call to activate a `Deployment`; everything
+after is asynchronous and eventually-consistent.
+
+The model ships as a **digest-pinned OCI image** (built by CI, one variant per edge
+backend — `cpu` / `gpu`). The server picks the variant from the device's reported
+`capabilities.backend` and sends only the image ref. The edge runs it as the
+`inference` service of its local `docker compose` stack: rewrite `INFERENCE_IMAGE`,
+`docker compose pull`, `up -d --wait`, health-check, roll back on failure.
+
+A **legacy artifact path** (`artifact_uri` → download → `runtime.load`) still exists
+for model versions that have no image digests yet; it is selected automatically and
+will be removed once every version is image-backed.
 
 **Scope:**
 Starts at `DeploymentService.activate(deployment_id)`. Ends when the device reports
@@ -17,10 +24,12 @@ Starts at `DeploymentService.activate(deployment_id)`. Ends when the device repo
 **Actors / Components:**
 
 * Frontend — activate call, status polling
-* Backend — `DeploymentService`, `AgentGateway`, `ModelRegistryService`
-* MQTT — `agent/devices/{id}/cmd` and `/state` channels
-* Edge Camera — `Agent._deploy`, `fetch_artifact`, `InferenceRuntime`
-* Storage — PostgreSQL (deployments, versions), S3 / MinIO (artifact), edge `state.json`
+* Backend — `DeploymentService`, `AgentGateway`, `ModelRegistryService`, `AgentService`
+* MQTT — `agent/devices/{id}/cmd` and `/state`
+* Edge Agent — `Agent._deploy`, `ComposeRunner`
+* Container runtime — `docker compose` on the edge host
+* Registry — OCI registry holding `models/<name>@sha256:...`
+* Storage — PostgreSQL (deployments, versions, `devices.backend`), edge `state.json` + `.env`
 
 ---
 
@@ -32,20 +41,20 @@ flowchart LR
     Backend[Backend]
     MQTT[MQTT]
     Edge[Edge Agent]
-    Artifact[(Storage / DB)]
+    Registry[(OCI Registry)]
+    Compose[docker compose]
 
-    Frontend -->|POST activate| Backend --> Artifact
-    Backend -->|command.deploy_model| MQTT --> Edge
-    Edge -->|artifact download HTTP| Artifact
-    Edge -->|device.state| MQTT --> Backend
+    Frontend -->|POST activate| Backend
+    Backend -->|command.deploy_model image@digest| MQTT --> Edge
+    Edge -->|rewrite .env, compose pull/up| Compose
+    Compose -->|pull| Registry
+    Edge -->|device.state applying/active/failed| MQTT --> Backend
     Frontend -->|poll GET /deployments/id| Backend
 ```
 
-> Diagram này chỉ thể hiện các component chính. Không đưa class hoặc internal service vào đây.
-
 ---
 
-## 3. Sequence Diagram
+## 3. Sequence
 
 ```mermaid
 sequenceDiagram
@@ -53,29 +62,29 @@ sequenceDiagram
     participant S as Server
     participant DB as DB
     participant MQTT as MQTT
-    participant EC as Edge Camera
+    participant A as Edge Agent
+    participant C as docker compose
 
     FE->>S: POST activate deployment
-    S->>DB: supersede current ACTIVE, set this one ACTIVE, commit
-    S->>MQTT: command.deploy_model (artifact_uri, checksum, config)
-    MQTT->>EC: deliver command
-    EC->>EC: persist desired state, download artifact (HTTP), verify checksum, load model
-    EC->>MQTT: device.state (applying then active or failed)
-    MQTT->>S: route to AgentGateway
-    S->>DB: update deployment / device runtime_status
-    FE->>S: poll GET /deployments/(id) for progress
+    S->>DB: supersede current ACTIVE, set this ACTIVE, commit
+    S->>DB: load device (backend), load model version (image_repo, image_*_digest)
+    S->>S: variant = gpu if device.backend == "deepstream" else cpu
+    S->>MQTT: command.deploy_model { image: repo@<digest>, model_version_id, config }
+    MQTT->>A: deliver
+    A->>A: persist desired.image, runtime_status="applying" -> device.state
+    A->>C: write .env INFERENCE_IMAGE=<image>; docker compose pull inference
+    A->>C: docker compose up -d --wait inference
+    alt healthy
+        A->>A: runtime_status="active", active_model_version_id set
+        A->>MQTT: device.state (active) + command.ack succeeded
+        A->>C: docker image prune -f
+    else pull/up failed or unhealthy
+        A->>C: restore .env to previous image; compose up -d
+        A->>MQTT: device.state (failed, detail) + command.ack failed
+    end
+    MQTT->>S: device.state -> AgentGateway; DeploymentFailed -> observability alert
+    FE->>S: poll GET /deployments/{id}
 ```
-
-**Flow:**
-
-1. `DeploymentService.activate` checks the transition is legal, marks any currently ACTIVE deployment for the same device SUPERSEDED, sets this one ACTIVE with `activated_at`, commits, then publishes `DeploymentActivated(deployment_id, device_id, model_version_id, config)`.
-2. `AgentGateway._on_deployment_activated` looks up the version via `ModelRegistryService.get_version` for `artifact_uri`, `format`, runtime hints; assembles `DeployModelPayload` with a fresh `command_id`, merging `{...version.runtime_metrics, ...deployment.config}`.
-3. The command goes out on `agent/devices/{device_id}/cmd`.
-4. `Agent._deploy` writes the desired state to `state.json`, sets `reported.runtime_status = "applying"`, saves, and sends a `device.state` — persisting before doing the work is what makes reconcile able to finish an interrupted deploy.
-5. `fetch_artifact(artifact_uri, ...)` downloads over HTTP and verifies the SHA-256 if provided.
-6. `InferenceRuntime.load(weights_path, model_version_id, effective_config)` swaps the model in the running pipeline.
-7. On success: `runtime_status = "active"`, `active_model_version_id` set, `device.state` sent, `command.ack succeeded`. On failure: `runtime_status = "failed"`, `detail` set, previous model keeps running, `command.ack failed`.
-8. `AgentGateway._on_state_report` marks presence and logs the new `runtime_status`; the `command.ack` is currently not consumed ([command-ack](command-ack.md)); the frontend polls `GET /deployments/{id}`.
 
 ---
 
@@ -83,53 +92,62 @@ sequenceDiagram
 
 | Component | Responsibility |
 | --- | --- |
-| Frontend | Trigger activation, poll deployment status |
-| DeploymentService | Run the deployment state machine, enforce one ACTIVE model per device |
-| ModelRegistryService | Resolve `artifact_uri`, `format`, runtime hints |
-| AgentGateway | Build and send `command.deploy_model`, observe `device.state` |
-| Edge Camera | Persist desired state, fetch + verify artifact, load model, report outcome |
-| Storage / DB | Deployment / version rows, artifact bytes, edge `state.json` |
+| Frontend | Trigger activation, poll status |
+| DeploymentService | Deployment state machine, one ACTIVE per device |
+| ModelRegistryService | Resolve `image_repo` + per-variant digest (or legacy `artifact_uri`) |
+| AgentService | Report `devices.backend` from heartbeat capabilities |
+| AgentGateway | Pick the variant by `device.backend`, build + send `command.deploy_model`, observe `device.state`; raise `DeploymentFailed` when no image/artifact is available |
+| Edge Agent (`Agent._deploy`) | Persist desired state, drive `ComposeRunner`, report outcome |
+| `ComposeRunner` | `.env` rewrite, `compose pull` / `up -d --wait`, rollback, image prune |
+| Registry | Immutable digest-addressed model images; signing (cosign, planned) |
 
 ---
 
 ## 5. Detailed Service Flow
 
-> Chỉ có section này mới đi sâu vào internal services/classes.
-
 ```mermaid
 sequenceDiagram
-    participant F as Frontend
     participant DS as DeploymentService.activate
     participant DB as PostgreSQL
     participant EB as event_bus
-    participant G as AgentGateway
+    participant G as AgentGateway._on_deployment_activated
     participant MR as ModelRegistryService
-    participant M as MQTT cmd topic
-    participant A as Agent (_deploy)
+    participant AS as AgentService
+    participant M as MQTT cmd
+    participant AG as Agent._deploy
+    participant CR as ComposeRunner
     participant ST as StateStore
-    participant RT as InferenceRuntime
 
-    F->>DS: activate(deployment_id)
-    DS->>DB: supersede current active, set ACTIVE, activated_at, commit
-    DS->>EB: publish DeploymentActivated(deployment_id, device_id, model_version_id, config)
-    EB->>G: _on_deployment_activated
-    G->>MR: get_version(model_version_id) returns artifact_uri and format
-    G->>M: command.deploy_model (DeployModelPayload, command_id is a uuid)
-    M->>A: dispatch
-    A->>ST: store desired, set reported.runtime_status applying, save
-    A->>M: device.state (runtime_status applying)
-    A->>A: fetch_artifact(uri, checksum) then runtime.load(...)
-    alt load ok
-        A->>ST: reported.runtime_status active, save
-        A->>M: device.state (runtime_status active)
-        A-->>M: command.ack succeeded (not yet consumed)
-    else load failed
-        A->>ST: reported.runtime_status failed, detail set, save
-        A->>M: device.state (runtime_status failed)
-        A-->>M: command.ack failed
+    DS->>DB: supersede + ACTIVE + commit
+    DS->>EB: DeploymentActivated(deployment_id, device_id, model_version_id, config)
+    EB->>G: handle
+    G->>AS: get_device(device_id) -> backend
+    G->>MR: get_version(model_version_id) -> image_repo, image_cpu_digest, image_gpu_digest, artifact_uri
+    G->>G: _select_model_image(version, backend) -> "repo@sha256:.." or None
+    alt image or legacy artifact present
+        G->>M: DeployModelPayload { image | artifact_uri, model_version_id, config }
+        M->>AG: dispatch
+        AG->>ST: desired.image=..., reported.runtime_status="applying", save
+        AG->>M: device.state (applying)
+        alt image path
+            AG->>CR: deploy(image)
+            CR->>CR: prev = current .env image
+            CR->>CR: set INFERENCE_IMAGE=image ; compose pull inference
+            CR->>CR: compose up -d --wait inference
+            CR-->>AG: DeployResult(ok) | DeployResult(false, detail) + rollback to prev
+        else legacy artifact path
+            AG->>AG: fetch_artifact(uri) ; runtime.load(...)
+        end
+        alt ok
+            AG->>ST: runtime_status="active", active_model_version_id, save
+            AG->>M: device.state (active) + command.ack succeeded
+        else failed
+            AG->>ST: runtime_status="failed", detail, save
+            AG->>M: device.state (failed) + command.ack failed
+        end
+    else nothing to deploy
+        G->>EB: DeploymentFailed(reason="no image for backend / no artifact_uri")
     end
-    M->>G: device.state
-    G->>G: presence.mark_seen, log runtime_status
 ```
 
 ---
@@ -137,18 +155,18 @@ sequenceDiagram
 ## 6. Data Flow
 
 ```text
-Frontend ──POST activate──► DeploymentService.activate
-  │
+Frontend ─POST activate─► DeploymentService.activate
   ├── Deployment rows (SUPERSEDED / ACTIVE) ──► PostgreSQL
-  └── DeploymentActivated ──► AgentGateway ──(ModelRegistryService.get_version)──► artifact_uri
-        │
-        │ command.deploy_model  (MQTT cmd)
-        ▼
-      Agent._deploy
-        ├── desired state ──► state.json (disk)
-        ├── fetch_artifact ──HTTP──► S3 / MinIO ──► weights_dir
-        ├── InferenceRuntime.load
-        └── device.state (applying / active / failed) ──MQTT──► AgentGateway ──► PostgreSQL
+  └── DeploymentActivated ─► AgentGateway
+        ├── AgentService.get_device      ──► devices.backend  ("composed" | "deepstream")
+        ├── ModelRegistryService.get_version ─► image_repo, image_{cpu,gpu}_digest
+        └── command.deploy_model { image: repo@digest }  ─MQTT cmd─►
+              Agent._deploy
+                ├── desired.image ──► state.json
+                ├── ComposeRunner ──► /project/.env (INFERENCE_IMAGE=)
+                │                     docker compose pull / up -d --wait
+                │                     └─ registry pull (layer cache, resumable)
+                └── device.state (applying / active / failed) ─MQTT─► AgentGateway ─► PostgreSQL
 ```
 
 ---
@@ -157,31 +175,20 @@ Frontend ──POST activate──► DeploymentService.activate
 
 | Failure | Handling |
 | --- | --- |
-| Command lost / edge offline | Nothing acks, desired state not on the device, nothing changes; needs re-send (open item) or reconcile if desired was written |
-| Download / checksum fails | Reported `failed` with `detail`; old model stays live |
-| Edge reboots mid-deploy | On restart the agent reads `state.json`, sees `desired != reported`, reconcile re-runs `_deploy` within `reconcile_interval_s` |
-| Load raises | `runtime_status = failed`, pipeline keeps the previous model; `DeploymentFailed` raises a CRITICAL alert |
+| Model version has no image for this backend and no `artifact_uri` | Gateway raises `DeploymentFailed` → CRITICAL alert; nothing sent to the edge |
+| Command lost / edge offline | Nothing acks; desired not on the device → re-send (open item) or reconcile once desired is written |
+| `compose pull` fails (registry down, bad digest, auth) | `.env` restored, old image stays up, `runtime_status=failed` with detail |
+| `compose up --wait` unhealthy | `.env` restored + `compose up -d` old image, `runtime_status=failed` |
+| Edge reboots mid-deploy | On restart the agent reads `state.json`, `reconcile()` re-runs `_deploy(desired.image)` — idempotent (same digest → `ComposeRunner` no-ops) |
+| Legacy artifact download / checksum fails | `runtime_status=failed`, previous model keeps running |
 
 ---
 
 ## 8. Observability
 
-**Logs**
-
-* deployment_id, device_id, model_version_id, command_id
-* each `runtime_status` transition (applying → active / failed) with `detail`
-
-**Metrics**
-
-* activation → first `applying` latency
-* `applying` → `active` duration (download + load time)
-* deploy success / failure rate
-
-**Tracing**
-
-* DeploymentService → event_bus → AgentGateway → MQTT → Agent
-* Agent → fetch_artifact → S3, Agent → InferenceRuntime.load
-* Agent → device.state → AgentGateway
+* Logs: `deployment_id`, `device_id`, `model_version_id`, `command_id`, chosen `image` digest, each `runtime_status` transition with `detail`
+* Metrics: activate → first `applying` latency; `applying` → `active` duration (pull + up time); deploy success/failure rate; image pull bytes
+* Alerts: `DeploymentFailed` → observability `DEPLOYMENT_FAILED`
 
 ---
 
@@ -189,16 +196,33 @@ Frontend ──POST activate──► DeploymentService.activate
 
 | Configuration | Description | Default |
 | --- | --- | --- |
-| `reconcile_interval_s` | How fast a stuck / interrupted deploy self-heals (edge) | `30` |
-| `inference.weights_dir` | Where artifacts land (edge) | edge path |
-| model version `checksum_sha256` | Integrity check on download | registry |
+| `compose.project_dir` / `compose.env_file` | Where `compose.yml` + env file live on the edge | `/project`, `/project/.env` |
+| `compose.image_var` | Env var the agent rewrites | `INFERENCE_IMAGE` |
+| `compose.service` | Compose service to swap | `inference` |
+| `compose.up_timeout_s` | Cap on a single `compose` invocation | `180` |
+| `reconcile_interval_s` | How fast a stuck / interrupted deploy self-heals | `30` |
+| model version `image_repo` / `image_cpu_digest` / `image_gpu_digest` | Per-variant OCI refs (registry / CI) | — |
 
 ---
 
 ## 10. Related Components
 
-* `app/modules/deployment/service.py` (`activate`, `mark_failed`), `app/modules/deployment/event.py`
-* `app/edge/gateway.py` (`_on_deployment_activated`, `send_command`, `_on_state_report`)
-* `edge_agent/services/agent.py` (`_deploy`, `reconcile`)
-* `edge_agent/services/artifacts.py` (`fetch_artifact`), `edge_agent/core/state.py` (`StateStore`)
-* contract: `edge_protocol/messages.py` (`DeployModelPayload`, `StateReportPayload`, `CommandAckPayload`)
+* `app/modules/deployment/service.py` (`activate`), `app/modules/deployment/event.py` (`DeploymentActivated`, `DeploymentFailed`)
+* `app/edge/gateway.py` (`_on_deployment_activated`, `_select_model_image`, `_on_heartbeat` → `devices.backend`)
+* `app/modules/model_registry/models.py` (`image_repo`, `image_cpu_digest`, `image_gpu_digest`)
+* `edge_agent/services/agent.py` (`_deploy`, `_apply_image`, `_apply_artifact`, `reconcile`)
+* `edge_agent/runner/compose_runner.py` (`ComposeRunner`)
+* `edge_agent/core/config.py` (`ComposeConfig`), `edge_agent/core/state.py` (`DesiredState.image`)
+* contract: `edge_protocol/messages.py` (`DeployModelPayload.image`, `DeviceCapabilities.backend`)
+
+---
+
+## 11. Open items (follow-up phase)
+
+* `backend/vision_runtime/` — the buildable that becomes the model images (capture + infer + WHIP), CPU + GPU Dockerfiles
+* DeepStream GPU pipeline (currently a skeleton)
+* cosign signature verification before `compose up`
+* registry credential provisioning on the edge (short-lived token via server)
+* `docker-socket-proxy` instead of raw socket mount
+* non-blocking legacy `runtime.load`; outbox for at-least-once violations
+* reconcile backoff + give-up; `T_UPDATE_CONFIG` hot-apply

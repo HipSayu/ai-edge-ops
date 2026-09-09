@@ -30,6 +30,9 @@ class Device(Base, TimestampMixin):
     agent_version: Mapped[str | None] = mapped_column(String(32), default=None)
     uptime_s: Mapped[float | None] = mapped_column(Float, default=None)
     active_model_version_id: Mapped[int | None] = mapped_column(default=None)
+    # probed hardware — decides which model image variant the server sends
+    backend: Mapped[str | None] = mapped_column(String(32), default=None)  # composed | deepstream
+    arch: Mapped[str | None] = mapped_column(String(32), default=None)  # x86_64 | aarch64 | ...
 
     metric_samples: Mapped[list[MetricSample]] = relationship(
         back_populates="device", cascade="all, delete-orphan", passive_deletes=True

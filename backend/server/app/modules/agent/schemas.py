@@ -43,6 +43,8 @@ class DeviceOut(ORMSchema):
 
 class HeartbeatIn(BaseModel):
     recorded_at: dt.datetime | None = None  # defaults to server time
+    backend: str | None = None
+    arch: str | None = None
     cpu_percent: float | None = Field(default=None, ge=0, le=100)
     gpu_percent: float | None = Field(default=None, ge=0, le=100)
     mem_percent: float | None = Field(default=None, ge=0, le=100)

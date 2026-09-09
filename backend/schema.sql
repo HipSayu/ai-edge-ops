@@ -91,6 +91,11 @@ CREATE TABLE IF NOT EXISTS devices (
     status       VARCHAR(32) NOT NULL DEFAULT 'provisioning',
     labels       JSONB NOT NULL DEFAULT '{}'::jsonb,
     last_seen_at TIMESTAMPTZ,
+    agent_version           VARCHAR(32),
+    uptime_s                DOUBLE PRECISION,
+    active_model_version_id INTEGER,
+    backend                 VARCHAR(32),
+    arch                    VARCHAR(32),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -168,7 +173,10 @@ CREATE TABLE IF NOT EXISTS model_versions (
     format       VARCHAR(32) NOT NULL,
     compression  VARCHAR(32) NOT NULL DEFAULT 'none',
     status       VARCHAR(32) NOT NULL DEFAULT 'draft',
-    artifact_uri VARCHAR(512) NOT NULL,
+    artifact_uri VARCHAR(512),
+    image_repo        VARCHAR(512),
+    image_cpu_digest  VARCHAR(128),
+    image_gpu_digest  VARCHAR(128),
     size_mb      DOUBLE PRECISION,
     metrics      JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),

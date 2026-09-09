@@ -25,7 +25,7 @@ from app.modules.agent.presence_records import PresenceEvent
 from app.modules.agent.presence_registry import PresenceRegistry
 from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.telemetry_relay import publish_sample
-from app.modules.deployment.event import DeploymentActivated
+from app.modules.deployment.event import DeploymentActivated, DeploymentFailed
 from app.modules.model_registry import ModelRegistryService
 from app.modules.streaming.service import StreamingService
 from app.shared.helpers.protocol import device_id_from_envelope
@@ -100,6 +100,8 @@ class AgentGateway:
                     agent_version=caps.agent_version if caps else None,
                     ip_address=caps.ip_address if caps else None,
                     uptime_s=caps.uptime_s if caps else None,
+                    backend=caps.backend if caps else None,
+                    arch=caps.arch if caps else None,
                     active_model_version_id=p.active_model_version_id,
                 ),
             )
@@ -219,19 +221,48 @@ class AgentGateway:
     # --- outbound (server -> edge) -------------------------------------
     async def _on_deployment_activated(self, event: DeploymentActivated) -> None:
         async with self._session() as session:
+            device = await AgentService(session).get_device(event.device_id)
             version = await ModelRegistryService(session).get_version(event.model_version_id)
+            config = {
+                **(dict(version.metrics.get("runtime", {})) if version.metrics else {}),
+                **event.config,
+            }
+            image = self._select_model_image(version, backend=device.backend)
+            if image is None and not version.artifact_uri:
+                await event_bus.publish(
+                    DeploymentFailed(
+                        deployment_id=event.deployment_id,
+                        device_id=event.device_id,
+                        reason=(
+                            f"model version {version.id} has no image for backend "
+                            f"{device.backend!r} and no legacy artifact_uri"
+                        ),
+                    )
+                )
+                return
             payload = protocol.DeployModelPayload(
                 command_id=uuid4().hex,
                 deployment_id=event.deployment_id,
                 model_version_id=event.model_version_id,
-                artifact_uri=version.artifact_uri,
-                format=str(version.format),
-                config={
-                    **(dict(version.metrics.get("runtime", {})) if version.metrics else {}),
-                    **event.config,
-                },
+                image=image,
+                artifact_uri=version.artifact_uri if image is None else None,
+                format=str(version.format) if image is None and version.format else None,
+                config=config,
             )
         await self.send_command(event.device_id, protocol.T_DEPLOY_MODEL, payload)
+
+    @staticmethod
+    def _select_model_image(version, *, backend: str | None) -> str | None:
+        """Digest-pinned OCI ref for this device's backend, or None to fall back
+        to the legacy artifact path."""
+        if not version.image_repo:
+            return None
+        digest = (
+            version.image_gpu_digest
+            if backend == "deepstream"
+            else version.image_cpu_digest
+        )
+        return f"{version.image_repo}@{digest}" if digest else None
 
     async def send_command(self, device_id: int, message_type: str, payload) -> None:
         envelope = Envelope(
