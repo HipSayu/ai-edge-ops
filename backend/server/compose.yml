@@ -1,6 +1,6 @@
 # Control-plane service. Pulled into the root stack via `include:` — run from app/:
 #   docker compose up --build server
-# Infra (db / mqtt / minio / redis / mediamtx) lives in app/docker-compose.yml.
+# Infra (db / mqtt / minio / redis / mediamtx) lives in app/docker-compose.data.yml.
 services:
   server:
     container_name: ai-edge-ops-dev-server
@@ -18,8 +18,15 @@ services:
       # container-network overrides (win over env_file)
       ENVIRONMENT: local
       EDGE_TRANSPORT: mqtt
+      REALTIME_TRANSPORT: redis
       DB__URL: postgresql+asyncpg://ppe:ppe@db:5432/ai_edge_ops
-      CORS_ORIGINS: '["http://localhost:5173"]'
+      # Dev only: "*" so any LAN machine/origin can call the API directly
+      # (e.g. :8000 from Postman/curl), bypassing nginx. Safe here because
+      # auth is a Bearer header, not cookies (allow_credentials stays False
+      # in CORSMiddleware — see packages/svc_core/.../middleware.py) — no
+      # cross-site cookie/session leakage risk. Prod (docker-compose.prod.yml)
+      # still pins CORS_ORIGINS to the real domain, don't copy this there.
+      CORS_ORIGINS: '["*"]'
       EVIDENCE_DIR: /var/lib/ai-edge-ops/evidence
       MQTT__HOST: mqtt
       MQTT__PORT: "1883"
@@ -29,8 +36,11 @@ services:
       S3__SECRET_ACCESS_KEY: minioadmin
       S3__BUCKET: artifacts
       REDIS__URL: redis://redis:6379/0
-      MEDIAMTX_WHIP_URL: http://localhost:8889
-      MEDIAMTX_WHEP_URL: http://localhost:8889
+      # WHIP (edge/publish): container-to-container, Docker DNS name.
+      MEDIAMTX_WHIP_URL: http://mediamtx:8889
+      # WHEP (frontend/view): a browser needs this reachable — host port from
+      # docker-compose.data.yml; LAN_IP (app/.env) for other machines.
+      MEDIAMTX_WHEP_URL: http://${LAN_IP:-localhost}:${MEDIAMTX_HTTP_PORT:-58889}
     volumes:
       - ./:/srv/server
       - evidencedata:/var/lib/ai-edge-ops/evidence

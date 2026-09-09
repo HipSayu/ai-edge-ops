@@ -1,70 +1,21 @@
 # Local dev stack. Run from app/:
-#   docker compose up --build                 # infra + server
-#   docker compose --profile edge up --build  # + edge-agent (end-to-end demo)
+#   docker compose -f docker-compose.data.yml up -d      # infra only
+#   docker compose up --build                            # infra + server
+#   docker compose --profile edge up --build             # + edge-agent (end-to-end demo)
+#   docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d   # + LAN reverse proxy
 #
-# API docs http://localhost:8000/docs | EMQX http://localhost:18083 (admin/public)
-# MinIO    http://localhost:9001 (minioadmin/minioadmin)
+# API docs http://localhost:8000/docs
+# EMQX     http://localhost:58083 (admin/public) | MinIO http://localhost:59001 (minioadmin/minioadmin)
 #
-# Per-service config lives next to each package:
+# Backing services (Postgres/EMQX/MinIO/Redis/MediaMTX) + their host ports live
+# in docker-compose.data.yml. Per-service config sits next to each package:
 #   backend/server/compose.yml   backend/server/.env
 #   backend/edge_agent/compose.yml   backend/edge_agent/.env
-# Shared infra creds: app/.env (see app/.env.example)
+# Shared infra creds / port overrides: app/.env (see app/.env.example)
+
 name: ai-edge-ops
 
 include:
+  - docker-compose.data.yml
   - backend/server/compose.yml
   - backend/edge_agent/compose.yml
-
-services:
-  db:
-    container_name: ai-edge-ops-dev-db
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-ppe}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ppe}
-      POSTGRES_DB: ${POSTGRES_DB:-ai_edge_ops}
-    ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ppe -d ai_edge_ops"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  mqtt:
-    container_name: ai-edge-ops-dev-mqtt
-    image: emqx/emqx:5.8
-    ports: ["1883:1883", "18083:18083"]
-    healthcheck:
-      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
-  minio:
-    container_name: ai-edge-ops-dev-minio
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-    ports: ["9000:9000", "9001:9001"]
-    volumes: ["miniodata:/data"]
-
-  redis:
-    container_name: ai-edge-ops-dev-redis
-    image: redis:7-alpine
-    ports: ["6379:6379"]
-
-  mediamtx:
-    container_name: ai-edge-ops-dev-mediamtx
-    image: bluenviron/mediamtx:1.9.3
-    ports:
-      - "8889:8889"      # WHIP/WHEP HTTP
-      - "8189:8189/udp"  # WebRTC/ICE
-    volumes:
-      - ./backend/server/mediamtx.yml:/mediamtx.yml:ro
-
-volumes:
-  pgdata:
-  miniodata:

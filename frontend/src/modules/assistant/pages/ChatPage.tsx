@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Bot, User } from 'lucide-react'
 import ChatInputForm from '@/modules/assistant/components/ChatInputForm'
+import { assistantService } from '@/shared/api/services/assistant'
 
 interface Message {
   id: string
@@ -10,48 +11,28 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I am your AI Edge Operations Assistant. I can help you query device telemetry, manage inference pipelines, or troubleshoot agent health. How can I assist you today?',
-      timestamp: '09:00:12'
-    },
-    {
-      id: '2',
-      role: 'user',
-      content: 'Can you check the thermal status of the Jetson nodes in Sector B?',
-      timestamp: '10:15:04'
-    },
-    {
-      id: '3',
-      role: 'assistant',
-      content: 'I have analyzed the telemetry for the 4 active Jetson nodes in Sector B. Currently, all temperatures are within safe operating limits (average 61°C). However, Node EDG-7041 showed a brief spike to 76°C about 20 minutes ago before stabilizing. Would you like me to increase the cooling fan curve for that node?',
-      timestamp: '10:15:22'
-    },
-    {
-      id: '4',
-      role: 'user',
-      content: 'Yes, please apply the aggressive cooling profile to EDG-7041.',
-      timestamp: '10:18:10'
-    },
-    {
-      id: '5',
-      role: 'assistant',
-      content: 'Done. I have dispatched the profile=aggressive configuration to EDG-7041. The daemon has acknowledged the change and fan speeds are now scaling up.',
-      timestamp: '10:18:15'
-    }
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    assistantService.listMessages()
+      .then((items) => setMessages(items.map((message) => ({
+        id: String(message.id),
+        role: message.role,
+        content: message.text,
+        timestamp: message.timestamp ?? '',
+      }))))
+      .catch(() => setMessages([]))
+  }, [])
   
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
-  const handleSend = (e?: React.FormEvent) => {
+  const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (!input.trim()) return
 
@@ -61,37 +42,27 @@ export default function ChatPage() {
       return
     }
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
-    }
-
-    setMessages(prev => [...prev, userMsg])
-    const currentInput = input
+    const currentInput = input.trim()
     setInput('')
     setIsTyping(true)
-
-    // Simulate AI response
-    setTimeout(() => {
-      let replyContent = "I've analyzed your request regarding '" + currentInput.substring(0, 20) + "...'. All systems are currently operating within normal parameters. Is there a specific edge node you'd like me to investigate?"
-      
-      if (currentInput.startsWith('/diagnose')) {
-        replyContent = 'Initiating full diagnostic sweep... /n/n[ OK ] Network Latency/n[ OK ] Memory Allocation/n[ OK ] Thermal Sensors/n[ OK ] TensorRT Engine Status/n/nNo anomalies detected.'
-      } else if (currentInput.startsWith('/deploy')) {
-        replyContent = 'Preparing rollout pipeline. Please specify the target group and model version (e.g., group=factory-floor model=yolov8n-v2.1).'
-      }
-
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
+    try {
+      const response = await assistantService.sendMessage(currentInput)
+      setMessages((prev) => [...prev, {
+        id: String(response.id),
+        role: response.role,
+        content: response.text,
+        timestamp: response.timestamp ?? '',
+      }])
+    } catch {
+      setMessages((prev) => [...prev, {
+        id: `error-${Date.now()}`,
         role: 'assistant',
-        content: replyContent,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
-      }
-      setMessages(prev => [...prev, aiMsg])
+        content: 'Unable to reach the assistant backend.',
+        timestamp: '',
+      }])
+    } finally {
       setIsTyping(false)
-    }, 1200)
+    }
   }
 
   return (

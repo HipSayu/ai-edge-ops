@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import asyncio
+import datetime as dt
 from pathlib import Path
 from uuid import uuid4
 
@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from app.api.deps import DbSession, Pagination
 from app.core.config import settings
 from app.core.ws import ws_hub
+from app.core.ws_auth import authenticate_ws
 from app.modules.observability.domain import AlertStatus, AlertType
 from app.modules.observability.schemas import (
     AlertOut,
@@ -72,8 +73,8 @@ async def get_evidence(filename: str) -> FileResponse:
 # --- live updates ------------------------------------------------------------
 @router.websocket("/ws/alerts")
 async def ws_alerts(websocket: WebSocket) -> None:
-    """Live feed of newly-raised alerts. No auth yet — the REST API has none either."""
-    await serve_ws(websocket, ws_hub, "alerts/#")
+    """Live feed of newly-raised alerts."""
+    await serve_ws(websocket, ws_hub, "alerts/#", authenticate=authenticate_ws)
 
 
 # --- violations --------------------------------------------------------------

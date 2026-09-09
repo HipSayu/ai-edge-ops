@@ -34,6 +34,9 @@ class DeviceOut(ORMSchema):
     status: DeviceStatus
     labels: dict
     last_seen_at: dt.datetime | None
+    agent_version: str | None = None
+    uptime_s: float | None = None
+    active_model_version_id: int | None = None
     created_at: dt.datetime
     updated_at: dt.datetime
 
@@ -45,9 +48,15 @@ class HeartbeatIn(BaseModel):
     mem_percent: float | None = Field(default=None, ge=0, le=100)
     mem_used_mb: float | None = Field(default=None, ge=0)
     mem_total_mb: float | None = Field(default=None, ge=0)
+    disk_percent: float | None = Field(default=None, ge=0, le=100)
     temperature_c: float | None = None
     fps: float | None = Field(default=None, ge=0)
     inference_latency_ms: float | None = Field(default=None, ge=0)
+    # agent identity / state (persisted onto the Device row, not the sample)
+    agent_version: str | None = None
+    ip_address: str | None = None
+    uptime_s: float | None = Field(default=None, ge=0)
+    active_model_version_id: int | None = None
 
 
 class MetricSampleOut(ORMSchema):
@@ -59,6 +68,7 @@ class MetricSampleOut(ORMSchema):
     mem_percent: float | None
     mem_used_mb: float | None
     mem_total_mb: float | None
+    disk_percent: float | None
     temperature_c: float | None
     fps: float | None
     inference_latency_ms: float | None

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { authStorage } from '@/shared/api/client'
 
 type RealtimeChannel = 'telemetry' | 'alerts' | 'logs'
 export type RealtimeEnvelope<T = unknown> = {
@@ -13,6 +14,7 @@ type ChannelState = {
   socket: WebSocket | null
   handlers: Set<MessageHandler>
   reconnectTimer: number | null
+  reconnectAttempts: number
 }
 
 type RealtimeContextValue = {
@@ -31,13 +33,17 @@ function websocketUrl(channel: RealtimeChannel): string {
 
   const suffix = channel === 'telemetry' ? '/agent/ws/telemetry' : channel === 'logs' ? '/agent/ws/logs' : '/ws/alerts'
   base.pathname = `${base.pathname}${suffix}`.replace(/\/+/g, '/')
+  // Browsers can't set headers on `new WebSocket`, so the access token rides
+  // as a query param (see backend app/core/ws_auth.py).
+  const token = authStorage.getAccessToken()
+  if (token) base.searchParams.set('token', token)
   return base.toString()
 }
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const states = useRef<Record<RealtimeChannel, ChannelState>>(
     Object.fromEntries(
-      channels.map((channel) => [channel, { status: 'idle', socket: null, handlers: new Set(), reconnectTimer: null }]),
+      channels.map((channel) => [channel, { status: 'idle', socket: null, handlers: new Set(), reconnectTimer: null, reconnectAttempts: 0 }]),
     ) as Record<RealtimeChannel, ChannelState>,
   )
   const [version, rerender] = useState(0)
@@ -63,7 +69,15 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     socket.onopen = () => {
       state.status = 'open'
+      state.reconnectAttempts = 0
       rerender((value) => value + 1)
+      // Ask the server to replay current state so the UI isn't blank until the
+      // next push (telemetry snapshot-on-connect; harmless on other channels).
+      try {
+        socket.send(JSON.stringify({ op: 'snapshot' }))
+      } catch {
+        // socket not ready — the next reconnect will retry
+      }
     }
     socket.onmessage = (event) => {
       try {
@@ -79,10 +93,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       state.status = state.handlers.size > 0 ? 'closed' : 'idle'
       rerender((value) => value + 1)
       if (state.handlers.size > 0) {
+        const delay = Math.min(500 * 2 ** state.reconnectAttempts, 8000)
+        state.reconnectAttempts += 1
         state.reconnectTimer = window.setTimeout(() => {
           state.reconnectTimer = null
           connect(channel)
-        }, 2000)
+        }, delay)
       }
     }
   }, [])
@@ -117,6 +133,6 @@ export function useRealtimeChannel(channel: RealtimeChannel, handler: MessageHan
   const context = useContext(RealtimeContext)
   if (!context) throw new Error('useRealtimeChannel must be used inside RealtimeProvider')
 
-  useEffect(() => context.subscribe(channel, handler), [channel, context, handler])
+  useEffect(() => context.subscribe(channel, handler), [channel, context.subscribe, handler])
   return context.status(channel)
 }

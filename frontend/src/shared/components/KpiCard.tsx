@@ -27,7 +27,7 @@ export default function KpiCard({
   isUp = true,
   chartType = 'sparkline',
   chartColor,
-  chartData: chartDataProp = [12, 18, 14, 24, 20, 29, 24, 32],
+  chartData: chartDataProp = [],
 }: KpiCardProps) {
   const gradId = useId()
   const chartData = chartDataProp.length ? chartDataProp : [0, 0]

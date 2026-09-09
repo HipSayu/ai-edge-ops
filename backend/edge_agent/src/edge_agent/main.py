@@ -17,6 +17,7 @@ from dqh.svc_core.transports.event_driven.mqtt import MqttMessageBus
 
 from edge_agent.core.config import AgentSettings, load_settings
 from edge_agent.core.hardware import detect_hardware
+from edge_agent.core.identity import agent_version, primary_ip, uptime_s
 from edge_agent.core.state import StateStore
 from edge_agent.network.api import build_api
 from edge_agent.network.link import EdgeLink, MqttLogHandler
@@ -24,6 +25,7 @@ from edge_agent.runtime import build_runtime
 from edge_agent.services.agent import Agent
 from edge_agent.services.backend import build_backend
 from edge_agent.services.evidence import HttpEvidenceUploader
+from edge_agent.services.telemetry import TelemetryPump
 from edge_agent.utils.metrics import collect_metrics
 
 logger = logging.getLogger("edge_agent")
@@ -59,12 +61,23 @@ async def run(settings: AgentSettings | None = None) -> None:
     store = StateStore(settings.state_file)
 
     agent = Agent(settings, runtime=runtime, store=store)
+
+    def heartbeat() -> p.HeartbeatPayload:
+        """Health heartbeat = machine metrics + this agent's identity + active model."""
+        hb = collect_metrics(hardware=hw)
+        hb.active_model_version_id = store.state.reported.active_model_version_id
+        if hb.capabilities is not None:
+            hb.capabilities.agent_version = agent_version()
+            hb.capabilities.ip_address = primary_ip()
+            hb.capabilities.uptime_s = uptime_s()
+        return hb
+
     link = EdgeLink(
         bus,
         device_id=settings.device_id,
         heartbeat_interval_s=settings.heartbeat_interval_s,
         on_command=agent.handle_command,
-        heartbeat_extra=lambda: collect_metrics(hardware=hw),
+        heartbeat_extra=heartbeat,
     )
     agent.link = link
     evidence_uploader = HttpEvidenceUploader(
@@ -82,10 +95,13 @@ async def run(settings: AgentSettings | None = None) -> None:
         evidence_uploader=evidence_uploader,
     )
 
+    telemetry = TelemetryPump(settings.telemetry, sink=link.send_telemetry, hardware=hw)
+
     await link.start()
     log_handler = MqttLogHandler(link)
     logging.getLogger("edge_agent").addHandler(log_handler)
     await backend.start()
+    telemetry.start()
 
     async def reconcile_loop() -> None:
         while True:
@@ -101,6 +117,7 @@ async def run(settings: AgentSettings | None = None) -> None:
     try:
         await asyncio.gather(api_server.serve(), reconcile_loop())
     finally:
+        await telemetry.stop()
         await backend.stop()
         logging.getLogger("edge_agent").removeHandler(log_handler)
         await link.stop()

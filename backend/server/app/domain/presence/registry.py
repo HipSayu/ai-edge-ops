@@ -4,8 +4,9 @@ import datetime as dt
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from dqh.svc_core.helpers.time import utcnow
+
 from app.domain.presence.models import PresenceEvent, PresenceSnapshot, PresenceStatus
-from app.shared.helpers.time import utcnow
 
 Clock = Callable[[], dt.datetime]
 

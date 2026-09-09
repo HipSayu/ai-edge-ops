@@ -1,0 +1,8 @@
+# MediaMTX on the VPS. Most knobs come from MTX_* env in ../docker-compose.yml
+# (webrtcAdditionalHosts, webrtcLocalUDPAddress, authMethod, authHTTPAddress).
+
+authHTTPExclude: []
+
+paths:
+  # created on demand: "cam_<camera_id>" (server/app/modules/streaming/service.py)
+  all_others:

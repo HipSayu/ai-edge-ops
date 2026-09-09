@@ -12,7 +12,8 @@ import datetime as dt
 
 import jwt
 
-from app.core.config import Settings, settings as default_settings
+from app.core.config import Settings
+from app.core.config import settings as default_settings
 from app.modules.streaming.schemas import StreamTokenOut
 
 TOKEN_TYPE = "stream"

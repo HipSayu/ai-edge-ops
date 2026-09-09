@@ -1,6 +1,6 @@
 """Deployment status model and transition rules."""
 
-from app.shared.helpers.enums import StrEnum
+from dqh.svc_core.helpers.str_enum import StrEnum
 
 
 class DeploymentStatus(StrEnum):

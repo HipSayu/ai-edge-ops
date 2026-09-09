@@ -34,6 +34,7 @@ class HeartbeatRecorded:
     mem_percent: float | None
     mem_used_mb: float | None
     mem_total_mb: float | None
+    disk_percent: float | None
     temperature_c: float | None
     fps: float | None
     inference_latency_ms: float | None

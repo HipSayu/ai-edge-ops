@@ -12,23 +12,39 @@ services:
     build:
       context: ..                 # = backend/
       dockerfile: edge_agent/Dockerfile
-    env_file:
-      - path: .env
-        required: false
+    # NOTE: deliberately no `env_file: .env` here. `.env` next to this file is
+    # for running the agent bare-metal on the host (where "localhost" is
+    # correct — db/mqtt/server ports are published to the host).
+    #
+    # Also deliberately NOT using `${MQTT__HOST:-mqtt}`-style substitution for
+    # the container-network values below: `docker compose include:` auto-loads
+    # this directory's `.env` as the *substitution* context for this file
+    # (independent of `env_file:`), so `${MQTT__HOST:-mqtt}` would silently
+    # resolve to that .env's "localhost" instead of the "mqtt" fallback —
+    # exactly the bug that caused this container to loop-crash. These are
+    # hardcoded on purpose; they must always be the container hostnames.
     environment:
-      # local-demo overrides (win over env_file); drop these on a real device
       DEVICE_ID: ${DEVICE_ID:-edge-dev-1}
       TRANSPORT: mqtt
-      MQTT__HOST: ${MQTT__HOST:-mqtt}
-      MQTT__PORT: ${MQTT__PORT:-1883}
-      MQTT__TLS: ${MQTT__TLS:-false}
-      SERVER__BASE_URL: ${SERVER__BASE_URL:-http://server:8000/api/v1}
+      MQTT__HOST: mqtt
+      MQTT__PORT: "1883"
+      MQTT__TLS: "false"
+      SERVER__BASE_URL: http://server:8000/api/v1
       INFERENCE__WEIGHTS_DIR: /var/lib/edge-agent/models
+      CAMERAS: '[{"id":"bay-1","source":"0","zone":"loading-bay","enabled":true,"fps_limit":10,"loop":false}]'
     volumes:
       - edge_state:/var/lib/edge-agent
       - ./weights:/var/lib/edge-agent/models:ro
     ports: ["9100:9100"]
     restart: unless-stopped
+    # Real device: report the HOST machine's metrics, not the container's
+    # pid: host
+    # volumes:
+    #   - /proc:/host/proc:ro
+    #   - /sys:/host/sys:ro
+    # environment:
+    #   HOST_PROC: /host/proc
+    #   HOST_SYS: /host/sys
     # Jetson: uncomment for GPU + camera passthrough
     # runtime: nvidia
     # devices: ["/dev/video0:/dev/video0"]

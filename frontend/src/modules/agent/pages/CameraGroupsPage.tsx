@@ -15,22 +15,16 @@ export default function CameraGroupsPage() {
     e.preventDefault()
     if (!newGroupName.trim()) return
 
-    const newGroup: CameraGroup = {
-      id: `GRP-0${groups.length + 1}`,
-      name: newGroupName,
-      description: 'Custom monitored zone created by operator',
-      site: newGroupSite || 'Main Facility',
-      cameraIds: ['CAM-01'],
-      totalCameras: 1,
-      onlineCameras: 1,
-      activeAlerts: 0,
-      aggregateFps: 30,
-      primaryModel: 'YOLOv11-Enterprise'}
-
-    setGroups([...groups, newGroup])
-    setNewGroupName('')
-    setNewGroupSite('')
-    setShowCreateModal(false)
+    agentService.createCameraGroup({
+      name: newGroupName.trim(),
+      site: newGroupSite.trim() || 'default',
+      camera_ids: [],
+    }).then((group) => {
+      setGroups((current) => [...current, group])
+      setNewGroupName('')
+      setNewGroupSite('')
+      setShowCreateModal(false)
+    })
   }
 
   return (

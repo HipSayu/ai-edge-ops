@@ -39,20 +39,10 @@ export default function UsersPage() {
     e.preventDefault()
     if (!newUserName.trim() || !newUserEmail.trim()) return
 
-    const newUser: UserAccount = {
-      id: `USR-0${users.length + 1}`,
-      name: newUserName,
-      email: newUserEmail,
-      role: newUserRole,
-      status: 'invited',
-      lastActive: 'Never',
-      avatarInitials: newUserName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase(),
-      assignedSites: ['Plant A']}
-
-    setUsers([...users, newUser])
-    setNewUserName('')
-    setNewUserEmail('')
-    setShowInviteModal(false)
+    userService.invite({ name: newUserName.trim(), email: newUserEmail.trim(), active: false })
+      .then(() => userService.list())
+      .then(setUsers)
+      .then(() => { setNewUserName(''); setNewUserEmail(''); setShowInviteModal(false) })
   }
 
   return (

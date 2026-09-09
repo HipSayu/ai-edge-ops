@@ -91,25 +91,8 @@ export default function LiveMonitorPanel({ camera }: Props) {
                 <span>REC • {camera.id}</span>
               </span>
               <span className="av-overlay-chip mono">
-                {new Date().toLocaleTimeString('en-US', { hour12: false })} · 1080p60
+                {new Date().toLocaleTimeString('en-US', { hour12: false })} · {camera.runtime.resolution}
               </span>
-            </div>
-
-            {/* AI Bounding Boxes */}
-            <div
-              className="av-detect-box"
-              style={{ top: '18%', left: '32%', width: '18%', height: '62%' }}
-            >
-              <span className="av-detect-tag person">PERSON #409 98.7%</span>
-              <span className="av-detect-tag violation">NO HARD HAT 96.2%</span>
-            </div>
-
-            <div
-              className="av-detect-box safe"
-              style={{ top: '22%', left: '56%', width: '16%', height: '54%' }}
-            >
-              <span className="av-detect-tag safe">HARD HAT 96.4%</span>
-              <span className="av-detect-tag safe">SAFETY VEST 94.8%</span>
             </div>
 
             {/* Video Controls */}

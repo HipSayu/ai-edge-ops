@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Server,
   Search,
@@ -10,10 +10,24 @@ import {
   WifiOff,
   Activity,
   Plus,
-  X} from 'lucide-react'
+  X,
+} from 'lucide-react'
 import KpiCard from '@/shared/components/KpiCard'
 import type { EdgeDevice } from '@/modules/agent/types'
 import { agentService } from '@/shared/api/services/agent'
+import { useRealtimeChannel, type RealtimeEnvelope } from '@/shared/contexts/RealtimeContext'
+
+type DeviceTelemetry = {
+  device_id: number
+  cpu_percent: number | null
+  gpu_percent: number | null
+  mem_used_mb: number | null
+  mem_total_mb: number | null
+  disk_percent: number | null
+  temperature_c: number | null
+}
+
+const round = (n: number, d = 0) => Math.round(n * 10 ** d) / 10 ** d
 
 export default function DevicesPage() {
   const [search, setSearch] = useState('')
@@ -40,6 +54,31 @@ export default function DevicesPage() {
       active = false
     }
   }, [])
+
+  // Live metric updates: the server re-publishes every device heartbeat on the
+  // `telemetry` WS channel (see backend telemetry_relay). Patch the matching
+  // card in place so the hardware gauges track without a page refresh.
+  const handleTelemetry = useCallback((message: RealtimeEnvelope) => {
+    if (message.type !== 'telemetry.device') return
+    const t = message.payload as DeviceTelemetry
+    setDeviceList((current) =>
+      current.map((dev) =>
+        dev.id === String(t.device_id)
+          ? {
+              ...dev,
+              cpuUsage: round(t.cpu_percent ?? dev.cpuUsage),
+              gpuUsage: round(t.gpu_percent ?? dev.gpuUsage),
+              ramUsedGb: round((t.mem_used_mb ?? dev.ramUsedGb * 1024) / 1024, 1),
+              ramTotalGb: round((t.mem_total_mb ?? dev.ramTotalGb * 1024) / 1024, 1),
+              diskUsage: round(t.disk_percent ?? dev.diskUsage),
+              tempC: round(t.temperature_c ?? dev.tempC),
+              lastHeartbeat: new Date().toLocaleString(),
+            }
+          : dev,
+      ),
+    )
+  }, [])
+  useRealtimeChannel('telemetry', handleTelemetry)
 
   // Add Device Modal state
   const [showAddModal, setShowAddModal] = useState(false)
@@ -281,6 +320,19 @@ export default function DevicesPage() {
                     <div
                       className="av-telemetry-bar-fill"
                       style={{ width: `${(dev.ramUsedGb / Math.max(dev.ramTotalGb, 1)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3, fontWeight: 600 }}>
+                    <span style={{ color: 'var(--text-dim)' }}>Disk</span>
+                    <span className="av-mono">{dev.diskUsage}%</span>
+                  </div>
+                  <div className="av-telemetry-bar-track">
+                    <div
+                      className={`av-telemetry-bar-fill${dev.diskUsage > 90 ? ' crit' : dev.diskUsage > 80 ? ' warn' : ''}`}
+                      style={{ width: `${dev.diskUsage}%` }}
                     />
                   </div>
                 </div>

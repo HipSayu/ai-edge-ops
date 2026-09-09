@@ -9,6 +9,8 @@ authHTTPAddress: http://server:8000/api/v1/streaming/auth
 # skip MediaMTX's own IP-based exclusion so every publish/read is checked.
 authHTTPExclude: []
 
+# Overridden by MTX_WEBRTCADDITIONALHOSTS (see ../../docker-compose.yml),
+# which reads LAN_IP from app/.env — the one place that's configured.
 webrtcAdditionalHosts: [localhost]
 
 paths:

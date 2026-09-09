@@ -27,6 +27,11 @@ class Device(Base, TimestampMixin):
     labels: Mapped[dict] = mapped_column(JSON, default=dict)
     last_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
+    # reported by the agent on every heartbeat (see AgentGateway._on_heartbeat)
+    agent_version: Mapped[str | None] = mapped_column(String(32), default=None)
+    uptime_s: Mapped[float | None] = mapped_column(Float, default=None)
+    active_model_version_id: Mapped[int | None] = mapped_column(default=None)
+
     metric_samples: Mapped[list[MetricSample]] = relationship(
         back_populates="device", cascade="all, delete-orphan", passive_deletes=True
     )
@@ -45,6 +50,7 @@ class MetricSample(Base):
     mem_percent: Mapped[float | None] = mapped_column(Float, default=None)
     mem_used_mb: Mapped[float | None] = mapped_column(Float, default=None)
     mem_total_mb: Mapped[float | None] = mapped_column(Float, default=None)
+    disk_percent: Mapped[float | None] = mapped_column(Float, default=None)
     temperature_c: Mapped[float | None] = mapped_column(Float, default=None)
     fps: Mapped[float | None] = mapped_column(Float, default=None)
     inference_latency_ms: Mapped[float | None] = mapped_column(Float, default=None)

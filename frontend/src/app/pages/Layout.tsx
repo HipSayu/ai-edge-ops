@@ -9,6 +9,7 @@ export type Theme = 'dark' | 'light'
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
   const location = useLocation()
 
   // Default to 'light' for a bright, clean, modern UI
@@ -25,6 +26,9 @@ export default function Layout() {
   // Close mobile drawer whenever route changes
   useEffect(() => {
     setMobileOpen(false)
+    setIsNavigating(true)
+    const timer = window.setTimeout(() => setIsNavigating(false), 350)
+    return () => window.clearTimeout(timer)
   }, [location.pathname])
 
   function toggleTheme() {
@@ -58,6 +62,12 @@ export default function Layout() {
           />
           <div className="av-body">
             <main className="av-main">
+              {isNavigating && (
+                <div className="av-route-loading" role="status" aria-live="polite">
+                  <div className="av-route-loading-bar" />
+                  <span>Loading page...</span>
+                </div>
+              )}
               <Outlet context={{ theme, toggleTheme }} />
             </main>
           </div>

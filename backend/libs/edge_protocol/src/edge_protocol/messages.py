@@ -20,6 +20,9 @@ class DeviceCapabilities(BaseModel):
     device: str | None = None  # cpu | cuda:0 | mps
     encoders: list[str] = Field(default_factory=list)
     model_formats: list[str] = Field(default_factory=list)  # engine, onnx, tflite, pt
+    agent_version: str | None = None
+    ip_address: str | None = None  # agent's primary LAN IP
+    uptime_s: float | None = None  # agent process uptime
 
 
 class HeartbeatPayload(BaseModel):
@@ -28,6 +31,7 @@ class HeartbeatPayload(BaseModel):
     mem_percent: float | None = None
     mem_used_mb: float | None = None
     mem_total_mb: float | None = None
+    disk_percent: float | None = None
     temperature_c: float | None = None
     fps: float | None = None
     inference_latency_ms: float | None = None
