@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.password_hasher import hash_password
-from app.modules.user.models import User
-from app.modules.user.schemas import UserCreate, UserUpdate
+from app.modules.iam.models import User
+from app.modules.iam.schemas import UserCreate, UserUpdate
 
 
 class UserService:
@@ -21,8 +21,7 @@ class UserService:
     async def create_user(self, data: UserCreate) -> User:
         if await self.session.scalar(select(User).where(User.email == data.email)):
             raise ConflictError(f"user '{data.email}' already exists")
-        values = data.model_dump(exclude={"password"})
-        user = User(**values)
+        user = User(**data.model_dump(exclude={"password"}))
         if data.password:
             user.password_hash = hash_password(data.password)
         self.session.add(user)
@@ -43,3 +42,6 @@ class UserService:
         await self.session.commit()
         await self.session.refresh(user)
         return user
+
+
+__all__ = ["UserService"]

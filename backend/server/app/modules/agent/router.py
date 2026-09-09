@@ -24,7 +24,7 @@ from app.modules.agent.schemas import (
     MetricSampleOut,
 )
 from app.modules.agent.service import AgentService
-from app.modules.auth.ws_auth import authenticate_ws
+from app.modules.iam.ws_auth import authenticate_ws
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 

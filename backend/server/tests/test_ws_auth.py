@@ -27,7 +27,7 @@ async def test_non_local_env_rejects_missing_token(_engine, monkeypatch):
 
 
 async def test_non_local_env_accepts_valid_token(_engine, session, monkeypatch):
-    from app.modules.user.models import User
+    from app.modules.iam.models import User
 
     user = User(email="ops@example.com", name="Ops", active=True, password_hash="x")
     session.add(user)

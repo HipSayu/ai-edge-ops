@@ -1,12 +1,20 @@
+"""Auth HTTP adapter — login, refresh, session."""
+
 from __future__ import annotations
 
 from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter
 
 from app.api.deps import DbSession
-from app.modules.auth.bearer_auth import CurrentUser
-from app.modules.auth.schemas import AuthSession, AuthTokens, LoginRequest, RefreshRequest, UserSession
-from app.modules.auth.service import AuthService
+from app.modules.iam.auth_service import AuthService
+from app.modules.iam.bearer_auth import CurrentUser
+from app.modules.iam.schemas import (
+    AuthSession,
+    AuthTokens,
+    LoginRequest,
+    RefreshRequest,
+    UserSession,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -30,6 +38,3 @@ async def me(user: CurrentUser, db: DbSession) -> ApiResponse[UserSession]:
 async def logout(_: CurrentUser) -> ApiResponse[None]:
     # Access and refresh tokens are short-lived / self-contained; the client discards them.
     return ok(None)
-
-
-__all__ = ["router"]

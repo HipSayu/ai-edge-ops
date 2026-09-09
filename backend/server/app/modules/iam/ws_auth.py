@@ -7,7 +7,7 @@ endpoints pass this as ``serve_ws(..., authenticate=...)``. It runs *before*
 Token source, in order: ``?token=`` query param (browsers can't set headers on
 ``new WebSocket``), then an ``Authorization: Bearer`` header. In
 ``ENVIRONMENT=local`` an anonymous socket is allowed, matching
-:func:`app.modules.auth.bearer_auth.require_permission`.
+:func:`app.modules.iam.bearer_auth.require_permission`.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from fastapi.exceptions import WebSocketException
 from app.core.config import settings
 from app.core.database import session_scope
 from app.core.token_codec import decode_token
-from app.modules.user.models import User
+from app.modules.iam.models import User
 
 
 def _extract_token(websocket: WebSocket) -> str | None:
@@ -36,7 +36,9 @@ async def authenticate_ws(websocket: WebSocket) -> User | None:
     if token is None:
         if settings.environment == "local":
             return None
-        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="authentication required")
+        raise WebSocketException(
+            code=status.WS_1008_POLICY_VIOLATION, reason="authentication required"
+        )
 
     try:
         user_id = decode_token(token, "access")

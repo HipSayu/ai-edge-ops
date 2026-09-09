@@ -16,8 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.token_codec import decode_token
-from app.modules.access_control.models import Permission, Role, RolePermission, UserRole
-from app.modules.user.models import User
+from app.modules.iam.models import Permission, Role, RolePermission, User, UserRole
 
 bearer = HTTPBearer(auto_error=False)
 
