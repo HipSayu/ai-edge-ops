@@ -4,6 +4,32 @@ Ngày lập: 2026-09-09. Mục tiêu: (a) nhấc hạ tầng thuần từ `backe
 `backend/packages/svc_core` (`dqh.svc_core`), (b) chuẩn hoá module contract của
 server, (c) áp rule code-style mới.
 
+## Trạng thái (branch `refactor/svc-core-extract-1`)
+
+| Commit | Nội dung |
+|---|---|
+| server `8dab862` + svc_core `509663d` | PR1 — EventBus + StrEnum + configure_logging (1.1/1.2/1.6) |
+| server `47249b8` | PR2.1 — ModuleRegistry auto-discovery + observability subscribers wired |
+| server `9d62577` + svc_core `cac594a` | PR1.3 — RedisPubSubMessageBus → svc_core `[redis]` |
+| server `0977400` + svc_core `b48bed4` | PR1.4 — persistence: Base/EngineFactory/BaseRepository/TimestampMixin/DbEnum → svc_core `[sqlalchemy]` |
+| server `ad68dd5` + svc_core `566cc78` | PR1.5 — auth split: PasswordHasher/TokenCodec → svc_core `[security]`; app `bearer_auth.py` |
+
+**PHẦN 1 (extract → svc_core) + 1.7 (pyproject) + 2.1 (subscribers): XONG.**
+svc_core 0.1.0 → 0.5.0, 41 test pass. server: 24 pass / 3 fail.
+
+**3 test đỏ CÒN LẠI = bug có sẵn trong WIP chưa commit, KHÔNG do refactor:**
+- `test_edge_gateway::test_violation_over_bus_records_and_alerts` — violation
+  không được route qua bus (edge_protocol/gateway WIP đang dở)
+- `test_api_smoke::test_violation_flow_creates_alert_and_shows_in_analytics` — cùng gốc
+- `test_ws_alerts::test_alert_raised_is_pushed_over_websocket` — WS đóng khi connect
+  (ws-auth trong `observability/router.py` WIP)
+Đã xác minh: revert sạch mọi thay đổi refactor → vẫn đúng 3 test này đỏ.
+
+**Còn lại:** PHẦN 2 (module contract: rename domain.py→rules.py, khuôn đồng nhất),
+PHẦN 3 (xẻ edge gateway), PHẦN 4 (import-linter + workspace).
+
+---
+
 ## Rule code-style (áp cho MỌI code mới + code động vào khi refactor)
 
 - **Ưu tiên class hoá.** Logic có state / lifecycle / nhiều method liên quan → bọc
