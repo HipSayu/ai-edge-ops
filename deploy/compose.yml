@@ -11,7 +11,6 @@
 #
 #   API + docs    http://localhost:8000/docs
 #   EMQX dash     http://localhost:58083   admin / <EMQX_DASHBOARD_PASSWORD>
-#   MinIO console http://localhost:59001
 #   local agent   http://localhost:9100/status
 #
 # The frontend runs separately: `npm run dev` in app/frontend.
@@ -92,7 +91,7 @@ services:
     profiles: ["edge"]
     build:
       context: ../backend
-      dockerfile: inference/Dockerfile.cpu
+      dockerfile: inference/Dockerfile
     environment:
       SOCKET_PATH: /run/edge/inference.sock
       RUNTIME: ${INFERENCE_RUNTIME}

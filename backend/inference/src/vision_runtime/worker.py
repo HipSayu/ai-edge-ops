@@ -174,7 +174,20 @@ class VisionWorker:
 
 
 def _resolve_device(device: str) -> str:
-    return "cpu" if device == "auto" else device
+    """``auto`` -> probe the hardware: CUDA, then Apple MPS, else CPU. One
+    multi-arch model image runs everywhere; the runtime picks the accelerator."""
+    if device != "auto":
+        return device
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return "cuda:0"
+        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            return "mps"
+    except ModuleNotFoundError:
+        pass
+    return "cpu"
 
 
 def _find_weights(weights_dir: str) -> str:
