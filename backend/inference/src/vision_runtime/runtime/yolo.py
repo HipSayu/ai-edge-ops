@@ -1,6 +1,6 @@
 """Ultralytics YOLO runtime. Needs the ``inference`` extra.
 
-    pip install ai-edge-ops-edge-agent[inference]
+    pip install ai-edge-ops-vision-runtime[inference]
 """
 
 from __future__ import annotations
@@ -9,10 +9,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from edge_agent.runtime.base import Detection, InferenceRuntime
+from vision_runtime.runtime.base import Detection, InferenceRuntime
 
-# Prefer the vendored ultralytics shipped under edge_agent/package/ultralytics
-# over any globally installed copy.
+# Fall back to the vendored ultralytics under backend/inference/package/ultralytics
+# when it isn't pip-installed (dev checkouts).
 _VENDORED = Path(__file__).resolve().parents[3] / "package" / "ultralytics"
 if _VENDORED.is_dir() and str(_VENDORED) not in sys.path:
     sys.path.insert(0, str(_VENDORED))
@@ -21,7 +21,7 @@ try:
     from ultralytics import YOLO
 except ModuleNotFoundError as exc:  # pragma: no cover
     raise ModuleNotFoundError(
-        "YoloRuntime needs the 'inference' extra: pip install ai-edge-ops-edge-agent[inference]"
+        "YoloRuntime needs the 'inference' extra: pip install ai-edge-ops-vision-runtime[inference]"
     ) from exc
 
 

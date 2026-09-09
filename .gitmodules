@@ -1,6 +1,6 @@
 [submodule "backend/packages"]
 	path = backend/packages
 	url = https://github.com/hopquangdo/python-packages
-[submodule "backend/edge_agent/package/ultralytics"]
-	path = backend/edge_agent/package/ultralytics
+[submodule "backend/inference/package/ultralytics"]
+	path = backend/inference/package/ultralytics
 	url = https://github.com/hopquangdo/yolo-ppe-optimizer.git

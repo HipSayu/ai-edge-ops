@@ -20,7 +20,6 @@ T_RUN_DIAGNOSTICS = "command.run_diagnostics"
 
 __all__ = [
     "T_BBOX_FRAME",
-    "T_STREAM_TOKEN_REQUEST",
     "T_COMMAND_ACK",
     "T_DEPLOY_MODEL",
     "T_HEARTBEAT",
@@ -28,6 +27,7 @@ __all__ = [
     "T_RESTART",
     "T_RUN_DIAGNOSTICS",
     "T_STATE_REPORT",
+    "T_STREAM_TOKEN_REQUEST",
     "T_TELEMETRY",
     "T_UPDATE_CONFIG",
     "T_VIOLATION",

@@ -11,9 +11,7 @@ from pathlib import Path
 class DesiredState:
     deployment_id: int | None = None
     model_version_id: int | None = None
-    image: str | None = None  # digest-pinned OCI ref (image-based deploy)
-    artifact_uri: str | None = None  # legacy artifact deploy
-    model_format: str | None = None
+    image: str | None = None  # digest-pinned OCI ref the inference service runs
     config: dict = field(default_factory=dict)
 
 

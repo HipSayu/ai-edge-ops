@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from edge_agent.runtime import Detection
+from vision_runtime.runtime import Detection
 
 
 def evaluate_ppe(detections: list[Detection], required: list[str]) -> list[str]:

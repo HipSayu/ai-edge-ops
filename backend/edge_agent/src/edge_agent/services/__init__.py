@@ -1,1 +1,1 @@
-"""Services: agent orchestration, pipeline, evidence, artifacts."""
+"""Services: agent orchestration + reconcile."""

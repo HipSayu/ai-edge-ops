@@ -19,14 +19,21 @@ def _agent(request: Request) -> Agent:
 async def status(request: Request):
     agent = _agent(request)
     st = agent.store.state
+    inference = agent.inference
     return ok(
         {
             "device_id": agent.settings.device_id,
             "runtime_status": st.reported.runtime_status,
             "active_model_version_id": st.reported.active_model_version_id,
             "desired_model_version_id": st.desired.model_version_id,
+            "desired_image": st.desired.image,
             "in_sync": st.in_sync(),
-            "runtime_loaded": agent.runtime.loaded,
+            "inference_connected": bool(inference and inference.connected),
+            "inference_health": (
+                inference.last_health.model_dump()
+                if inference and inference.last_health
+                else None
+            ),
             "cameras": [c.id for c in agent.settings.cameras],
         }
     )
@@ -34,7 +41,7 @@ async def status(request: Request):
 
 @router.get("/config")
 async def get_config(request: Request):
-    return ok(_agent(request).settings.inference.model_dump())
+    return ok(_agent(request).store.state.reported.config)
 
 
 @router.put("/config")

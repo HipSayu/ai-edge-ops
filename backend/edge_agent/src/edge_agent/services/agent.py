@@ -1,4 +1,8 @@
-"""Agent orchestrator: owns state + runtime, executes commands, reconciles."""
+"""Agent orchestrator: owns desired/reported state, executes commands, reconciles.
+
+Inference runs in the vision-runtime container; the agent only deploys the model
+image (via ``docker compose``) and reports the outcome.
+"""
 
 from __future__ import annotations
 
@@ -12,8 +16,6 @@ from edge_agent.core.config import AgentSettings
 from edge_agent.core.state import StateStore
 from edge_agent.network.link import EdgeLink
 from edge_agent.runner import ComposeRunner, ModelDeployer
-from edge_agent.runtime import InferenceRuntime
-from edge_agent.services.artifacts import fetch_artifact
 
 logger = logging.getLogger("edge_agent")
 
@@ -23,17 +25,15 @@ class Agent:
         self,
         settings: AgentSettings,
         *,
-        runtime: InferenceRuntime,
         store: StateStore,
         link: EdgeLink | None = None,
         deployer: ModelDeployer | None = None,
     ) -> None:
         self.settings = settings
-        self.runtime = runtime
         self.store = store
         self.link: EdgeLink | None = link
-        # image-based deploy (new). The legacy artifact path uses `runtime`.
         self.deployer: ModelDeployer = deployer or ComposeRunner(settings.compose)
+        self.inference = None  # set by main.run(): the InferenceClient, for the status API
 
     # --- command handling (called by EdgeLink) ------------------------
     async def handle_command(self, env: Envelope) -> p.CommandAckPayload:
@@ -55,44 +55,30 @@ class Agent:
         return p.CommandAckPayload(command_id=env.id, status="failed", detail="unknown command")
 
     async def _deploy(self, cmd: p.DeployModelPayload) -> p.CommandAckPayload:
+        if not cmd.image:
+            return p.CommandAckPayload(
+                command_id=cmd.command_id,
+                deployment_id=cmd.deployment_id,
+                status="failed",
+                detail="deploy command has no image (this agent is image-only)",
+            )
         st = self.store.state
         st.desired.deployment_id = cmd.deployment_id
         st.desired.model_version_id = cmd.model_version_id
         st.desired.image = cmd.image
-        st.desired.artifact_uri = cmd.artifact_uri
-        st.desired.model_format = cmd.format
         st.desired.config = cmd.config
-        effective_config = {**self.settings.inference.model_dump(), **cmd.config}
-        st.reported.config = effective_config
+        st.reported.config = cmd.config
         st.reported.runtime_status = "applying"
         st.reported.deployment_id = cmd.deployment_id
         self.store.save()
         await self._report_state()
 
         try:
-            if cmd.image:
-                detail = await self._apply_image(cmd.image)
-            else:
-                detail = await self._apply_artifact(cmd, effective_config)
+            result = await self.deployer.deploy(cmd.image)
         except Exception as exc:  # noqa: BLE001
-            st.reported.runtime_status = "failed"
-            st.reported.detail = str(exc)
-            self.store.save()
-            await self._report_state()
-            return p.CommandAckPayload(
-                command_id=cmd.command_id, deployment_id=cmd.deployment_id,
-                status="failed", detail=str(exc),
-            )
-
-        if detail is not None:  # non-None detail == failure reason
-            st.reported.runtime_status = "failed"
-            st.reported.detail = detail
-            self.store.save()
-            await self._report_state()
-            return p.CommandAckPayload(
-                command_id=cmd.command_id, deployment_id=cmd.deployment_id,
-                status="failed", detail=detail,
-            )
+            return await self._fail(cmd, str(exc))
+        if not result.ok:
+            return await self._fail(cmd, result.detail)
 
         st.reported.runtime_status = "active"
         st.reported.active_model_version_id = cmd.model_version_id
@@ -103,23 +89,18 @@ class Agent:
             command_id=cmd.command_id, deployment_id=cmd.deployment_id, status="succeeded"
         )
 
-    async def _apply_image(self, image: str) -> str | None:
-        """Pull + run the model image via compose. Returns a failure reason or None."""
-        result = await self.deployer.deploy(image)
-        return None if result.ok else result.detail
-
-    async def _apply_artifact(self, cmd: p.DeployModelPayload, config: dict) -> str | None:
-        """Legacy path: download the artifact and load it into the local runtime."""
-        path = await fetch_artifact(
-            cmd.artifact_uri,
-            dest_dir=self.settings.inference.weights_dir,
-            filename=f"mv-{cmd.model_version_id}.{cmd.format or 'pt'}",
-            checksum_sha256=cmd.checksum_sha256,
+    async def _fail(self, cmd: p.DeployModelPayload, detail: str) -> p.CommandAckPayload:
+        st = self.store.state
+        st.reported.runtime_status = "failed"
+        st.reported.detail = detail
+        self.store.save()
+        await self._report_state()
+        return p.CommandAckPayload(
+            command_id=cmd.command_id,
+            deployment_id=cmd.deployment_id,
+            status="failed",
+            detail=detail,
         )
-        await self.runtime.load(
-            weights_path=path, model_version_id=cmd.model_version_id, config=config
-        )
-        return None
 
     async def _update_config(self, cmd: p.UpdateConfigPayload) -> p.CommandAckPayload:
         self.store.state.desired.config.update(cmd.config)
@@ -133,12 +114,12 @@ class Agent:
     # --- reconcile (periodic) ---------------------------------------
     async def reconcile(self) -> None:
         st = self.store.state
-        if st.in_sync():
-            return
-        if not (st.desired.image or st.desired.artifact_uri):
+        if st.in_sync() or not st.desired.image:
             return
         if st.reported.runtime_status == "applying":
             return  # a deploy is in flight
+        if self.deployer.current_image() == st.desired.image:
+            return  # image already running; nothing to re-pull
         logger.info("reconcile: re-applying desired model %s", st.desired.model_version_id)
         await self._deploy(
             p.DeployModelPayload(
@@ -146,8 +127,6 @@ class Agent:
                 deployment_id=st.desired.deployment_id or 0,
                 model_version_id=st.desired.model_version_id or 0,
                 image=st.desired.image,
-                artifact_uri=st.desired.artifact_uri,
-                format=st.desired.model_format,
                 config=st.desired.config,
             )
         )
@@ -168,8 +147,9 @@ class Agent:
         )
 
     def _diagnostics(self) -> str:
+        r = self.store.state.reported
         return (
-            f"runtime={self.store.state.reported.runtime_status} "
-            f"model={self.runtime.model_version_id} "
-            f"loaded={self.runtime.loaded} at {dt.datetime.now(tz=dt.timezone.utc).isoformat()}"
+            f"runtime_status={r.runtime_status} model={r.active_model_version_id} "
+            f"image={self.deployer.current_image()} "
+            f"at {dt.datetime.now(tz=dt.timezone.utc).isoformat()}"
         )

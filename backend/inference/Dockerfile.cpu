@@ -1,0 +1,33 @@
+# CPU / generic model image. Runs anywhere: x86, Raspberry Pi, Apple Silicon,
+# or a Jetson in CPU/ONNX mode. Built by CI per model version; the weights are
+# baked in at /models.
+#
+#   docker build -f backend/inference/Dockerfile.cpu \
+#     --build-arg MODEL_VERSION=42 \
+#     -t registry/org/models/ppe:v42-cpu backend
+FROM python:3.11-slim
+
+ARG MODEL_VERSION=0
+ENV MODEL_VERSION_ID=${MODEL_VERSION} \
+    RUNTIME=onnx \
+    DEVICE=cpu \
+    SOCKET_PATH=/run/edge/inference.sock \
+    MODEL_DIR=/models
+
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /srv
+COPY packages/svc_core        /srv/packages/svc_core
+COPY libs/edge_protocol       /srv/libs/edge_protocol
+COPY inference                /srv/inference
+
+RUN pip install --no-cache-dir -U pip \
+ && pip install --no-cache-dir -e "/srv/packages/svc_core" \
+ && pip install --no-cache-dir -e "/srv/libs/edge_protocol" \
+ && pip install --no-cache-dir -e "/srv/inference[cpu]"
+
+# CI mounts / copies the exported model here (model.onnx / model.pt)
+COPY --chown=root:root models/ /models/
+
+CMD ["vision-runtime"]

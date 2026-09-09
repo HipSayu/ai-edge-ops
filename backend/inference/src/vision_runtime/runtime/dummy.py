@@ -8,7 +8,7 @@ from __future__ import annotations
 import itertools
 from typing import Any
 
-from edge_agent.runtime.base import Detection, InferenceRuntime
+from vision_runtime.runtime.base import Detection, InferenceRuntime
 
 
 class DummyRuntime(InferenceRuntime):
