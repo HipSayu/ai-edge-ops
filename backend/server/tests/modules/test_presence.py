@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import datetime as dt
 
-from app.domain.presence import PresenceRegistry, PresenceStatus
+from app.modules.agent.presence_registry import PresenceRegistry
+from app.modules.agent.presence_status import PresenceStatus
 
 
 class _Clock:
