@@ -17,8 +17,7 @@ dependencies = [
     "alembic>=1.14",
     "argon2-cffi>=23.1",
     "PyJWT>=2.9",
-    "redis>=5.0",
-    "dqh-svc-core[fastapi,mqtt]",
+    "dqh-svc-core[fastapi,mqtt,redis]",
     "edge-protocol",
 ]
 
