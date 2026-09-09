@@ -7,7 +7,7 @@ from sqlalchemy import JSON, Float, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.modules.model_registry.domain import (
+from app.modules.model_registry.rules import (
     CompressionMethod,
     ModelFormat,
     ModelTask,

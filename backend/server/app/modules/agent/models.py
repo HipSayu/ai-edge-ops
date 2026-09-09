@@ -9,7 +9,7 @@ from sqlalchemy import JSON, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.modules.agent.domain import DeviceStatus
+from app.modules.agent.rules import DeviceStatus
 
 
 class Device(Base, TimestampMixin):

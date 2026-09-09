@@ -3,10 +3,10 @@ from __future__ import annotations
 import pytest
 from dqh.svc_core.contracts.errors import ConflictError
 
-from app.modules.agent.domain import DeviceStatus
+from app.modules.agent.rules import DeviceStatus
 from app.modules.agent.schemas import DeviceCreate, HeartbeatIn
 from app.modules.agent.service import AgentService
-from app.modules.observability.domain import AlertType
+from app.modules.observability.rules import AlertType
 from app.modules.observability.repository import AlertRepository
 
 

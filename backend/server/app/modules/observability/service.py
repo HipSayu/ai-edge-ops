@@ -11,10 +11,10 @@ from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
-from app.modules.observability.domain import AlertSeverity, AlertStatus, AlertType
 from app.modules.observability.event import AlertRaised, ViolationRecorded
 from app.modules.observability.models import Alert, Violation
 from app.modules.observability.repository import AlertRepository, ViolationRepository
+from app.modules.observability.rules import AlertSeverity, AlertStatus, AlertType
 from app.modules.observability.schemas import (
     LabelCount,
     OverviewKpis,

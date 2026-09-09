@@ -6,7 +6,7 @@ import datetime as dt
 
 from pydantic import BaseModel, Field
 
-from app.modules.observability.domain import AlertSeverity, AlertStatus, AlertType
+from app.modules.observability.rules import AlertSeverity, AlertStatus, AlertType
 from app.shared.schema import ORMSchema
 
 

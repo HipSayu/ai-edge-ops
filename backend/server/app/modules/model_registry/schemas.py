@@ -6,7 +6,7 @@ import datetime as dt
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.model_registry.domain import (
+from app.modules.model_registry.rules import (
     CompressionMethod,
     ModelFormat,
     ModelTask,

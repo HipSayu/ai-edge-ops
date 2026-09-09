@@ -3,12 +3,12 @@ from __future__ import annotations
 import pytest
 from dqh.svc_core.contracts.errors import BadRequestError as BusinessRuleError
 
-from app.modules.deployment.domain import DeploymentStatus
+from app.modules.deployment.rules import DeploymentStatus
 from app.modules.deployment.schemas import DeploymentCreate
 from app.modules.deployment.service import DeploymentService
 from app.modules.agent.schemas import DeviceCreate
 from app.modules.agent.service import AgentService
-from app.modules.model_registry.domain import ModelFormat, ModelTask, ModelVersionStatus
+from app.modules.model_registry.rules import ModelFormat, ModelTask, ModelVersionStatus
 from app.modules.model_registry.schemas import ModelCreate, ModelVersionCreate
 from app.modules.model_registry.service import ModelRegistryService
 

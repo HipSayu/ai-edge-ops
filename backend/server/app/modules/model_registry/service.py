@@ -8,9 +8,9 @@ from dqh.svc_core.transports.http import Page
 from dqh.svc_core.transports.http import PaginationParams as PageParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.model_registry.domain import ModelTask, ModelVersionStatus
 from app.modules.model_registry.models import Model, ModelVersion
 from app.modules.model_registry.repository import ModelRepository, ModelVersionRepository
+from app.modules.model_registry.rules import ModelTask, ModelVersionStatus
 from app.modules.model_registry.schemas import ModelCreate, ModelVersionCreate
 
 _STATUS_FLOW: dict[ModelVersionStatus, set[ModelVersionStatus]] = {

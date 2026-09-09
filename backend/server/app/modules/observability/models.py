@@ -9,7 +9,7 @@ from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.modules.observability.domain import AlertSeverity, AlertStatus, AlertType
+from app.modules.observability.rules import AlertSeverity, AlertStatus, AlertType
 
 
 class Violation(Base):

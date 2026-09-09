@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Bot, Send, User } from 'lucide-react'
-import type { ChatMessage } from '@/modules/observability/types'
 import { assistantService } from '@/shared/api/services/assistant'
+
+type ChatMessage = {
+  id: number
+  role: 'user' | 'assistant'
+  text: string
+  timestamp?: string
+}
 
 export default function AiAssistantChat({ floating }: { floating?: boolean }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])

@@ -6,7 +6,7 @@ import datetime as dt
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.deployment.domain import DeploymentStatus
+from app.modules.deployment.rules import DeploymentStatus
 from app.shared.schema import ORMSchema
 
 

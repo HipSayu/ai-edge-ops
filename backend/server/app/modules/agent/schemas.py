@@ -6,7 +6,7 @@ import datetime as dt
 
 from pydantic import BaseModel, Field
 
-from app.modules.agent.domain import DeviceStatus
+from app.modules.agent.rules import DeviceStatus
 from app.shared.schema import ORMSchema
 
 

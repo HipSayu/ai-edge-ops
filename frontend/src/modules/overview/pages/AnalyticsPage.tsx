@@ -1,23 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import KpiCard from '@/shared/components/KpiCard'
 import { TrendingUp, ShieldCheck, AlertCircle, Clock } from 'lucide-react'
-import type { AnalyticsPoint } from '@/modules/observability/types'
-import { observabilityService } from '@/shared/api/services/observability'
 import AnalyticsChart from '@/shared/components/AnalyticsChart'
+
+type AnalyticsPoint = {
+  time: string
+  violations: number
+  people: number
+  complianceRate: number
+}
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('2h')
-  const [timeline, setTimeline] = useState<AnalyticsPoint[]>([])
-  const [categories, setCategories] = useState<{ label: string; count: number }[]>([])
-  const [overview, setOverview] = useState<{
+  const [timeline] = useState<AnalyticsPoint[]>([])
+  const [categories] = useState<{ label: string; count: number }[]>([])
+  const [overview] = useState<{
     violations_24h: number
     avg_inference_latency_ms: number | null
   } | null>(null)
-  useEffect(() => {
-    observabilityService.getViolationTimeseries().then((rows) => setTimeline(rows.map((row) => ({ time: row.bucket, violations: row.count, people: 0, complianceRate: 0 })))).catch(() => setTimeline([]))
-    observabilityService.getViolationsByType().then(setCategories).catch(() => setCategories([]))
-    observabilityService.getAnalyticsOverview().then(setOverview).catch(() => setOverview(null))
-  }, [])
 
   const categoryTotal = categories.reduce((total, category) => total + category.count, 0)
   const averageLatency = overview?.avg_inference_latency_ms
