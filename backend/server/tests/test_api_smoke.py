@@ -11,14 +11,14 @@ async def test_violation_flow_creates_alert_and_shows_in_analytics(client):
     device = (
         await client.post(
             "agent/devices",
-            json={"name": "cam-01", "site": "Plant A", "hardware": "Jetson Orin Nano"},
+            json={"device_id": "cam-01", "name": "cam-01", "site": "Plant A", "hardware": "Jetson Orin Nano"},
         )
     ).json()["data"]
 
     resp = await client.post(
         "violations",
         json={
-            "device_id": device["id"],
+            "device_id": device["device_id"],
             "zone": "loading-bay",
             "violation_type": "no_helmet",
             "confidence": 0.91,

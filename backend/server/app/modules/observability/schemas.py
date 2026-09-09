@@ -12,7 +12,7 @@ from app.shared.schema import ORMSchema
 
 # --- violations --------------------------------------------------------------
 class ViolationCreate(BaseModel):
-    device_id: int
+    device_id: str
     zone: str = Field(min_length=1, max_length=128)
     violation_type: str = Field(min_length=1, max_length=64)
     confidence: float = Field(ge=0, le=1)
@@ -22,7 +22,7 @@ class ViolationCreate(BaseModel):
 
 class ViolationOut(ORMSchema):
     id: int
-    device_id: int
+    device_id: str
     zone: str
     violation_type: str
     confidence: float
@@ -38,7 +38,7 @@ class AlertOut(ORMSchema):
     status: AlertStatus
     title: str
     description: str | None
-    device_id: int | None
+    device_id: str | None
     deployment_id: int | None
     context: dict
     resolved_at: dt.datetime | None

@@ -60,7 +60,7 @@ export default function DeploymentsPage() {
       setActionNotice('Select a model and ensure an edge device is available.')
       return
     }
-    aiService.createDeployment({ device_id: Number(device.id), image: model.id, config: { strategy: selectedStrategy } })
+    aiService.createDeployment({ device_id: device.id, image: model.id, config: { strategy: selectedStrategy } })
       .then(() => aiService.listDeployments())
       .then(setDeployments)
       .then(() => { setShowDeployModal(false); setActionNotice('Deployment queued by backend.'); setTimeout(() => setActionNotice(null), 3500) })

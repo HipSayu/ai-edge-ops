@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 
 from dqh.svc_core.persistence.sqlalchemy import DbEnum, TimestampMixin
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import JSON, DateTime, Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -16,9 +16,7 @@ class Violation(Base):
     __tablename__ = "violations"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    device_id: Mapped[int] = mapped_column(
-        ForeignKey("devices.id", ondelete="CASCADE"), index=True
-    )
+    device_id: Mapped[str] = mapped_column(String(64), index=True)
     zone: Mapped[str] = mapped_column(String(128), index=True)
     violation_type: Mapped[str] = mapped_column(String(64), index=True)  # "no_helmet", "no_vest"
     confidence: Mapped[float] = mapped_column(Float)
@@ -37,11 +35,7 @@ class Alert(Base, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(256))
     description: Mapped[str | None] = mapped_column(Text, default=None)
-    device_id: Mapped[int | None] = mapped_column(
-        ForeignKey("devices.id", ondelete="SET NULL"), default=None, index=True
-    )
-    deployment_id: Mapped[int | None] = mapped_column(
-        ForeignKey("deployments.id", ondelete="SET NULL"), default=None
-    )
+    device_id: Mapped[str | None] = mapped_column(String(64), default=None, index=True)
+    deployment_id: Mapped[int | None] = mapped_column(default=None)
     context: Mapped[dict] = mapped_column(JSON, default=dict)
     resolved_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)

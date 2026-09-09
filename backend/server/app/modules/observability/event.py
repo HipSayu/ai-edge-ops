@@ -7,7 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class ViolationRecorded:
     violation_id: int
-    device_id: int
+    device_id: str
     violation_type: str
     zone: str
     confidence: float
@@ -20,4 +20,4 @@ class AlertRaised:
     alert_id: int
     type: str
     severity: str
-    device_id: int | None
+    device_id: str | None

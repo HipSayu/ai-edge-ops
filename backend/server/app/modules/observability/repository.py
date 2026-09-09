@@ -19,7 +19,7 @@ class ViolationRepository(BaseRepository[Violation]):
     async def list_page(
         self,
         *,
-        device_id: int | None,
+        device_id: str | None,
         violation_type: str | None,
         since: dt.datetime | None,
         params: PageParams,
@@ -61,7 +61,7 @@ class AlertRepository(BaseRepository[Alert]):
         *,
         status: AlertStatus | None,
         alert_type: AlertType | None,
-        device_id: int | None,
+        device_id: str | None,
         params: PageParams,
     ) -> tuple[list[Alert], int]:
         clauses = []
@@ -73,7 +73,7 @@ class AlertRepository(BaseRepository[Alert]):
             clauses.append(Alert.device_id == device_id)
         return await self.page(*clauses, order_by=Alert.created_at.desc(), params=params)
 
-    async def find_open(self, alert_type: AlertType, device_id: int | None) -> Alert | None:
+    async def find_open(self, alert_type: AlertType, device_id: str | None) -> Alert | None:
         stmt = select(Alert).where(
             Alert.type == alert_type,
             Alert.status != AlertStatus.RESOLVED,

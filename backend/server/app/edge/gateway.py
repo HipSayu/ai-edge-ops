@@ -45,7 +45,7 @@ class AgentGateway:
         self._rpc = RpcServer(bus, source="server")
         # device_id -> monotonic-ish ts of the last telemetry sample persisted;
         # fast telemetry fans out live but only lands in the DB once a minute.
-        self._telemetry_persisted_at: dict[int, dt.datetime] = {}
+        self._telemetry_persisted_at: dict[str, dt.datetime] = {}
         self._telemetry_persist_gap = dt.timedelta(seconds=60)
 
     def _session(self):
@@ -113,7 +113,7 @@ class AgentGateway:
                 caps.device,
                 caps.model_formats,
             )
-        self.presence.mark_seen(str(device_id))
+        self.presence.mark_seen(device_id)
 
     async def _on_telemetry(self, env: Envelope) -> None:
         """Fast metric stream: fan every sample out to dashboards over WS, but
@@ -122,7 +122,7 @@ class AgentGateway:
         payload = protocol.TelemetryPayload.model_validate(env.payload)
         if not payload.samples:
             return
-        self.presence.mark_seen(str(device_id))
+        self.presence.mark_seen(device_id)
 
         now = dt.datetime.now(dt.timezone.utc)
         for sample in payload.samples:
@@ -236,7 +236,7 @@ class AgentGateway:
         )
         await self.send_command(event.device_id, protocol.T_DEPLOY_MODEL, payload)
 
-    async def send_command(self, device_id: int, message_type: str, payload) -> None:
+    async def send_command(self, device_id: str, message_type: str, payload) -> None:
         envelope = Envelope(
             type=message_type,
             source="agent-gateway",

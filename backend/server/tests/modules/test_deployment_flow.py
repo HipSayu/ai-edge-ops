@@ -9,7 +9,7 @@ from app.modules.agent.service import AgentService
 from app.modules.deployment.rules import DeploymentStatus
 from app.modules.deployment.schemas import DeploymentCreate
 from app.modules.deployment.service import DeploymentService
-from app.modules.model_registry.catalog import ModelImage
+from app.modules.model_registry.schemas import ModelImage
 
 _IMAGE = ModelImage(
     name="ai-edge-ops-model",
@@ -34,7 +34,7 @@ def _catalog(monkeypatch):
 
 async def _device(session):
     return await AgentService(session).register_device(
-        DeviceCreate(name="cam-01", site="A", hardware="Orin")
+        DeviceCreate(device_id="cam-01", name="cam-01", site="A", hardware="Orin")
     )
 
 
@@ -42,14 +42,14 @@ async def test_deploy_rejects_image_not_in_registry(session):
     device = await _device(session)
     with pytest.raises(NotFoundError):
         await DeploymentService(session).create(
-            DeploymentCreate(device_id=device.id, image="9.9.9")
+            DeploymentCreate(device_id=device.device_id, image="9.9.9")
         )
 
 
 async def test_deploy_stores_the_digest_pinned_ref(session):
     device = await _device(session)
     d = await DeploymentService(session).create(
-        DeploymentCreate(device_id=device.id, image="1.0.0")
+        DeploymentCreate(device_id=device.device_id, image="1.0.0")
     )
     assert d.image == "ghcr.io/acme/ai-edge-ops-model@sha256:abc"
 
@@ -59,10 +59,10 @@ async def test_activate_supersedes_previous(session):
     svc = DeploymentService(session)
 
     first = await svc.create(
-        DeploymentCreate(device_id=device.id, image="1.0.0", activate_now=True)
+        DeploymentCreate(device_id=device.device_id, image="1.0.0", activate_now=True)
     )
     second = await svc.create(
-        DeploymentCreate(device_id=device.id, image="1.0.0", activate_now=True)
+        DeploymentCreate(device_id=device.device_id, image="1.0.0", activate_now=True)
     )
 
     assert (await svc.get(first.id)).status is DeploymentStatus.SUPERSEDED

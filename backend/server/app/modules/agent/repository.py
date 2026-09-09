@@ -51,7 +51,7 @@ class MetricSampleRepository(BaseRepository[MetricSample]):
     model = MetricSample
 
     async def list_for_device(
-        self, device_id: int, *, since: dt.datetime | None, params: PageParams
+        self, device_id: str, *, since: dt.datetime | None, params: PageParams
     ) -> tuple[list[MetricSample], int]:
         clauses = [MetricSample.device_id == device_id]
         if since:

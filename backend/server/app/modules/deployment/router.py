@@ -23,7 +23,7 @@ async def create_deployment(data: DeploymentCreate, db: DbSession, _: object = D
 async def list_deployments(
     db: DbSession,
     params: Pagination,
-    device_id: int | None = None,
+    device_id: str | None = None,
     deployment_status: DeploymentStatus | None = None,
     _: object = Depends(require_permission("deployments.manage")),
 ) -> ApiResponse[Page[DeploymentOut]]:

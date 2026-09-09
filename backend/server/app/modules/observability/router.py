@@ -90,7 +90,7 @@ async def report_violation(data: ViolationCreate, db: DbSession) -> ApiResponse[
 async def list_violations(
     db: DbSession,
     params: Pagination,
-    device_id: int | None = None,
+    device_id: str | None = None,
     violation_type: str | None = None,
     since: dt.datetime | None = None,
 ) -> ApiResponse[Page[ViolationOut]]:
@@ -109,7 +109,7 @@ async def list_alerts(
     params: Pagination,
     alert_status: AlertStatus | None = None,
     alert_type: AlertType | None = None,
-    device_id: int | None = None,
+    device_id: str | None = None,
 ) -> ApiResponse[Page[AlertOut]]:
     page = await AlertService(db).list(
         status=alert_status, alert_type=alert_type, device_id=device_id, params=params

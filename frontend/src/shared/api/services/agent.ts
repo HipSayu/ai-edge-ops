@@ -14,7 +14,7 @@ const formatUptime = (seconds: number | null): string => {
 }
 
 const mapDevice = (device: BackendDevice, latest?: BackendMetricSample): EdgeDevice => ({
-  id: String(device.id), name: device.name, hardware: device.hardware,
+  id: device.device_id, name: device.name, hardware: device.hardware,
   status: device.status === 'provisioning' ? 'offline' : device.status,
   ip: device.ip_address ?? 'Not assigned',
   agentVersion: device.agent_version ?? 'Unknown',
@@ -30,7 +30,7 @@ const mapDevice = (device: BackendDevice, latest?: BackendMetricSample): EdgeDev
   lastHeartbeat: device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : 'Never',
 })
 
-const latestMetrics = async (deviceId: number): Promise<BackendMetricSample | undefined> => {
+const latestMetrics = async (deviceId: string): Promise<BackendMetricSample | undefined> => {
   try {
     const page = await apiClient.get<{ items: BackendMetricSample[] }>(
       `/agent/devices/${deviceId}/metrics`, { query: { page_size: 1 } },
@@ -57,11 +57,11 @@ export const agentService = {
   createDevice: async (payload: CreateDevicePayload) => mapDevice(await apiClient.post<BackendDevice>('/agent/devices', payload)),
   listDevices: async () => {
     const { items } = await apiClient.get<{ items: BackendDevice[] }>('/agent/devices')
-    return Promise.all(items.map(async (d) => mapDevice(d, await latestMetrics(d.id))))
+    return Promise.all(items.map(async (d) => mapDevice(d, await latestMetrics(d.device_id))))
   },
   getDevice: async (id: string) => {
     const device = await apiClient.get<BackendDevice>(`/agent/devices/${id}`)
-    return mapDevice(device, await latestMetrics(device.id))
+    return mapDevice(device, await latestMetrics(device.device_id))
   },
   listDeviceMetrics: async (deviceId: string) => {
     const page = await apiClient.get<{ items: BackendMetricSample[] }>(

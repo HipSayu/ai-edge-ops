@@ -16,7 +16,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
     async def list_page(
         self,
         *,
-        device_id: int | None,
+        device_id: str | None,
         status: DeploymentStatus | None,
         params: PageParams,
     ) -> tuple[list[Deployment], int]:
@@ -27,7 +27,7 @@ class DeploymentRepository(BaseRepository[Deployment]):
             clauses.append(Deployment.status == status)
         return await self.page(*clauses, order_by=Deployment.created_at.desc(), params=params)
 
-    async def active_for_device(self, device_id: int) -> Deployment | None:
+    async def active_for_device(self, device_id: str) -> Deployment | None:
         stmt = select(Deployment).where(
             Deployment.device_id == device_id,
             Deployment.status == DeploymentStatus.ACTIVE,

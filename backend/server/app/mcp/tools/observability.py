@@ -21,7 +21,7 @@ async def analytics_overview() -> dict:
 
 
 async def list_alerts(
-    status: str | None = None, alert_type: str | None = None, device_id: int | None = None,
+    status: str | None = None, alert_type: str | None = None, device_id: str | None = None,
     limit: int = 50,
 ) -> dict:
     """List alerts. status: open|acknowledged|resolved. alert_type:
@@ -53,7 +53,7 @@ async def list_alerts(
 
 
 async def list_violations(
-    device_id: int | None = None, violation_type: str | None = None, hours: int = 24,
+    device_id: str | None = None, violation_type: str | None = None, hours: int = 24,
     limit: int = 50,
 ) -> dict:
     """Recent PPE violations (no_helmet / no_vest ...), optionally by device or type."""

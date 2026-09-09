@@ -8,7 +8,7 @@ from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter
 
 from app.core.model_catalog import model_catalog
-from app.modules.model_registry.catalog import ModelImage
+from app.modules.model_registry.schemas import ModelImage
 
 router = APIRouter(prefix="/models", tags=["model-registry"])
 

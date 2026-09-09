@@ -15,7 +15,8 @@ from app.modules.agent.rules import DeviceStatus
 class Device(Base, TimestampMixin):
     __tablename__ = "devices"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    # the string DEVICE_ID the box is provisioned with (also the MQTT identity)
+    device_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     site: Mapped[str] = mapped_column(String(128), index=True)
     hardware: Mapped[str] = mapped_column(String(64))  # e.g. "Jetson Orin Nano 8GB"
@@ -43,8 +44,8 @@ class MetricSample(Base):
     __tablename__ = "metric_samples"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    device_id: Mapped[int] = mapped_column(
-        ForeignKey("devices.id", ondelete="CASCADE"), index=True
+    device_id: Mapped[str] = mapped_column(
+        ForeignKey("devices.device_id", ondelete="CASCADE"), index=True
     )
     recorded_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), index=True)
     cpu_percent: Mapped[float | None] = mapped_column(Float, default=None)

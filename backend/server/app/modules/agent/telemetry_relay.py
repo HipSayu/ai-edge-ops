@@ -38,7 +38,7 @@ _METRIC_KEYS = (
 _latest: dict[int, dict[str, Any]] = {}
 
 
-async def publish_sample(device_id: int, sample: dict[str, Any]) -> None:
+async def publish_sample(device_id: str, sample: dict[str, Any]) -> None:
     """Fan one metric sample out to the telemetry channel. ``sample`` needs a
     ``recorded_at`` (ISO string) plus any of :data:`_METRIC_KEYS`."""
     frame = {"device_id": device_id, **sample}

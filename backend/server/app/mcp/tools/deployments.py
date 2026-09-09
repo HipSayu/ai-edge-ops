@@ -23,7 +23,7 @@ def _row(d) -> dict:
 
 
 async def list_deployments(
-    device_id: int | None = None, status: str | None = None, limit: int = 50
+    device_id: str | None = None, status: str | None = None, limit: int = 50
 ) -> dict:
     """List deployments, optionally by device or status
     (pending|active|superseded|failed|rolled_back)."""

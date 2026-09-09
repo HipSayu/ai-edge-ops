@@ -15,9 +15,10 @@ import datetime as dt
 import time
 
 import httpx
-from pydantic import BaseModel, Field, computed_field
 
 from app.core.config import ModelRegistryConfig
+from app.modules.model_registry.label_values import parse_datetime, split_csv, to_float
+from app.modules.model_registry.schemas import ModelImage
 
 _MANIFEST_ACCEPT = ", ".join(
     (
@@ -29,41 +30,15 @@ _MANIFEST_ACCEPT = ", ".join(
 )
 
 
-class ModelImage(BaseModel):
-    """One model version = one image tag. Shape the frontend / deploy consume."""
-
-    name: str  # package name
-    tag: str
-    ref: str  # host/owner/package:tag
-    digest: str  # manifest (list) digest, sha256:...
-    created_at: dt.datetime | None = None
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def pinned_ref(self) -> str:
-        """Digest-pinned ref for an immutable pull on the edge."""
-        base = self.ref.rsplit(":", 1)[0]
-        return f"{base}@{self.digest}" if self.digest else self.ref
-
-    platforms: list[str] = Field(default_factory=list)
-    size_bytes: int = 0
-    # from labels
-    task: str | None = None
-    classes: list[str] = Field(default_factory=list)
-    map50_95: float | None = None
-    params_m: float | None = None
-    latency_ms: float | None = None
-    base: str | None = None
-
-
 class ModelCatalog:
-    def __init__(self, config: ModelRegistryConfig, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self, config: ModelRegistryConfig, *, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
         self._cfg = config
         self._transport = transport  # tests inject httpx.MockTransport
         self._cache: dict[str, tuple[float, ModelImage]] = {}
         self._tags_cache: tuple[float, list[str]] | None = None
         self._bearer: str | None = None
-        self._lock = asyncio.Lock()
 
     # --- public ------------------------------------------------------------
     async def list_models(self, *, refresh: bool = False) -> list[ModelImage]:
@@ -78,7 +53,7 @@ class ModelCatalog:
     async def get_model(self, tag: str, *, refresh: bool = False) -> ModelImage:
         return await self._image(tag, refresh=refresh)
 
-    # --- registry v2 -----------------------------------------------------
+    # --- registry v2 ---------------------------------------------------------
     async def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             base_url=f"https://{self._cfg.host}", timeout=15.0, transport=self._transport
@@ -150,38 +125,20 @@ class ModelCatalog:
             tag=tag,
             ref=f"{self._cfg.host}/{self._cfg.repo}:{tag}",
             digest=top_digest or img.get("config", {}).get("digest", ""),
-            created_at=_parse_dt(labels.get("org.opencontainers.image.created") or blob.get("created")),
+            created_at=parse_datetime(
+                labels.get("org.opencontainers.image.created") or blob.get("created")
+            ),
             platforms=platforms,
             size_bytes=size,
             task=labels.get("ai.edge-ops.model.task"),
-            classes=_split(labels.get("ai.edge-ops.model.classes")),
-            map50_95=_num(labels.get("ai.edge-ops.model.map50_95")),
-            params_m=_num(labels.get("ai.edge-ops.model.params_m")),
-            latency_ms=_num(labels.get("ai.edge-ops.model.latency_ms")),
+            classes=split_csv(labels.get("ai.edge-ops.model.classes")),
+            map50_95=to_float(labels.get("ai.edge-ops.model.map50_95")),
+            params_m=to_float(labels.get("ai.edge-ops.model.params_m")),
+            latency_ms=to_float(labels.get("ai.edge-ops.model.latency_ms")),
             base=labels.get("ai.edge-ops.model.base"),
         )
         self._cache[tag] = (now + self._cfg.ttl_s, image)
         return image
 
 
-def _parse_dt(raw: str | None) -> dt.datetime | None:
-    if not raw:
-        return None
-    try:
-        return dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-
-
-def _split(raw: str | None) -> list[str]:
-    return [p.strip() for p in raw.split(",") if p.strip()] if raw else []
-
-
-def _num(raw: str | None) -> float | None:
-    try:
-        return float(raw) if raw not in (None, "") else None
-    except (TypeError, ValueError):
-        return None
-
-
-__all__ = ["ModelCatalog", "ModelImage"]
+__all__ = ["ModelCatalog"]
