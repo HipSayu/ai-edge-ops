@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dqh.svc_core.persistence.sqlalchemy import DbEnum, TimestampMixin
 from sqlalchemy import JSON, Float, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,8 +13,6 @@ from app.modules.model_registry.domain import (
     ModelTask,
     ModelVersionStatus,
 )
-from app.shared.helpers.database import db_enum
-from app.shared.models import TimestampMixin
 
 
 class Model(Base, TimestampMixin):
@@ -21,7 +20,7 @@ class Model(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
-    task: Mapped[ModelTask] = mapped_column(db_enum(ModelTask), index=True)
+    task: Mapped[ModelTask] = mapped_column(DbEnum(ModelTask), index=True)
     architecture: Mapped[str] = mapped_column(String(64))  # e.g. "yolo26-n"
     description: Mapped[str | None] = mapped_column(Text, default=None)
 
@@ -39,12 +38,12 @@ class ModelVersion(Base, TimestampMixin):
         ForeignKey("models.id", ondelete="CASCADE"), index=True
     )
     version: Mapped[str] = mapped_column(String(32))  # e.g. "1.3.0"
-    format: Mapped[ModelFormat] = mapped_column(db_enum(ModelFormat))
+    format: Mapped[ModelFormat] = mapped_column(DbEnum(ModelFormat))
     compression: Mapped[CompressionMethod] = mapped_column(
-        db_enum(CompressionMethod), default=CompressionMethod.NONE
+        DbEnum(CompressionMethod), default=CompressionMethod.NONE
     )
     status: Mapped[ModelVersionStatus] = mapped_column(
-        db_enum(ModelVersionStatus), default=ModelVersionStatus.DRAFT, index=True
+        DbEnum(ModelVersionStatus), default=ModelVersionStatus.DRAFT, index=True
     )
     artifact_uri: Mapped[str] = mapped_column(String(512))
     size_mb: Mapped[float | None] = mapped_column(Float, default=None)

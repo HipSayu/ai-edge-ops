@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import datetime as dt
 
+from dqh.svc_core.persistence.sqlalchemy import TimestampMixin
 from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.shared.models import TimestampMixin
 
 
 class Role(Base, TimestampMixin):

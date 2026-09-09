@@ -1,7 +1,13 @@
-"""Async SQLAlchemy engine/session setup.
+"""Async SQLAlchemy engine/session wiring.
 
-Production uses PostgreSQL (asyncpg). Schema is created on startup via ``init_db``
-(swap for Alembic migrations later — the ``alembic/`` layout is left in place).
+The engine is built from ``settings.db`` via
+:class:`dqh.svc_core.persistence.sqlalchemy.EngineFactory`; ``Base`` and the
+repository base also come from svc_core. Schema is created on startup via
+:func:`init_db` (swap for Alembic later — the ``alembic/`` layout is in place).
+
+``async_session`` is a module global on purpose: tests swap it (and ``engine``)
+for a SQLite factory, and :func:`session_scope` / :func:`get_db` read it at call
+time.
 """
 
 from __future__ import annotations
@@ -9,22 +15,15 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from dqh.svc_core.persistence.sqlalchemy import Base, EngineFactory
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
 
-engine = create_async_engine(
-    settings.db.url,
-    echo=settings.db.echo,
-    pool_pre_ping=settings.db.pool_pre_ping,
-    pool_recycle=settings.db.pool_recycle_s,
-)
+engine = EngineFactory(settings.db).create()
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-
-class Base(DeclarativeBase):
-    pass
+__all__ = ["Base", "async_session", "engine", "get_db", "init_db", "session_scope"]
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -39,10 +38,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 @asynccontextmanager
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
-    """Standalone session for event handlers / workers (not request-scoped).
-
-    Reads the module-level ``async_session`` at call time so tests can swap it.
-    """
+    """Standalone session for event handlers / workers (not request-scoped)."""
     async with async_session() as session:
         try:
             yield session
