@@ -45,7 +45,6 @@ class ModelVersion(Base, TimestampMixin):
     status: Mapped[ModelVersionStatus] = mapped_column(
         DbEnum(ModelVersionStatus), default=ModelVersionStatus.DRAFT, index=True
     )
-    artifact_uri: Mapped[str | None] = mapped_column(String(512), default=None)
     # OCI model-image refs (digest-pinned), one per edge backend variant. CI
     # builds both from the same weights; the gateway picks by device.backend.
     image_repo: Mapped[str | None] = mapped_column(String(512), default=None)

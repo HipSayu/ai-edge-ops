@@ -228,14 +228,14 @@ class AgentGateway:
                 **event.config,
             }
             image = self._select_model_image(version, backend=device.backend)
-            if image is None and not version.artifact_uri:
+            if image is None:
                 await event_bus.publish(
                     DeploymentFailed(
                         deployment_id=event.deployment_id,
                         device_id=event.device_id,
                         reason=(
                             f"model version {version.id} has no image for backend "
-                            f"{device.backend!r} and no legacy artifact_uri"
+                            f"{device.backend!r}"
                         ),
                     )
                 )
@@ -245,16 +245,13 @@ class AgentGateway:
                 deployment_id=event.deployment_id,
                 model_version_id=event.model_version_id,
                 image=image,
-                artifact_uri=version.artifact_uri if image is None else None,
-                format=str(version.format) if image is None and version.format else None,
                 config=config,
             )
         await self.send_command(event.device_id, protocol.T_DEPLOY_MODEL, payload)
 
     @staticmethod
     def _select_model_image(version, *, backend: str | None) -> str | None:
-        """Digest-pinned OCI ref for this device's backend, or None to fall back
-        to the legacy artifact path."""
+        """Digest-pinned OCI ref for this device's backend, or None if not set."""
         if not version.image_repo:
             return None
         digest = (
