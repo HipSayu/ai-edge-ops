@@ -1,5 +1,1 @@
-"""Utils: pure technical helpers."""
-
-from edge_agent.utils.metrics import collect_metrics
-
-__all__ = ["collect_metrics"]
+"""Utils: pure technical helpers (import from the submodule)."""

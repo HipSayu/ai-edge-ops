@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.mcp._session import session_scope
+from app.core.database import session_scope
 from app.modules.camera.service import CameraService
 
 
