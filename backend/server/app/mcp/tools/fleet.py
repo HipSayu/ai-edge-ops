@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from app.mcp._session import session_scope
+from app.core.database import session_scope
 from app.modules.agent import AgentService
 
 

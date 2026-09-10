@@ -26,9 +26,15 @@ from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.telemetry_relay import publish_sample
 from app.modules.deployment.event import ConfigResolved, DeploymentFailed, DeployRequested
 from app.modules.streaming.service import StreamingService
-from app.shared.helpers.protocol import device_id_from_envelope
 
 logger = logging.getLogger("app.edge.gateway")
+
+
+def _device_id(env: Envelope) -> str:
+    """The device id an edge Envelope came from (its MQTT source)."""
+    if not env.source:
+        raise ValueError(f"bad device source {env.source!r}")
+    return str(env.source)
 
 
 class AgentGateway:
@@ -71,7 +77,7 @@ class AgentGateway:
 
     # --- inbound (edge -> server) ---------------------------------------
     async def _on_heartbeat(self, env: Envelope) -> None:
-        device_id = device_id_from_envelope(env)
+        device_id = _device_id(env)
         p = protocol.HeartbeatPayload.model_validate(env.payload)
         caps = p.capabilities
         async with self._session() as session:
@@ -109,7 +115,7 @@ class AgentGateway:
     async def _on_telemetry(self, env: Envelope) -> None:
         """Fast metric stream: fan every sample out to dashboards over WS and
         keep the newest in the FleetRegistry ring buffer (~15 min, in-memory)."""
-        device_id = device_id_from_envelope(env)
+        device_id = _device_id(env)
         payload = protocol.TelemetryPayload.model_validate(env.payload)
         if not payload.samples:
             return
@@ -135,7 +141,7 @@ class AgentGateway:
             )
 
     async def _on_state_report(self, env: Envelope) -> None:
-        device_id = device_id_from_envelope(env)
+        device_id = _device_id(env)
         p = protocol.StateReportPayload.model_validate(env.payload)
         was_failed = (rs := fleet.get(device_id)) is not None and rs.runtime_status == "failed"
         fleet.record_state(device_id, p)

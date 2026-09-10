@@ -6,7 +6,7 @@ import datetime as dt
 
 from dqh.svc_core.transports.http import PaginationParams
 
-from app.mcp._session import session_scope
+from app.core.database import session_scope
 from app.modules.observability import AlertService, AnalyticsService
 from app.modules.observability.rules import AlertStatus, AlertType
 from app.modules.observability.service import ViolationService
