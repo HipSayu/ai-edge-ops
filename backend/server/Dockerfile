@@ -1,4 +1,4 @@
-# Build context = backend/ (see server/compose.yml and .github/workflows/deploy.yml).
+# Build context = backend/ (see .github/workflows/deploy.yml and deploy/compose.app.yml).
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -8,11 +8,13 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /srv
 
 COPY packages/svc_core /srv/packages/svc_core
+COPY packages/ai_core /srv/packages/ai_core
 COPY libs/edge_protocol /srv/libs/edge_protocol
 COPY server /srv/server
 
 RUN pip install --upgrade pip \
- && pip install -e "/srv/packages/svc_core[fastapi,mqtt]" \
+ && pip install -e "/srv/packages/svc_core[fastapi,mqtt,redis,sqlalchemy,security,httpclient]" \
+ && pip install -e "/srv/packages/ai_core[mcp,openai]" \
  && pip install -e "/srv/libs/edge_protocol" \
  && pip install -e "/srv/server[dev]"
 
