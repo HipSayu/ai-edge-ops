@@ -27,3 +27,7 @@ example/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# deploy host secrets — never commit
+deploy/*.pem
+deploy/server.txt
