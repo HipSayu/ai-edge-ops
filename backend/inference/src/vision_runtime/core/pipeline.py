@@ -1,7 +1,7 @@
 """One camera: capture -> runtime.infer -> emit bbox frame -> PPE rule -> violation.
 
 Emits are `edge_protocol.Envelope`s pushed to the agent over the IPC channel.
-Video (WHIP) is a separate concern — see :mod:`vision_runtime.publish`.
+Video (WHIP) is a separate concern — see :mod:`vision_runtime.publishers`.
 """
 
 from __future__ import annotations
@@ -16,11 +16,11 @@ from dqh.svc_core.contracts.messaging import Envelope
 
 from vision_runtime.capture.frame_source import frames
 from vision_runtime.config import InferenceConfig
-from vision_runtime.evidence import EvidenceUploader
+from vision_runtime.core.evidence import EvidenceUploader
 from vision_runtime.rules.ppe import evaluate_ppe
 from vision_runtime.runtime import Detection, InferenceRuntime
 
-logger = logging.getLogger("vision_runtime.pipeline")
+logger = logging.getLogger("vision_runtime.core.pipeline")
 
 Emit = Callable[[Envelope], Awaitable[None]]
 

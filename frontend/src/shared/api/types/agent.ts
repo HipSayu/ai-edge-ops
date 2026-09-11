@@ -2,6 +2,7 @@ export interface Camera {
 	id: string
 	name: string
 	zone: string
+	deviceId: string | null
 	online: boolean
 	alertCount: number
 	thumbHue: number
@@ -31,6 +32,6 @@ export type BackendMetricSample = {
 	mem_used_mb: number | null; mem_total_mb: number | null; disk_percent: number | null
 	temperature_c: number | null; fps: number | null; inference_latency_ms: number | null
 }
-export type BackendCamera = { id: number; name: string; source: string; zone: string; enabled: boolean }
+export type BackendCamera = { id: number; name: string; source: string; zone: string; enabled: boolean; device_id: string | null }
 export type BackendCameraGroup = { id: number; name: string; description: string | null; site: string; camera_ids: number[] }
 export type CreateDevicePayload = { device_id: string; name: string; site: string; labels?: Record<string, string>; desired_image?: string | null }

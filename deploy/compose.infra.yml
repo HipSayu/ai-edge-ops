@@ -58,12 +58,19 @@ services:
     restart: unless-stopped
     environment:
       MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_HOST}
+      # Advertise ONLY the public host as an ICE candidate — the container's
+      # docker-network IP (172.x) is unreachable from real clients and ffmpeg's
+      # WHIP muxer naively picks the first candidate, so it must not appear.
+      MTX_WEBRTCIPSFROMINTERFACES: "no"
       MTX_WEBRTCLOCALUDPADDRESS: ":${MEDIAMTX_ICE_PORT}"
       MTX_AUTHMETHOD: ${MEDIAMTX_AUTH_METHOD}
       MTX_AUTHHTTPADDRESS: ${MEDIAMTX_AUTH_URL}
     ports:
       - "${MEDIAMTX_HTTP_PORT}:8889"
       - "${MEDIAMTX_ICE_PORT}:${MEDIAMTX_ICE_PORT}/udp"
+      # Edge publishes here (RTMP): ffmpeg's WHIP muxer can't complete ICE with
+      # MediaMTX, RTMP is a plain-TCP push and takes ?user=&pass= for auth.
+      - "${MEDIAMTX_RTMP_PORT:-1935}:1935"
     volumes:
       - ./config/mediamtx.yml:/mediamtx.yml:ro
 

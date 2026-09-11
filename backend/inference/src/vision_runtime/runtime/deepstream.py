@@ -5,9 +5,9 @@ inference + hardware encode for every camera on the device.
         ├─► pad probe: NvDsBatchMeta -> BboxFramePayload / ViolationPayload
         └─► nvvideoconvert ─► nvv4l2h264enc ─► whip sink (per camera)
 
-Selected by :class:`vision_runtime.worker.VisionWorker` when ``RUNTIME=deepstream``
+Selected by :class:`vision_runtime.core.worker.VisionWorker` when ``RUNTIME=deepstream``
 (the model image was built ``FROM nvcr.io/nvidia/deepstream``). On every other
-image the CPU pipeline (:mod:`vision_runtime.pipeline`) runs.
+image the CPU pipeline (:mod:`vision_runtime.core.pipeline`) runs.
 
 Status: skeleton. The pipeline construction + ``NvDsBatchMeta`` pad probe are
 implemented against a real Jetson / dGPU target (DeepStream 9.1, JetPack 7.2 or

@@ -11,6 +11,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from typing import Protocol
+from urllib.parse import urlparse
 
 from dqh.svc_core.contracts.messaging import Envelope
 
@@ -77,6 +78,41 @@ class UnixSocketChannel:
         return channel
 
 
+class TcpChannel:
+    """The same newline-framed channel over TCP for native Windows development."""
+
+    @staticmethod
+    def _address(url: str) -> tuple[str, int]:
+        parsed = urlparse(url)
+        if parsed.scheme != "tcp" or not parsed.hostname or not parsed.port:
+            raise ValueError(f"invalid TCP channel URL: {url}")
+        return parsed.hostname, parsed.port
+
+    @classmethod
+    async def connect(cls, url: str) -> StreamChannel:
+        reader, writer = await asyncio.open_connection(*cls._address(url))
+        return StreamChannel(reader, writer)
+
+    @classmethod
+    async def serve_one(cls, url: str) -> StreamChannel:
+        got: asyncio.Future[StreamChannel] = asyncio.get_event_loop().create_future()
+
+        async def _on_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            if not got.done():
+                got.set_result(StreamChannel(reader, writer))
+            else:
+                writer.close()
+
+        host, port = cls._address(url)
+        server = await asyncio.start_server(_on_client, host=host, port=port)
+        channel = await got
+        # NB: don't await server.wait_closed() here — on the Windows Proactor loop
+        # it blocks until every accepted connection closes, which is exactly the
+        # one we just handed back. Closing the listener is enough.
+        server.close()
+        return channel
+
+
 class MemoryChannel:
     def __init__(self, inbox: asyncio.Queue, outbox: asyncio.Queue) -> None:
         self._in = inbox
@@ -107,6 +143,7 @@ __all__ = [
     "MemoryChannel",
     "MessageChannel",
     "StreamChannel",
+    "TcpChannel",
     "UnixSocketChannel",
     "channel_pair",
 ]

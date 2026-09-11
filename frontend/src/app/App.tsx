@@ -1,5 +1,7 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import Layout from '@/app/pages/Layout'
+import LoginPage from '@/app/pages/LoginPage'
 import Overview from '@/modules/overview/pages/Overview'
 import ChatPage from '@/modules/assistant/pages/ChatPage'
 
@@ -23,13 +25,23 @@ import AuditLogsPage from '@/modules/system/pages/AuditLogsPage'
 import '@/app/styles/theme.css'
 import '@/app/styles/layout-extras.css'
 import { RealtimeProvider } from '@/shared/contexts/RealtimeContext'
+import { authStorage } from '@/shared/api/client'
+
+function RequireAuth({ children }: { children: ReactNode }) {
+  const location = useLocation()
+  if (!authStorage.getAccessToken()) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
+  return children
+}
 
 function App() {
   return (
     <RealtimeProvider>
       <HashRouter>
         <Routes>
-        <Route element={<Layout />}>
+        <Route path="login" element={<LoginPage />} />
+        <Route element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Overview />} />
           <Route path="chat" element={<ChatPage />} />
 

@@ -4,6 +4,7 @@ import type { Camera } from '@/modules/agent/types'
 import { agentService } from '@/shared/api/services/agent'
 import LiveMonitorPanel from '@/modules/agent/components/LiveMonitorPanel'
 import CameraListPanel from '@/modules/agent/components/CameraListPanel'
+import WhepVideo from '@/shared/streaming/WhepVideo'
 
 const LAYOUTS = [
   { key: '1x1', cols: 1, label: '1×1 Focus' },
@@ -55,8 +56,8 @@ export default function LiveMonitor() {
               className={`av-grid-tile${cam.id === activeId ? ' active' : ''}`}
               onClick={() => setActiveId(cam.id)}
             >
-              {cam.online && cam.runtime.streamUrl ? (
-                <video src={cam.runtime.streamUrl} autoPlay loop muted playsInline />
+              {cam.online ? (
+                <WhepVideo cameraId={cam.id} muted />
               ) : (
                 <div className="av-video-offline small">
                   <WifiOff size={20} />

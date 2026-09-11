@@ -26,3 +26,4 @@ export default function EmptyState({ message = 'No data available.', icon }: Emp
     </div>
   )
 }
+

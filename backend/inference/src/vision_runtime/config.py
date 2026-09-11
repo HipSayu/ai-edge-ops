@@ -36,4 +36,15 @@ class WorkerSettings(BaseAppSettings):
 
 
 def load_settings() -> WorkerSettings:
+    """Build settings, first sourcing ``VR_ENV_FILE`` (e.g. deploy/.env.edge) into
+    the process env so the ffmpeg publisher's ``VR_*`` knobs pick it up too when
+    running as a bare process rather than a compose service."""
+    import os
+    from pathlib import Path
+
+    env_file = os.environ.get("VR_ENV_FILE")
+    if env_file and Path(env_file).is_file():
+        from dotenv import load_dotenv
+
+        load_dotenv(env_file, override=False)
     return WorkerSettings()
