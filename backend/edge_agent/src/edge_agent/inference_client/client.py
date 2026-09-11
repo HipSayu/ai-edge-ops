@@ -18,7 +18,7 @@ import logging
 
 import edge_protocol as p
 from dqh.svc_core.contracts.messaging import Envelope
-from edge_protocol.channel import MessageChannel, UnixSocketChannel
+from edge_protocol.channel import MessageChannel, TcpChannel, UnixSocketChannel
 
 from edge_agent.core.config import AgentSettings
 from edge_agent.network.link import EdgeLink
@@ -50,7 +50,8 @@ class InferenceClient:
         path = self._settings.inference_socket
         while True:
             try:
-                self._channel = await UnixSocketChannel.connect(path)
+                channel_type = TcpChannel if path.startswith("tcp://") else UnixSocketChannel
+                self._channel = await channel_type.connect(path)
                 self.connected = True
                 logger.info("connected to vision-runtime (%s)", path)
                 await self._send_cameras()

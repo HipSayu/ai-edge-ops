@@ -1,6 +1,6 @@
 """Entrypoint: serve the agent IPC socket, run the vision worker forever.
 
-    python -m vision_runtime.main       (or: vision-runtime)
+    python -m vision_runtime       (or: vision-runtime)
 """
 
 from __future__ import annotations
@@ -8,10 +8,10 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from edge_protocol.channel import UnixSocketChannel
+from edge_protocol.channel import TcpChannel, UnixSocketChannel
 
 from vision_runtime.config import WorkerSettings, load_settings
-from vision_runtime.worker import VisionWorker
+from vision_runtime.core.worker import VisionWorker
 
 logger = logging.getLogger("vision_runtime")
 
@@ -22,7 +22,8 @@ async def run(settings: WorkerSettings | None = None) -> None:
     logger.info("vision-runtime up: runtime=%s socket=%s", settings.runtime, settings.socket_path)
 
     while True:
-        channel = await UnixSocketChannel.serve_one(settings.socket_path)
+        channel_type = TcpChannel if settings.socket_path.startswith("tcp://") else UnixSocketChannel
+        channel = await channel_type.serve_one(settings.socket_path)
         logger.info("agent connected")
         worker = VisionWorker(settings, channel)
         try:

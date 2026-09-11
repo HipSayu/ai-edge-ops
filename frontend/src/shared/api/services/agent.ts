@@ -42,9 +42,9 @@ const latestMetrics = async (deviceId: string): Promise<BackendMetricSample | un
 }
 
 const mapCamera = (camera: BackendCamera): Camera => ({
-  id: String(camera.id), name: camera.name, zone: camera.zone, online: camera.enabled,
-  alertCount: 0, thumbHue: 0,
-  runtime: { resolution: 'Unknown', protocol: camera.source.split(':')[0].toUpperCase(), model: 'Unknown', fps: 0, roiZones: 0, lastHeartbeat: 'Unknown', streamUrl: camera.source },
+  id: String(camera.id), name: camera.name, zone: camera.zone, deviceId: camera.device_id ?? null,
+  online: camera.enabled, alertCount: 0, thumbHue: 0,
+  runtime: { resolution: '—', protocol: 'WebRTC', model: '—', fps: 0, roiZones: 0, lastHeartbeat: '—', streamUrl: camera.source },
 })
 
 const mapGroup = (group: BackendCameraGroup): CameraGroup => ({

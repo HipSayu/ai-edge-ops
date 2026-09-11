@@ -1,15 +1,6 @@
 import { useState, useEffect, useId } from 'react'
-import {
-  Cpu,
-  Camera,
-  Boxes,
-  Rocket,
-  Activity,
-  Radio,
-  Zap,
-  Truck,
-  Heart,
-} from 'lucide-react'
+import { Cpu, Camera, Boxes, Rocket, Activity, Radio, Zap, Truck, Heart, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import KpiCard from '@/shared/components/KpiCard'
 import type { EdgeDevice } from '@/modules/agent/types'
 import { agentService } from '@/shared/api/services/agent'

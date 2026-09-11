@@ -6,9 +6,9 @@ import datetime as dt
 import logging
 from typing import Any, Protocol
 
-import httpx
+from dqh.svc_core.transports.http.client import HttpClient
 
-logger = logging.getLogger("vision_runtime.evidence")
+logger = logging.getLogger("vision_runtime.core.evidence")
 
 
 class EvidenceUploader(Protocol):
@@ -34,7 +34,7 @@ class HttpEvidenceUploader:
         timeout_s: float = 15.0,
         jpeg_quality: int = 85,
     ) -> None:
-        self._url = f"{base_url.rstrip('/')}/observability/evidence"
+        self._base_url = base_url.rstrip("/")
         self._token = token
         self._timeout = timeout_s
         self._quality = max(1, min(jpeg_quality, 100))
@@ -48,6 +48,11 @@ class HttpEvidenceUploader:
         violation_type: str,
         recorded_at: dt.datetime,
     ) -> str | None:
+        from vision_runtime.capture.frame_source import NO_CV2_FRAME
+
+        if frame is NO_CV2_FRAME:  # capture disabled / no cv2 — nothing to upload
+            return None
+
         try:
             import cv2
         except ModuleNotFoundError:
@@ -71,9 +76,16 @@ class HttpEvidenceUploader:
             "recorded_at": recorded_at.isoformat(),
         }
 
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.post(self._url, data=data, files=files, headers=headers)
-            response.raise_for_status()
+        async with HttpClient(
+            self._base_url,
+            headers=headers,
+            timeout=self._timeout,
+        ) as client:
+            response = await client.post(
+                "/evidence",
+                data=data,
+                files=files,
+            )
             image_path = response.json().get("image_path")
             return str(image_path) if image_path else None
 

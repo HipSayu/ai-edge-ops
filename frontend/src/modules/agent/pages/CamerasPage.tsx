@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Camera as CameraIcon, Wifi, WifiOff, Radio, Search, Play, Grid2X2, Grid3X3, LayoutGrid } from 'lucide-react'
+import { Radio, Search, Grid2X2, Grid3X3, LayoutGrid } from 'lucide-react'
 import type { Camera } from '@/modules/agent/types'
 import { agentService } from '@/shared/api/services/agent'
 import LiveMonitorPanel from '@/modules/agent/components/LiveMonitorPanel'
+import CameraCard from '@/modules/agent/components/CameraCard'
 
 type ViewMode = 'cards' | 'grid4' | 'grid9'
 
@@ -124,89 +125,7 @@ export default function CamerasPage() {
       {viewMode === 'cards' && (
         <div className="av-cameras-grid">
           {filtered.map((cam) => (
-            <div key={cam.id} className="av-panel av-camera-card">
-              <div
-                className="av-camera-card-thumb"
-                style={{ background: `hsl(${cam.thumbHue} 40% 16%)` }}
-              >
-                {!cam.online ? (
-                  <WifiOff size={28} className="av-camera-thumb-off" />
-                ) : (
-                  <CameraIcon size={28} color="rgba(255,255,255,0.6)" />
-                )}
-                {cam.online && (
-                  <span className="av-live-badge overlay">
-                    <Radio size={12} className="av-dot pulse" /> LIVE
-                  </span>
-                )}
-              </div>
-
-              <div className="av-panel-body">
-                <div className="av-camera-card-title">
-                  <span>{cam.id}</span>
-                  {cam.alertCount > 0 ? (
-                    <span className="av-alert-pill has-alerts">{cam.alertCount} alerts</span>
-                  ) : (
-                    <span className="av-alert-pill">Normal</span>
-                  )}
-                </div>
-                <div className="av-camera-card-sub">
-                  {cam.name} · {cam.zone}
-                </div>
-                <div className="av-camera-card-status">
-                  {cam.online ? (
-                    <>
-                      <Wifi size={13} color="var(--good)" />
-                      <span style={{ color: 'var(--good)', fontWeight: 600 }}>
-                        Connected • {cam.runtime.fps} FPS
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <WifiOff size={13} color="var(--critical)" />
-                      <span style={{ color: 'var(--critical)', fontWeight: 600 }}>
-                        Connection Lost
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <div className="av-camera-runtime">
-                  <span className="av-camera-runtime-title">Inference & Streaming Pipeline</span>
-                  <div className="av-camera-runtime-grid">
-                    <div className="av-camera-runtime-row">
-                      <span>Assigned Model</span>
-                      <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{cam.runtime.model}</span>
-                    </div>
-                    <div className="av-camera-runtime-row">
-                      <span>Resolution</span>
-                      <span className="av-mono">{cam.runtime.resolution}</span>
-                    </div>
-                    <div className="av-camera-runtime-row">
-                      <span>Protocol</span>
-                      <span className="av-mono">{cam.runtime.protocol}</span>
-                    </div>
-                    <div className="av-camera-runtime-row">
-                      <span>ROI Geofences</span>
-                      <span className="av-mono">{cam.runtime.roiZones} Zones</span>
-                    </div>
-                    <div className="av-camera-runtime-row">
-                      <span>Heartbeat</span>
-                      <span className="av-mono">{cam.runtime.lastHeartbeat}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  className="av-btn-primary"
-                  style={{ width: '100%', marginTop: 14, justifyContent: 'center' }}
-                  onClick={() => setSelectedCamera(cam)}
-                >
-                  <Play size={14} />
-                  <span>View Stream & HUD</span>
-                </button>
-              </div>
-            </div>
+            <CameraCard key={cam.id} camera={cam} onOpen={setSelectedCamera} />
           ))}
           {filtered.length === 0 && (
             <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--text-faint)' }}>

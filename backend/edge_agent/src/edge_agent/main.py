@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sys
 
 import edge_protocol as p
 import uvicorn
@@ -102,6 +103,8 @@ async def run(settings: AgentSettings | None = None) -> None:
 
 
 def main() -> None:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(run())
 
 

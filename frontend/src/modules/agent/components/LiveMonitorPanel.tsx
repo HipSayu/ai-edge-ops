@@ -12,6 +12,7 @@ import {
   Zap,
 } from 'lucide-react'
 import type { Camera } from '@/modules/agent/types'
+import WhepVideo, { type WhepStats } from '@/shared/streaming/WhepVideo'
 
 interface Props {
   camera: Camera
@@ -23,6 +24,7 @@ export default function LiveMonitorPanel({ camera }: Props) {
   const [playing, setPlaying] = useState(true)
   const [muted, setMuted] = useState(true)
   const [snapshotTaken, setSnapshotTaken] = useState(false)
+  const [stats, setStats] = useState<WhepStats | null>(null)
 
   function togglePlay() {
     const v = videoRef.current
@@ -64,11 +66,8 @@ export default function LiveMonitorPanel({ camera }: Props) {
       <div className="av-video-frame" ref={frameRef}>
         {camera.online ? (
           <>
-            {camera.runtime.streamUrl ? (
-              <video ref={videoRef} src={camera.runtime.streamUrl} autoPlay loop muted={muted} playsInline />
-            ) : (
-              <div className="av-video-offline"><WifiOff size={32} /><span>Stream URL unavailable</span></div>
-            )}
+            <WhepVideo ref={videoRef} cameraId={camera.id} muted={muted} onStats={setStats} />
+
             <div className="av-video-scanlines" />
             <div className="av-video-vignette" />
 
@@ -154,10 +153,10 @@ export default function LiveMonitorPanel({ camera }: Props) {
 
       <div className="av-telemetry-bar">
         <span>
-          FPS <strong>{camera.runtime.fps || 'N/A'}</strong>
+          FPS <strong>{stats?.fps || camera.runtime.fps || 'N/A'}</strong>
         </span>
         <span>
-          LATENCY <strong>N/A</strong>
+          LATENCY <strong>{stats ? `${stats.latencyMs} ms` : 'N/A'}</strong>
         </span>
         <span>
           OBJECTS <strong>N/A</strong>
@@ -167,7 +166,9 @@ export default function LiveMonitorPanel({ camera }: Props) {
         </span>
         <span>
           <Zap size={13} color="var(--accent)" />
-          {camera.runtime.resolution}
+          {stats && stats.width && stats.height
+            ? `${stats.width}x${stats.height}`
+            : camera.runtime.resolution}
         </span>
       </div>
     </section>

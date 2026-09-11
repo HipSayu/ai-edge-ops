@@ -53,6 +53,89 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.av-login-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  background-image: var(--bg-gradient);
+}
+
+.av-login-panel {
+  width: min(100%, 430px);
+  padding: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.av-login-mark {
+  color: var(--accent);
+  font: 800 0.78rem/1 var(--font-ui);
+  letter-spacing: 0.12em;
+}
+
+.av-login-panel h1 {
+  margin: 8px 0 6px;
+  color: var(--text);
+  font: 800 2rem/1.1 var(--font-ui);
+}
+
+.av-login-subtitle {
+  margin: 0 0 28px;
+  color: var(--text-dim);
+}
+
+.av-login-form {
+  display: grid;
+  gap: 18px;
+}
+
+.av-login-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.av-login-form input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+}
+
+.av-login-form input:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+}
+
+.av-login-submit {
+  min-height: 46px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font: 800 0.9rem/1 var(--font-ui);
+}
+
+.av-login-submit:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.av-login-error {
+  margin: 0;
+  color: var(--critical);
+  font-size: 0.85rem;
+}
+
 [data-theme='dark'] {
   color-scheme: dark;
 

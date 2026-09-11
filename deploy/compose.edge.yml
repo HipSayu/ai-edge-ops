@@ -34,6 +34,9 @@ services:
       MQTT__PASSWORD: ${AGENT_MQTT_PASSWORD}
       SERVER__BASE_URL: ${AGENT_SERVER_BASE_URL}
       CAMERAS: ${AGENT_CAMERAS}
+      STREAMING_ENABLED: ${AGENT_STREAMING_ENABLED:-false}
+      STREAMING_ENCODER: ${AGENT_STREAMING_ENCODER:-auto}
+      STREAMING_BITRATE_KBPS: ${AGENT_STREAMING_BITRATE_KBPS:-2000}
       INFERENCE_SOCKET: /run/edge/inference.sock
       COMPOSE__PROJECT_DIR: /project
       COMPOSE__ENV_FILE: /project/.env.edge
@@ -58,6 +61,17 @@ services:
     environment:
       SOCKET_PATH: /run/edge/inference.sock
       RUNTIME: ${INFERENCE_RUNTIME}
+      # live streaming (edge -> MediaMTX). See deploy/.env.edge.
+      VR_RTMP_BASE: ${VR_RTMP_BASE:-}
+      VR_DISABLE_CAPTURE: ${VR_DISABLE_CAPTURE:-}
+      VR_DSHOW_VIDEO: ${VR_DSHOW_VIDEO:-}
+      VR_CAPTURE_SIZE: ${VR_CAPTURE_SIZE:-640x480}
+      VR_CAPTURE_FPS: ${VR_CAPTURE_FPS:-30}
+      VR_CAPTURE_RTBUFSIZE: ${VR_CAPTURE_RTBUFSIZE:-16M}
+      VR_CAPTURE_QUEUE: ${VR_CAPTURE_QUEUE:-8}
+      VR_STREAM_FPS: ${VR_STREAM_FPS:-15}
+      VR_WHIP_GOP: ${VR_WHIP_GOP:-30}
+      VR_RTMP_GOP: ${VR_RTMP_GOP:-15}
     volumes:
       - ipc:/run/edge
     healthcheck:

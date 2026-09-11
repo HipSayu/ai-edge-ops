@@ -7,12 +7,17 @@ publish/read *which* camera path.
 
 from __future__ import annotations
 
+import logging
+from urllib.parse import parse_qs
+
 from dqh.svc_core.transports.http import ApiResponse, ok
 from fastapi import APIRouter, Depends, Response, status
 
 from app.modules.iam.bearer_auth import require_permission
 from app.modules.streaming.schemas import StreamAuthCheck, StreamTokenOut
 from app.modules.streaming.service import StreamingService
+
+logger = logging.getLogger("app.streaming")
 
 router = APIRouter(prefix="/streaming", tags=["streaming"])
 
@@ -35,6 +40,25 @@ async def get_publish_token(
     return ok(StreamingService().issue_publish_token(camera_id))
 
 
+def _token_from(check: StreamAuthCheck) -> str:
+    """The bearer token, wherever MediaMTX put it.
+
+    ``authMethod: http`` forwards HTTP Basic creds as ``user``/``password`` and a
+    JWT (from ``Authorization: Bearer`` or ``?jwt=``) as ``token`` — but ffmpeg's
+    WHIP muxer sends neither an auth header nor Basic creds, so the edge publisher
+    passes the token in the URL query. Check every spot.
+    """
+    if check.token:
+        return check.token
+    if check.password:
+        return check.password
+    qs = parse_qs(check.query or "")
+    for key in ("jwt", "token", "pass", "password", "access_token"):
+        if qs.get(key):
+            return qs[key][0]
+    return ""
+
+
 @router.post("/auth", status_code=status.HTTP_204_NO_CONTENT)
 async def mediamtx_auth_webhook(check: StreamAuthCheck, response: Response) -> None:
     """Called by MediaMTX (``authMethod: http``) before every publish/read.
@@ -43,12 +67,16 @@ async def mediamtx_auth_webhook(check: StreamAuthCheck, response: Response) -> N
     MediaMTX API/metrics probes) we don't issue tokens for, so deny by
     default.
     """
-    token = check.token or check.password
-    if check.action in ("publish", "read") and StreamingService().verify(
+    token = _token_from(check)
+    allowed = check.action in ("publish", "read") and StreamingService().verify(
         token, path=check.path, action=check.action
-    ):
-        return
-    response.status_code = status.HTTP_401_UNAUTHORIZED
+    )
+    if not allowed:
+        logger.info(
+            "mediamtx auth DENY: action=%s path=%s proto=%s token_len=%d query=%r",
+            check.action, check.path, check.protocol, len(token), check.query,
+        )
+        response.status_code = status.HTTP_401_UNAUTHORIZED
 
 
 __all__ = ["router"]

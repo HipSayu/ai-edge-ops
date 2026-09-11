@@ -17,12 +17,12 @@ from dqh.svc_core.contracts.messaging import Envelope
 from edge_protocol.channel import MessageChannel
 
 from vision_runtime.config import InferenceConfig, WorkerSettings
-from vision_runtime.evidence import HttpEvidenceUploader
-from vision_runtime.pipeline import CameraPipeline
-from vision_runtime.publish import build_publisher
+from vision_runtime.core.evidence import HttpEvidenceUploader
+from vision_runtime.core.pipeline import CameraPipeline
+from vision_runtime.publishers import build_publisher
 from vision_runtime.runtime import build_runtime
 
-logger = logging.getLogger("vision_runtime.worker")
+logger = logging.getLogger("vision_runtime.core.worker")
 
 
 class VisionWorker:
@@ -83,6 +83,11 @@ class VisionWorker:
             if spec.evidence_url
             else None
         )
+        logger.info(
+            "apply_cameras: streaming=%s cameras=%s",
+            spec.streaming_enabled,
+            [(c.id, c.camera_id) for c in spec.cameras],
+        )
         wanted = {c.id: c for c in spec.cameras if c.enabled}
 
         for cam_id in list(self._pipelines):
@@ -114,15 +119,33 @@ class VisionWorker:
 
     # --- streaming ------------------------------------------------
     async def _start_stream(self, cam: p.IpcCameraSpec, encoder: str, bitrate: int) -> None:
-        try:
-            token = await self._request_token(cam.camera_id)
-            publisher = build_publisher("ffmpeg", encoder=encoder, bitrate_kbps=bitrate)
-            await publisher.start(
-                source=cam.source, whip_url=token.url, token=token.token, loop=cam.loop
-            )
-            self._publishers[cam.id] = publisher
-        except Exception:  # noqa: BLE001
-            logger.exception("could not start stream for camera %s", cam.id)
+        """Keep a publisher alive for one camera: (re)request a token, run the
+        ffmpeg push, and restart it with a fresh token if it exits."""
+        backoff = 3.0
+        loop = asyncio.get_event_loop()
+        while not self._stop.is_set():
+            started = loop.time()
+            try:
+                token = await self._request_token(cam.camera_id)
+                publisher = build_publisher("ffmpeg", encoder=encoder, bitrate_kbps=bitrate)
+                await publisher.start(
+                    source=cam.source, whip_url=token.url, token=token.token, loop=cam.loop
+                )
+                self._publishers[cam.id] = publisher
+                while publisher.running and not self._stop.is_set():
+                    await asyncio.sleep(2.0)
+                await publisher.stop()
+                if self._stop.is_set() or cam.id not in self._pipelines:
+                    return
+                logger.warning("stream for camera %s exited; restarting", cam.id)
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001
+                logger.warning("stream for camera %s failed (%s); retrying", cam.id, "token/start")
+            # A stream that held up for a while resets the backoff; one that dies
+            # on startup (device busy, bad token) backs off up to 30s.
+            backoff = 3.0 if loop.time() - started > 20 else min(backoff * 1.7, 30.0)
+            await asyncio.sleep(backoff)
 
     async def _request_token(self, camera_id: int) -> p.StreamTokenReplyPayload:
         path = f"cam_{camera_id}"

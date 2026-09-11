@@ -25,6 +25,8 @@ from app.modules.agent.event import DeviceWentOffline
 from app.modules.agent.schemas import HeartbeatIn
 from app.modules.agent.telemetry_relay import publish_sample
 from app.modules.deployment.event import ConfigResolved, DeploymentFailed, DeployRequested
+from app.modules.observability.schemas import ViolationCreate
+from app.modules.observability.service import ViolationService
 from app.modules.streaming.service import StreamingService
 
 logger = logging.getLogger("app.edge.gateway")
@@ -55,6 +57,7 @@ class AgentGateway:
         self.router.on(protocol.T_STATE_REPORT, self._on_state_report)
         self.router.on(protocol.T_LOG, self._on_log)
         self.router.on(protocol.T_BBOX_FRAME, self._on_bbox_frame)
+        self.router.on(protocol.T_VIOLATION, self._on_violation)
         for pattern in (
             protocol.SUB_STATE,
             protocol.SUB_TELEMETRY,
@@ -167,6 +170,27 @@ class AgentGateway:
                 payload=payload.model_dump(mode="json"),
             ),
         )
+
+    async def _on_violation(self, env: Envelope) -> None:
+        """Persist a PPE violation reported by the edge inference runtime.
+
+        The runtime emits ``T_VIOLATION`` on the device events topic (relayed by
+        the agent, which holds the MQTT identity); ``device_id`` is the envelope
+        source. Mirrors the ``POST /violations`` HTTP path.
+        """
+        device_id = _device_id(env)
+        p = protocol.ViolationPayload.model_validate(env.payload)
+        async with self._session() as session:
+            await ViolationService(session).record(
+                ViolationCreate(
+                    device_id=device_id,
+                    zone=p.zone,
+                    violation_type=p.violation_type,
+                    confidence=p.confidence,
+                    image_path=p.image_path,
+                    recorded_at=p.recorded_at,
+                )
+            )
 
     async def _on_stream_token_request(self, env: Envelope) -> dict:
         """RPC handler: edge asks (over the already-authenticated MQTT link)

@@ -60,7 +60,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback((channel: RealtimeChannel) => {
     const state = states.current[channel]
-    if (state.socket || state.handlers.size === 0) return
+    if (state.socket || state.handlers.size === 0 || !authStorage.getAccessToken()) return
 
     state.status = 'connecting'
     rerender((value) => value + 1)

@@ -2,6 +2,7 @@ export interface Camera {
   id: string
   name: string
   zone: string
+  deviceId: string | null
   online: boolean
   alertCount: number
   thumbHue: number

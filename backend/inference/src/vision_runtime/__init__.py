@@ -7,6 +7,6 @@ unix socket (:mod:`edge_protocol.channel`). Public surface: :class:`VisionWorker
 
 from __future__ import annotations
 
-from vision_runtime.worker import VisionWorker
+from vision_runtime.core.worker import VisionWorker
 
 __all__ = ["VisionWorker"]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from vision_runtime.publish.base import VideoPublisher
+from vision_runtime.publishers.base import VideoPublisher
 
 
 class NullPublisher(VideoPublisher):

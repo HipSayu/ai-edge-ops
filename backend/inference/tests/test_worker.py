@@ -10,7 +10,7 @@ from dqh.svc_core.contracts.messaging import Envelope
 from edge_protocol.channel import channel_pair
 
 from vision_runtime.config import WorkerSettings
-from vision_runtime.worker import VisionWorker
+from vision_runtime.core.worker import VisionWorker
 
 
 @pytest.fixture
