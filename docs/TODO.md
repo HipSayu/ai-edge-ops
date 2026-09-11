@@ -15,7 +15,7 @@ Chi tiết kế hoạch: [`REFACTOR_stateless.md`](REFACTOR_stateless.md).
   (`_resolve_device` dò CUDA/MPS/CPU); `Dockerfile.jetson` để dành; contract
   labels `ai.edge-ops.model.*`; `.env.app` thêm `MODEL_REGISTRY__*`.
 - `27d9c2e` — chốt MVP: GHCR model package **public**, edge không cần token.
-- (chưa commit, an toàn) — xoá `S3__*` khỏi `backend/server/.env`; dọn
+- (chưa commit, an toàn) — xoá `S3__*` khỏi `server/.env`; dọn
   `S3Config` mồ côi trong `svc_core` `__all__`.
 
 ---
@@ -83,7 +83,7 @@ Mỗi bước: BE + FE + test xanh cùng nhau. S1→S5 tuần tự; S6/S7 độc
         tables như cũ. Còn: FE "Fleet defaults" page.
 - [x] **S5** (`293481c`) — deploy = command; xoá ORM Deployment; GET /deployments = per-device view.
 - [x] **S6** (`847244c`) — metrics ring buffer in-memory (FleetRegistry); xoá `metric_samples`. Prometheus remote-write để sau.
-- [~] **S7** — `backend/schema.sql` regen (14 bảng); `ARCHITECTURE.md` + `deploy-model.md` dọn. `chat_messages` giữ (assistant). `docs/flows/*` mermaid chưa vẽ lại.
+- [~] **S7** — `schema.sql` regen (14 bảng); `ARCHITECTURE.md` + `deploy-model.md` dọn. `chat_messages` giữ (assistant). `docs/flows/*` mermaid chưa vẽ lại.
 
 **DB đích sau S1–S7:** giữ `device_config`, `violations`, `snapshots`, `alerts`,
 `users`/`roles`/`permissions`, `audit_logs`, `app_settings`. Bỏ: `devices`,

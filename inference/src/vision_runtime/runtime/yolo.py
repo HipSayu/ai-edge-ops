@@ -11,7 +11,7 @@ from typing import Any
 
 from vision_runtime.runtime.base import Detection, InferenceRuntime
 
-# Fall back to the vendored ultralytics under backend/inference/package/ultralytics
+# Fall back to the vendored ultralytics under inference/package/ultralytics
 # when it isn't pip-installed (dev checkouts).
 _VENDORED = Path(__file__).resolve().parents[3] / "package" / "ultralytics"
 if _VENDORED.is_dir() and str(_VENDORED) not in sys.path:

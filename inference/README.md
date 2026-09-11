@@ -11,7 +11,7 @@ service next to the edge agent.
 > (`ModelCatalog` reads those labels; the agent `docker compose pull`s the ref).
 
 ```
-backend/inference/
+inference/
   src/vision_runtime/
     config.py            WorkerSettings
     capture/             cv2 frame source (blocking; pulled off the loop)
@@ -46,12 +46,12 @@ worker has no control-plane credential.
 One multi-arch image per model version, tagged `…/ai-edge-ops-model:<version>`:
 
 ```
-docker buildx build -f backend/inference/Dockerfile \
+docker buildx build -f inference/Dockerfile \
   --platform linux/amd64,linux/arm64 \
   --build-arg MODEL_VERSION=1.3.0 \
   --build-arg MODEL_CLASSES=helmet,vest,person \
   --build-arg MODEL_MAP50_95=0.41 \
-  -t ghcr.io/hopquangdo/ai-edge-ops-model:1.3.0 --push backend
+  -t ghcr.io/hopquangdo/ai-edge-ops-model:1.3.0 --push .
 ```
 
 GPU vs CPU is **not** a build choice — `_resolve_device` probes

@@ -1,7 +1,7 @@
 # Backend Refactor — TODO
 
-Ngày lập: 2026-09-09. Mục tiêu: (a) nhấc hạ tầng thuần từ `backend/server/app` lên
-`backend/packages/svc_core` (`dqh.svc_core`), (b) chuẩn hoá module contract của
+Ngày lập: 2026-09-09. Mục tiêu: (a) nhấc hạ tầng thuần từ `server/app` lên
+`packages/svc_core` (`dqh.svc_core`), (b) chuẩn hoá module contract của
 server, (c) áp rule code-style mới.
 
 ## Trạng thái (branch `refactor/svc-core-extract-1`, 10 commit `8dab862..ce01015`)
@@ -143,7 +143,7 @@ vào `api_router` — `/violations` `/alerts` `/ws/alerts` `/analytics/*` chưa 
       `hash_password`, `verify_password`, `issue_tokens`, `decode_token`)
 
 ### 1.7 Dọn `pyproject` sau khi tách
-- [ ] `backend/server/pyproject.toml`:
+- [ ] `server/pyproject.toml`:
       `dqh-svc-core[fastapi,mqtt]` → `[fastapi,mqtt,sqlalchemy,security,redis]`
 - [ ] Bỏ khỏi deps trực tiếp của server: `sqlalchemy`, `asyncpg` (giữ! asyncpg là
       driver, không nằm trong extra), `argon2-cffi`, `PyJWT`, `redis`

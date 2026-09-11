@@ -5,12 +5,12 @@
 
 ## Actors
 
-- **Edge Agent** (`backend/edge_agent`) — captures cameras, runs inference locally, publishes state/events over MQTT, streams video over WHIP. One process per edge box.
-- **Backend Server** (`backend/server`) — FastAPI. REST API + business logic + persistence + WebSocket hub for dashboards + MQTT gateway for edges. Stateless.
+- **Edge Agent** (`edge_agent`) — captures cameras, runs inference locally, publishes state/events over MQTT, streams video over WHIP. One process per edge box.
+- **Backend Server** (`server`) — FastAPI. REST API + business logic + persistence + WebSocket hub for dashboards + MQTT gateway for edges. Stateless.
 - **Infrastructure** — MQTT broker (EMQX), PostgreSQL, MinIO/S3, Redis (cross-replica WS fan-out), MediaMTX (WebRTC SFU).
-- **Frontend** (`frontend`) — React SPA. REST for commands/queries, WebSocket for live telemetry/alerts/logs, WHEP for video.
+- **Frontend** (`ui`) — React SPA. REST for commands/queries, WebSocket for live telemetry/alerts/logs, WHEP for video.
 
-Shared wire contract: `backend/libs/edge_protocol` (`topics.py`, `types.py`, `messages.py`), imported by both edge and server.
+Shared wire contract: `libs/edge_protocol` (`topics.py`, `types.py`, `messages.py`), imported by both edge and server.
 
 ## Flow index
 

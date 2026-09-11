@@ -1,4 +1,4 @@
-# Build context = backend/ (see .github/workflows/deploy.yml and deploy/compose.app.yml).
+# Build context = repo root (see .github/workflows/deploy.yml and deploy/compose.app.yml).
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \

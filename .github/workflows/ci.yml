@@ -24,7 +24,6 @@ jobs:
           python-version: "3.12"
 
       - name: Install packages (editable)
-        working-directory: backend
         run: |
           python -m pip install -U pip
           pip install -e "packages/svc_core[fastapi,mqtt,redis,sqlalchemy,security,dev]" \
@@ -34,18 +33,16 @@ jobs:
                       -e "inference[dev]"
 
       - name: Ruff
-        working-directory: backend
         run: |
           ruff check packages/svc_core/src libs/edge_protocol/src server/app \
                      edge_agent/src inference/src \
                      server/tests edge_agent/tests inference/tests packages/svc_core/tests
 
       - name: Import boundaries
-        working-directory: backend/server
+        working-directory: server
         run: lint-imports
 
       - name: Pytest
-        working-directory: backend
         run: |
           set -e
           for pkg in packages/svc_core libs/edge_protocol server edge_agent inference; do
@@ -63,16 +60,16 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: ui/package-lock.json
 
       - name: Install
-        working-directory: frontend
+        working-directory: ui
         run: npm ci
 
       - name: Lint
-        working-directory: frontend
+        working-directory: ui
         run: npx oxlint
 
       - name: Build
-        working-directory: frontend
+        working-directory: ui
         run: npm run build

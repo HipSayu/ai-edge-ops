@@ -184,7 +184,7 @@ parse body ──► { success, data } ? return data : return body   (or throw A
 
 ## 10. Related Components
 
-* `frontend/src/shared/api/client.ts`
-* `frontend/src/shared/api/services/*` (per-domain wrappers)
+* `ui/src/shared/api/client.ts`
+* `ui/src/shared/api/services/*` (per-domain wrappers)
 * `app/modules/auth/router.py` (`/auth/login`, `/auth/refresh`)
 * `dqh.svc_core.transports.http` (`ApiResponse` envelope)

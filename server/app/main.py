@@ -1,6 +1,6 @@
 """FastAPI entrypoint for the AI Edge Ops platform API.
 
-Run (from app/backend/): uvicorn app.main:app --reload --port 8000
+Run (from app/): uvicorn app.main:app --reload --port 8000
 """
 
 from __future__ import annotations

@@ -57,7 +57,7 @@ Design rule: **anything needing delivery guarantees (commands, ACKs, violations)
 
 ## Backend module map
 
-`backend/server/app`:
+`server/app`:
 
 ```
 main.py            FastAPI lifespan: configure logging, init_db, register_event_handlers,
@@ -124,7 +124,7 @@ flowchart TD
 
 ## Edge agent module map
 
-`backend/edge_agent/src/edge_agent`:
+`edge_agent/src/edge_agent`:
 
 ```
 main.py            wires bus + link + agent + backend + telemetry pump + local API, runs forever
@@ -152,7 +152,7 @@ analytics/ppe.py   detections -> violation types (no_helmet, ...)
 
 | Store | Holds | Notes |
 |---|---|---|
-| PostgreSQL | **desired** device config (`devices`: name/site/labels/desired_image/cameras/inference), violations, snapshots, alerts, users/roles, audit_logs, app_settings, cameras | `init_db()` on boot; reference DDL in `backend/schema.sql`. No models / deployments / metric_samples tables. |
+| PostgreSQL | **desired** device config (`devices`: name/site/labels/desired_image/cameras/inference), violations, snapshots, alerts, users/roles, audit_logs, app_settings, cameras | `init_db()` on boot; reference DDL in `schema.sql`. No models / deployments / metric_samples tables. |
 | FleetRegistry (in-memory) | **reported** device state: online / health / running image / probed hw + a ~15-min metric ring buffer | not persisted; rebuilt from MQTT heartbeats + `state` on every server start. See [`REFACTOR_stateless.md`](REFACTOR_stateless.md). |
 | Container registry (GHCR) | the model catalog — each model version is one multi-arch OCI image; metadata in `ai.edge-ops.model.*` labels | `ModelCatalog` reads it live (v2 API); edge deploys by `docker compose pull` |
 | Local disk (server) | evidence images (`settings.evidence_dir`) | served from `/evidence/{filename}` |

@@ -181,7 +181,7 @@ Envelope text frame ──► JSON.parse ──► every handler for the channel
 
 ## 10. Related Components
 
-* `frontend/src/shared/contexts/RealtimeContext.tsx`
+* `ui/src/shared/contexts/RealtimeContext.tsx`
 * `app/core/ws_auth.py` (`authenticate_ws`), `app/core/ws.py` (`ws_hub = build_realtime_bus()`)
 * `app/core/messaging/redis_bus.py`
 * `app/modules/agent/router.py`, `app/modules/observability/router.py`

@@ -15,7 +15,7 @@ vision-runtime = "vision_runtime.main:main"
 
 [project.optional-dependencies]
 cpu = ["opencv-python-headless>=4.10", "onnxruntime>=1.18"]
-# YOLO .pt / vendored ultralytics (backend/vision_runtime/package/ultralytics submodule)
+# YOLO .pt / vendored ultralytics (inference/package/ultralytics submodule)
 inference = ["ultralytics>=8.3"]
 dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.7"]
 

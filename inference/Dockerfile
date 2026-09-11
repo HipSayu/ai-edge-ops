@@ -4,10 +4,10 @@
 # is NOT a build-time choice.
 #
 # Built by .github/workflows/build-model-image.yml. Local:
-#   docker buildx build -f backend/inference/Dockerfile \
+#   docker buildx build -f inference/Dockerfile \
 #     --platform linux/amd64,linux/arm64 \
 #     --build-arg MODEL_VERSION=1.3.0 \
-#     -t ghcr.io/hopquangdo/ai-edge-ops-model:1.3.0 --push backend
+#     -t ghcr.io/hopquangdo/ai-edge-ops-model:1.3.0 --push .
 #
 # Jetson with a real TensorRT/DeepStream pipeline: see Dockerfile.jetson (future).
 FROM python:3.11-slim
