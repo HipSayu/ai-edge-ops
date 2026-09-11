@@ -15,13 +15,12 @@ app/
 │   ├── .env.edge.example     ┘  no literals, no fallbacks
 │   ├── config/              Caddyfile, mediamtx.yml
 │   └── vps-proxy/           system-nginx snippets to expose an infra-only VPS
-├── backend/
-│   ├── server/              FastAPI control plane        (server/Dockerfile)
-│   ├── edge_agent/          host supervisor per device   (edge_agent/Dockerfile)
-│   ├── inference/           vision runtime, swapped per model deploy
-│   ├── libs/edge_protocol/  server <-> edge wire contract
-│   └── packages/            svc_core, ai_core (shared libs)
-├── frontend/                React SPA (Vite dev / nginx image in prod)
+├── server/              FastAPI control plane        (server/Dockerfile)
+├── edge_agent/          host supervisor per device   (edge_agent/Dockerfile)
+├── inference/           vision runtime, swapped per model deploy
+├── libs/edge_protocol/  server <-> edge wire contract
+├── packages/            svc_core, ai_core (shared libs)
+├── ui/                  React SPA (Vite dev / nginx image in prod)
 └── DEPLOY.md                production runbook
 ```
 
@@ -32,7 +31,7 @@ app/
 - Docker + Docker Compose **v2.24+** (`include:` + object `env_file` + inline
   env-file comments)
 - `git submodule update --init --recursive` — private `svc_core` / `ai_core`
-- Node 20+ and `uv` — only for running frontend / backend outside Docker
+- Node 20+ and `uv` — only for running the UI / backend packages outside Docker
 
 ---
 
@@ -77,7 +76,7 @@ From `app/deploy/`, with `COMPOSE_ENV_FILES` exported as above:
 | `docker compose down` | stop, keep volumes |
 | `docker compose down -v` | stop, drop `pgdata` / `redisdata` / edge state |
 
-The frontend is not in compose — run it from `app/frontend`:
+The UI is not in compose — run it from `app/ui`:
 
 ```bash
 npm install
@@ -143,14 +142,14 @@ plus the `deploy/vps-proxy/` nginx snippets — see `deploy/vps-proxy/README.md`
 
 ## Build images
 
-CI publishes two; the build context for the server is `backend/` (it bundles the
-shared libs):
+CI publishes two; the build context for the server is the repo root (it bundles
+the shared libs):
 
 ```bash
-docker build -t ghcr.io/hopquangdo/ai-edge-ops-server:dev   -f backend/server/Dockerfile   backend
-docker build -t ghcr.io/hopquangdo/ai-edge-ops-frontend:dev  frontend
-docker build -t ai-edge-ops/edge-agent:dev -f backend/edge_agent/Dockerfile backend
-docker build -t ai-edge-ops/inference:dev  -f backend/inference/Dockerfile backend
+docker build -t ghcr.io/hopquangdo/ai-edge-ops-server:dev   -f server/Dockerfile   .
+docker build -t ghcr.io/hopquangdo/ai-edge-ops-frontend:dev  ui
+docker build -t ai-edge-ops/edge-agent:dev -f edge_agent/Dockerfile .
+docker build -t ai-edge-ops/inference:dev  -f inference/Dockerfile .
 ```
 
 `docker compose build` drives the same Dockerfiles.
@@ -169,5 +168,25 @@ uv run --package server         pytest -q
 uv run --package edge_agent     pytest -q
 uv run --package inference      pytest -q
 
-cd frontend && npm run lint && npm run build
+cd ui && npm run lint && npm run build
+```
+
+## Backend packages — dev setup
+
+`server`, `edge_agent`, `libs/edge_protocol`, `packages/svc_core`,
+`packages/ai_core` are members of the root `uv` workspace with a single
+`uv.lock`:
+
+```bash
+uv sync --all-extras          # from the repo root — builds everything
+```
+
+Or plain pip (what CI and the Dockerfiles do):
+
+```bash
+python -m venv .venv
+.venv/Scripts/pip install -e "packages/svc_core[fastapi,mqtt,redis,sqlalchemy,security,dev]" \
+                          -e "libs/edge_protocol[dev]" \
+                          -e "server[dev]" \
+                          -e "edge_agent[dev]"
 ```

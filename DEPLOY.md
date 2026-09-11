@@ -7,8 +7,8 @@ that operators pull onto each device (see `docs/run-edge-agent.md`).
 GitHub push to main
    ├─ CI (.github/workflows/ci.yml)        lint + tests (all packages + frontend)
    └─ Deploy (.github/workflows/deploy.yml)
-        ├─ build ghcr.io/<owner>/ai-edge-ops-server:<sha>   (context: backend/, needs the submodule)
-        ├─ build ghcr.io/<owner>/ai-edge-ops-frontend:<sha> (context: frontend/, nginx SPA)
+        ├─ build ghcr.io/<owner>/ai-edge-ops-server:<sha>   (context: repo root, needs the submodule)
+        ├─ build ghcr.io/<owner>/ai-edge-ops-frontend:<sha> (context: ui/, nginx SPA)
         └─ ssh to $DEPLOY_HOST → scp deploy/compose.infra.yml + compose.app.yml +
            config/ to /opt/ai-edge-ops, then docker compose pull && up -d
 ```

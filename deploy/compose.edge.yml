@@ -22,7 +22,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-edge-agent-${DEVICE_ID}
     image: ${EDGE_AGENT_IMAGE}
     build:
-      context: ../backend
+      context: ..
       dockerfile: edge_agent/Dockerfile
     environment:
       DEVICE_ID: ${DEVICE_ID}
@@ -56,7 +56,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-inference-${DEVICE_ID}
     image: ${INFERENCE_IMAGE}
     build:
-      context: ../backend
+      context: ..
       dockerfile: inference/Dockerfile
     environment:
       SOCKET_PATH: /run/edge/inference.sock

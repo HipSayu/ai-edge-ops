@@ -20,7 +20,11 @@ example/
 !.env.*.example
 
 # Edge model weights
-/backend/edge_agent/weights/*.pt
+/edge_agent/weights/*.pt
+
+# Logs
+*.out.log
+*.err.log
 
 # Editors / OS
 .idea/

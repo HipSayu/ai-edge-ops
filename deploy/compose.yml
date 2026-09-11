@@ -13,7 +13,7 @@
 #   EMQX dash     http://localhost:58083   admin / <EMQX_DASHBOARD_PASSWORD>
 #   local agent   http://localhost:9100/status
 #
-# The frontend runs separately: `npm run dev` in app/frontend.
+# The frontend runs separately: `npm run dev` in app/ui.
 # Infra comes from compose.infra.yml (included below). Every value is in the
 # .env.* files — see the .example siblings. No literals, no fallbacks.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -27,7 +27,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-server
     image: ${SERVER_IMAGE}
     build:
-      context: ../backend                 # bundles svc_core + edge_protocol
+      context: ..                 # bundles svc_core + edge_protocol
       dockerfile: server/Dockerfile
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
@@ -47,7 +47,7 @@ services:
       ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES}
       REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS}
     volumes:
-      - ../backend/server:/srv/server
+      - ../server:/srv/server
       - evidencedata:${SERVER_EVIDENCE_DIR}
     ports: ["${SERVER_HTTP_PORT}:8000"]
     depends_on:
@@ -62,7 +62,7 @@ services:
     image: ${EDGE_AGENT_IMAGE}
     profiles: ["edge"]
     build:
-      context: ../backend
+      context: ..
       dockerfile: edge_agent/Dockerfile
     environment:
       DEVICE_ID: ${DEVICE_ID}
@@ -90,7 +90,7 @@ services:
     image: ${INFERENCE_IMAGE}
     profiles: ["edge"]
     build:
-      context: ../backend
+      context: ..
       dockerfile: inference/Dockerfile
     environment:
       SOCKET_PATH: /run/edge/inference.sock

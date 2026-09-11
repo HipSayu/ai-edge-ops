@@ -11,7 +11,7 @@ image the CPU pipeline (:mod:`vision_runtime.core.pipeline`) runs.
 
 Status: skeleton. The pipeline construction + ``NvDsBatchMeta`` pad probe are
 implemented against a real Jetson / dGPU target (DeepStream 9.1, JetPack 7.2 or
-CUDA 13.2) — see ``backend/inference/package/DeepStream``.
+CUDA 13.2) — see ``inference/package/DeepStream``.
 """
 
 from __future__ import annotations

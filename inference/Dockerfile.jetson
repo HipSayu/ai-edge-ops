@@ -4,9 +4,9 @@
 # TensorRT/pyds pipeline is real. The .engine is built against this base's exact
 # TRT/JetPack, so runtime + model + engine ship as one immutable image.
 #
-#   docker build -f backend/inference/Dockerfile.jetson \
+#   docker build -f inference/Dockerfile.jetson \
 #     --build-arg MODEL_VERSION=1.3.0 \
-#     -t ghcr.io/hopquangdo/ai-edge-ops-model:1.3.0-jetson backend
+#     -t ghcr.io/hopquangdo/ai-edge-ops-model:1.3.0-jetson .
 ARG DEEPSTREAM_TAG=7.1-triton-multiarch
 FROM nvcr.io/nvidia/deepstream:${DEEPSTREAM_TAG}
 

@@ -11,7 +11,7 @@
 **/*.sqlite3
 **/weights/
 **/compose.yml
-frontend/
+ui/
 
 # vendored SDK sources — only needed on-device with the [inference]/deepstream
 # builds, never in the slim x86 demo image

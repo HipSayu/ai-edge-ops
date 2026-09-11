@@ -9,12 +9,12 @@ dependencies = []
 # (its own pyproject, tests, and `uv run`).
 [tool.uv.workspace]
 members = [
-    "backend/server",
-    "backend/edge_agent",
-    "backend/inference",
-    "backend/libs/edge_protocol",
-    "backend/packages/svc_core",
-    "backend/packages/ai_core",
+    "server",
+    "edge_agent",
+    "inference",
+    "libs/edge_protocol",
+    "packages/svc_core",
+    "packages/ai_core",
 ]
 
 [tool.uv.sources]

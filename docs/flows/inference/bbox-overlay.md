@@ -179,5 +179,5 @@ Frontend ──► pair with WHEP video by nearest frame_ts ──► draw boxes
 * `edge_agent/services/pipeline.py` (`_run`, `_emit_bbox_frame`)
 * `edge_agent/network/link.py` (`send_bbox_frame`)
 * `app/edge/gateway.py` (`_on_bbox_frame`)
-* `frontend/src/modules/agent/components/LiveMonitorPanel.tsx`
+* `ui/src/modules/agent/components/LiveMonitorPanel.tsx`
 * contract: `edge_protocol/messages.py` (`BboxFramePayload`, `BboxPayload`)

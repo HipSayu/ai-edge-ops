@@ -16,7 +16,7 @@ phần svc_core extract) và [model deploy = image](../deploy/compose.edge.yml).
 | ✅ | `293481c` | S5 — deploy = command; xoá ORM `Deployment`; `GET /deployments` = per-device view |
 | ✅ | `0ca775b` | S3.3 (một phần) — `ConfigResolver` (model labels < policy < device) + `T_UPDATE_CONFIG` |
 | ✅ | `847244c` | S6 — metrics = ring buffer in-memory; xoá `metric_samples` |
-| ✅ | (S7) | `backend/schema.sql` regen; dọn `ARCHITECTURE.md` + flow |
+| ✅ | (S7) | `schema.sql` regen; dọn `ARCHITECTURE.md` + flow |
 
 **Còn lại:**
 - **camera-fold huỷ** (user): giữ `cameras`/`camera_groups` tables. Chỉ còn
@@ -160,7 +160,7 @@ Không cấu hình toàn cục HAY theo device — **cả hai, dạng phân tầ
 | `app_settings` | |
 
 `init_db()` giữ nguyên (bảng ít + ổn định, chưa cần Alembic).
-`backend/schema.sql` viết lại cho khớp.
+`schema.sql` viết lại cho khớp.
 
 ---
 
@@ -209,7 +209,7 @@ Không cấu hình toàn cục HAY theo device — **cả hai, dạng phân tầ
 
 ### Frontend
 
-**Types (`frontend/src/shared/api/types/`):**
+**Types (`ui/src/shared/api/types/`):**
 
 | Type | Đổi |
 |---|---|
@@ -246,14 +246,14 @@ Không cấu hình toàn cục HAY theo device — **cả hai, dạng phân tầ
 
 | PR | Backend / protocol | Frontend | Rủi ro |
 |---|---|---|---|
-| **S0** ✅ | `backend/inference`: gộp `Dockerfile.cpu`+`.gpu` → **1** `Dockerfile` (multi-arch, `_resolve_device` dò CUDA/MPS/CPU) + `Dockerfile.jetson` (future). Dockerfile mang **contract labels** `ai.edge-ops.model.*`. `.env.app` thêm `MODEL_REGISTRY__*`. **Build model→image KHÔNG nằm trong app** — pipeline riêng dùng Dockerfile này làm contract. Còn lại: tạo GHCR PAT `read:packages` → secret | — | 0 |
+| **S0** ✅ | `inference`: gộp `Dockerfile.cpu`+`.gpu` → **1** `Dockerfile` (multi-arch, `_resolve_device` dò CUDA/MPS/CPU) + `Dockerfile.jetson` (future). Dockerfile mang **contract labels** `ai.edge-ops.model.*`. `.env.app` thêm `MODEL_REGISTRY__*`. **Build model→image KHÔNG nằm trong app** — pipeline riêng dùng Dockerfile này làm contract. Còn lại: tạo GHCR PAT `read:packages` → secret | — | 0 |
 | **S1** | `DEVICE_ID` string: `edge_protocol` payloads + `device_id_from_envelope` (bỏ `int()`) + `violations.device_id` TEXT; sửa test | `BackendDevice.id`, `DeploymentRecord.device_id`, `BackendCamera` id → `string`; `CreateDevicePayload.device_id` | tb — đụng nhiều chỗ, cơ học |
 | **S2** | `ModelCatalog` (GHCR API) + `Settings.model_registry`; `GET /models*` đổi backing; bỏ `POST /models`; xoá `models`/`model_versions` ORM + repo + `ModelRegistryService` | `types/ai.ts` reshape (`ModelRecord.id: string`, versions=tags, fields từ labels); `ModelsPage` bỏ form register, hiện labels | tb |
 | **S3** | Bảng `device_config` + service; `POST/PATCH /agent/devices` + `/agent/cameras` map sang đó; khối `inference_policy` global (`/system/settings`) + `ConfigResolver.merge(model, global, device, camera)`; seed migrate | `EdgeDevicesPage`/`DevicesPage` provision bằng `device_id`; `Cameras*` sửa inline; trang **Fleet defaults** + panel override (kế thừa vs override); `CameraGroupsPage` client-only/bỏ | tb |
 | **S4** | `FleetRegistry` in-memory; agent `state` retained+LWT (`network/link.py`); `GET /agent/devices` = union known+online; bỏ `PresenceRegistry` | device list = merge known+online; hiện **drift** desired vs reported; WS live update | **cao** — đường sống fleet |
 | **S5** | `/deployments` = set `desired_image` + publish `T_DEPLOY_MODEL`; xoá `deployments` ORM; history → `audit_logs` | `DeploymentsPage`: chọn device(s)+image tag; tiến trình từ WS (`ack`+`state`), bỏ `progressPct` | tb |
 | **S6** | Prometheus service vào `compose.infra.yml`; agent expose `/metrics` (scrape); `GET .../metrics` proxy Prometheus hoặc 501; xoá `metric_samples` | chart live qua WS ring buffer; history qua proxy | thấp (phụ) |
-| **S7** | Xoá `chat_messages` nếu không dùng; viết lại `backend/schema.sql`; dọn `docs/ARCHITECTURE.md` + flows | dọn type/service chết | 0 |
+| **S7** | Xoá `chat_messages` nếu không dùng; viết lại `schema.sql`; dọn `docs/ARCHITECTURE.md` + flows | dọn type/service chết | 0 |
 
 Mỗi PR: BE + FE + test xanh cùng nhau trước khi qua PR sau. S6/S7 độc lập.
 
@@ -277,7 +277,7 @@ S3/S4 nên migrate FK riêng ở S1 là phí. Khi `devices` → `device_config` 
 - **Sửa máy reconcile của agent** — đã đủ, chỉ đổi payload.
 - **Giữ bảng `deployments` cho history** — dùng `audit_logs`.
 - **Build model → image trong app CI** — đó là việc của pipeline model (repo/
-  quy trình riêng). App chỉ giữ `backend/inference/Dockerfile` làm *contract*
+  quy trình riêng). App chỉ giữ `inference/Dockerfile` làm *contract*
   (code vision_runtime + label schema) và *consume* image từ registry.
 
 ## Đã chốt (2026-09-09)

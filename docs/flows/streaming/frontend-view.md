@@ -177,4 +177,4 @@ parallel: bbox/{camera_id} WebSocket ──► overlay boxes paired by frame_ts
 
 * `app/modules/streaming/router.py` (`get_view_token`, `get_publish_token`, `mediamtx_auth_webhook`)
 * `app/modules/streaming/service.py`
-* `frontend/src/modules/agent/components/LiveMonitorPanel.tsx`
+* `ui/src/modules/agent/components/LiveMonitorPanel.tsx`
