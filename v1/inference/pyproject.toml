@@ -1,0 +1,47 @@
+[project]
+name = "ai-edge-ops-vision-runtime"
+version = "0.1.0"
+description = "Vision runtime — camera capture, model inference, WHIP publish. Built into per-model OCI images (cpu / gpu)."
+requires-python = ">=3.10"
+dependencies = [
+    "dqh-svc-core",
+    "edge-protocol",
+    "pydantic>=2.5",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+vision-runtime = "vision_runtime.main:main"
+
+[project.optional-dependencies]
+cpu = ["opencv-python-headless>=4.10", "onnxruntime>=1.18"]
+# YOLO .pt / vendored ultralytics (inference/packages/ultralytics submodule)
+inference = ["ultralytics>=8.3"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.7"]
+
+[tool.uv.sources]
+dqh-svc-core = { workspace = true }
+edge-protocol = { workspace = true }
+ultralytics = { path = "package/ultralytics", editable = true }
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vision_runtime"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+extend-ignore = ["B008"]
