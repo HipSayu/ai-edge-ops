@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="84b50be0-b4b1-431a-9943-1ef5080d2335" />
+    <option name="activeSessionId" value="2d4739bb-76c2-4e40-addf-ace1d48f9662" />
     <option name="openSessionIds">
       <list>
         <option value="3a90de64-3d8e-4d2d-9882-b8a999d30542" />
         <option value="7ff7ded4-ec0e-4679-b862-68e387407c14" />
         <option value="2d4739bb-76c2-4e40-addf-ace1d48f9662" />
-        <option value="84b50be0-b4b1-431a-9943-1ef5080d2335" />
       </list>
     </option>
     <option name="sessionPaths">
@@ -16,7 +15,6 @@
         <entry key="3a90de64-3d8e-4d2d-9882-b8a999d30542" value="/sessions/5cf4665b-a5a2-41a3-aade-159dd171e9e6" />
         <entry key="41731430-d154-4c89-b659-855cab8e50d9" value="/sessions/4dd2df77-a10d-418e-adc9-dadd0f0b82ee" />
         <entry key="7ff7ded4-ec0e-4679-b862-68e387407c14" value="/sessions/new" />
-        <entry key="84b50be0-b4b1-431a-9943-1ef5080d2335" value="/sessions/3deeb01a-42c7-45c2-9a0c-32dde2e6112c" />
       </map>
     </option>
     <option name="sessionTitles">
@@ -25,7 +23,6 @@
         <entry key="3a90de64-3d8e-4d2d-9882-b8a999d30542" value="D:\Workspace\Research\ultralytics\app\backend\infe" />
         <entry key="41731430-d154-4c89-b659-855cab8e50d9" value="bạn ơi tôi k muốn tách ra backend và frontend nữa?" />
         <entry key="7ff7ded4-ec0e-4679-b862-68e387407c14" value="Claude Code" />
-        <entry key="84b50be0-b4b1-431a-9943-1ef5080d2335" value="bạn ơi tôi có thể dùng kubernet để quản lý tập chu" />
       </map>
     </option>
   </component>

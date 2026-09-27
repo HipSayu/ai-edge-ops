@@ -30,6 +30,10 @@
       <excludeFolder url="file://$MODULE_DIR$/libs/edge_protocol/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/packages/svc_core/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/server/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/v1/edge_agent/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/v1/libs/edge_protocol/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/v1/packages/svc_core/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/v1/server/.venv" />
     </content>
     <orderEntry type="jdk" jdkName="uv (app)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

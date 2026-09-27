@@ -3,9 +3,8 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$/.." vcs="Git" />
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/edge_agent/package/DeepStream" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/example/kubeedge" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/inference/package/ultralytics" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/packages" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/v1/edge_agent/package/DeepStream" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/v1/inference/package/ultralytics" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/v1/packages" vcs="Git" />
   </component>
 </project>
