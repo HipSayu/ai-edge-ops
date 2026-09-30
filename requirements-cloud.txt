@@ -1,0 +1,17 @@
+# Cloud (https + worker). Install from repo root: pip install -r requirements-cloud.txt
+./packages/messaging[mqtt]
+./packages/http
+./packages/observability
+
+fastapi>=0.115
+# [standard] brings the WebSocket implementation /api/v1/ws needs (plain uvicorn 404s every upgrade)
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.4
+asyncpg>=0.29
+redis>=5.0
+huggingface_hub>=0.24
+mcp>=2.2
+# Auth: JWT access tokens + Argon2 password hashes
+PyJWT[crypto]>=2.8
+argon2-cffi>=23.1

@@ -1,0 +1,61 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------- Node / dashboard ----------
+node_modules/
+apps/dashboard/dist/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+.vite/
+
+# ---------- Secrets / env ----------
+.env
+.env.*
+!.env.example
+# compose secrets (infra/compose/*/.env, *.env); keep the *.env.example templates
+infra/compose/**/*.env
+# local edge agent state (EDGE_STATE_DIR in .env)
+.edge-state/
+*.pem
+*.key
+cert/
+
+# ---------- ML artifacts ----------
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+runs/
+weights/
+datasets/
+
+# ---------- Runtime data ----------
+*.log
+logs/
+*.sqlite
+*.db
+tmp/
+
+# ---------- IDE / OS ----------
+.idea/workspace.xml
+.idea/claudeCodeEditorTabs.xml
+.idea/shelf/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

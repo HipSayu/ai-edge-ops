@@ -1,0 +1,64 @@
+{
+  "version": "lstm-v1",
+  "features": [
+    "heartbeat_age_sec",
+    "connection_reconnect_count",
+    "cpu_usage_pct",
+    "memory_usage_pct",
+    "gpu_usage_pct",
+    "gpu_temperature_c",
+    "disk_usage_pct",
+    "inference_fps",
+    "inference_latency_ms",
+    "runtime_restart_count",
+    "runtime_error_count"
+  ],
+  "mean": [
+    3.0165300369262695,
+    0.0023030005395412445,
+    29.456998825073242,
+    57.4766731262207,
+    51.97343063354492,
+    57.14664077758789,
+    51.121795654296875,
+    19.54189682006836,
+    28.811939239501953,
+    0.0004766204219777137,
+    0.2921033799648285
+  ],
+  "std": [
+    10.713293075561523,
+    0.04794909432530403,
+    10.999555587768555,
+    9.93444538116455,
+    19.566970825195312,
+    7.297482013702393,
+    13.711244583129883,
+    5.334475040435791,
+    12.893821716308594,
+    0.021822089329361916,
+    0.8363253474235535
+  ],
+  "counters_as_delta": [
+    "connection_reconnect_count",
+    "runtime_restart_count"
+  ],
+  "window": 60,
+  "horizon": 120,
+  "sample_sec": 5,
+  "threshold": 0.8207736611366272,
+  "alarm_consecutive": 3,
+  "config": {
+    "hidden": 64,
+    "layers": 2,
+    "dropout": 0.2,
+    "lr": 0.001,
+    "batch": 256,
+    "epochs": 30,
+    "patience": 5
+  },
+  "test": {
+    "pr_auc": 0.6982,
+    "roc_auc": 0.8702
+  }
+}

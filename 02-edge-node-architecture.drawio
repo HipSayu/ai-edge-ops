@@ -1,0 +1,164 @@
+<mxfile host="Electron" modified="2026-03-27T10:00:00.000Z" agent="Mozilla/5.0" version="21.6.8" type="device">
+  <diagram id="cloud-edge-architecture" name="Figure 1 - Cloud-Edge System Architecture">
+    <mxGraphModel dx="1422" dy="850" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- CLIENT ZONE -->
+        <mxCell id="client-box" value="CLIENT LAYER" style="swimlane;whiteSpace=wrap;html=1;childLayout=stackLayout;horizontal=1;startSize=30;fillColor=#F3F4F6;strokeColor=#D1D5DB;fontColor=#111827;fontStyle=1;fontSize=12;rounded=1;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="680" y="40" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="client-node" value="Web Application / Mobile App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9CA3AF;fontColor=#1F2937;fontSize=11;fontStyle=1;" vertex="1" parent="client-box">
+          <mxGeometry x="20" y="40" width="200" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- AWS CLOUD BOUNDARY -->
+        <mxCell id="aws-cloud-bg" value="AWS CLOUD REGION" style="swimlane;whiteSpace=wrap;html=1;childLayout=stackLayout;horizontal=1;startSize=30;fillColor=#F1F5F9;strokeColor=#232F3E;strokeWidth=2;fontColor=#232F3E;fontStyle=1;fontSize=13;rounded=1;arcSize=2;" vertex="1" parent="1">
+          <mxGeometry x="120" y="180" width="1360" height="440" as="geometry" />
+        </mxCell>
+
+        <!-- Core Backend Services -->
+        <mxCell id="cloud-server" value="Cloud Management Server&#xa;(API Gateway / App Service)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#232F3E;strokeColor=#111827;fontColor=#FFFFFF;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="670" y="240" width="260" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Data Services Sub-boundary -->
+        <mxCell id="data-group" value="Data &amp; Cache Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2E8F0;strokeColor=#CBD5E1;dashed=1;fontColor=#475569;fontStyle=1;align=left;spacingLeft=10;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="160" y="320" width="400" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rds" value="RDS PostgreSQL&#xa;(Metadata &amp; Config)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="360" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" value="ElastiCache Redis&#xa;(State &amp; Cache)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DC2626;strokeColor=#B91C1C;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="360" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Artifact & IoT Services Sub-boundary -->
+        <mxCell id="artifact-group" value="Artifacts &amp; Messaging Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2E8F0;strokeColor=#CBD5E1;dashed=1;fontColor=#475569;fontStyle=1;align=left;spacingLeft=10;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="600" y="320" width="840" height="270" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s3" value="AWS S3&#xa;(Model Weights Storage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#059669;strokeColor=#047857;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="630" y="360" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ecr" value="AWS ECR&#xa;(Runtime Container Images)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D97706;strokeColor=#B45309;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="910" y="360" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="iot-core" value="AWS IoT Core&#xa;(MQTT Broker &amp; Shadow)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7C3AED;strokeColor=#6D28D9;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="360" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cloudwatch" value="AWS CloudWatch&#xa;(Central Logs &amp; Metrics)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4B5563;strokeColor=#374151;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="630" y="480" width="220" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- EDGE CLUSTER BOUNDARY -->
+        <mxCell id="edge-cluster-bg" value="EDGE CLUSTER (FIELD DEPLOYMENT)" style="swimlane;whiteSpace=wrap;html=1;childLayout=stackLayout;horizontal=1;startSize=30;fillColor=#FEF3C7;strokeColor=#D97706;strokeWidth=2;fontColor=#78350F;fontStyle=1;fontSize=13;rounded=1;arcSize=2;" vertex="1" parent="1">
+          <mxGeometry x="120" y="680" width="1360" height="360" as="geometry" />
+        </mxCell>
+
+        <!-- Edge Node 01 -->
+        <mxCell id="edge-node-1" value="EDGE NODE 01 (Master/Primary)" style="swimlane;whiteSpace=wrap;html=1;startSize=25;fillColor=#FFFFFF;strokeColor=#F59E0B;fontColor=#92400E;fontStyle=1;fontSize=11;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="730" width="600" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="agent-1" value="EDGE AGENT&#xa;(Device/Health/Telemetry)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2563EB;strokeColor=#1D4ED8;fontColor=#FFFFFF;fontStyle=1;fontSize=11;" vertex="1" parent="edge-node-1">
+          <mxGeometry x="30" y="40" width="540" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="manager-1" value="RUNTIME MANAGER (Container Lifecycle)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4F46E5;strokeColor=#4338CA;fontColor=#FFFFFF;fontStyle=1;fontSize=11;" vertex="1" parent="edge-node-1">
+          <mxGeometry x="30" y="110" width="540" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" value="Vision Runtime&#xa;(YOLO/TensorRT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#059669;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" vertex="1" parent="edge-node-1">
+          <mxGeometry x="30" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" value="Safety Runtime&#xa;(Anomaly Detection)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#059669;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" vertex="1" parent="edge-node-1">
+          <mxGeometry x="220" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" value="OCR Runtime&#xa;(Text Extraction)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#059669;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" vertex="1" parent="edge-node-1">
+          <mxGeometry x="410" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edge Node 02 -->
+        <mxCell id="edge-node-2" value="EDGE NODE 02..N (Worker Nodes)" style="swimlane;whiteSpace=wrap;html=1;startSize=25;fillColor=#FFFFFF;strokeColor=#9CA3AF;fontColor=#374151;fontStyle=1;fontSize=11;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="730" width="600" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="agent-2" value="EDGE AGENT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6B7280;strokeColor=#4B5563;fontColor=#FFFFFF;fontStyle=1;fontSize=11;" vertex="1" parent="edge-node-2">
+          <mxGeometry x="30" y="40" width="540" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="manager-2" value="RUNTIME MANAGER" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6B7280;strokeColor=#4B5563;fontColor=#FFFFFF;fontStyle=1;fontSize=11;" vertex="1" parent="edge-node-2">
+          <mxGeometry x="30" y="110" width="540" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="r-replica" value="AI Runtimes (Vision / Safety / OCR / Custom Workers)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9CA3AF;strokeColor=#6B7280;fontColor=#FFFFFF;fontSize=11;fontStyle=1;" vertex="1" parent="edge-node-2">
+          <mxGeometry x="30" y="180" width="540" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- CONNECTORS WITH CLEAR LABELS -->
+        <!-- Client -> Cloud -->
+        <mxCell id="c1" edge="1" parent="1" source="client-node" target="cloud-server" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4B5563;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c1-label" value="HTTPS / WSS" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontStyle=1;fontColor=#374151;backgroundHeight=14;backgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="c1">
+          <mxGeometry x="0.1" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- Cloud Server internal -->
+        <mxCell id="c2" edge="1" parent="1" source="cloud-server" target="rds" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748B;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" edge="1" parent="1" source="cloud-server" target="redis" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748B;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" edge="1" parent="1" source="cloud-server" target="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748B;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c5" edge="1" parent="1" source="cloud-server" target="ecr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748B;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c6" edge="1" parent="1" source="cloud-server" target="iot-core" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748B;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- CLOUD TO EDGE PIPELINES -->
+        <!-- IoT Core <-> Edge Agent (Telemetry & Commands) -->
+        <mxCell id="pipe-iot" edge="1" parent="1" source="iot-core" target="agent-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#7C3AED;startArrow=classic;endArrow=classic;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="650" />
+              <mxPoint x="460" y="650" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pipe-iot-label" value="MQTT (Heartbeat, Config, Telemetry, Command)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1;fontColor=#6D28D9;backgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="pipe-iot">
+          <mxGeometry x="0.0" relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- S3 -> Edge (Model Artifacts) -->
+        <mxCell id="pipe-s3" edge="1" parent="1" source="s3" target="manager-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#059669;dashed=1;endArrow=classic;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="740" y="620" />
+              <mxPoint x="380" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pipe-s3-label" value="HTTPS Pull (Model Weights / AI Config)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontStyle=1;fontColor=#047857;backgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="pipe-s3">
+          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ECR -> Edge (Container Images) -->
+        <mxCell id="pipe-ecr" edge="1" parent="1" source="ecr" target="manager-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#D97706;dashed=1;endArrow=classic;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="635" />
+              <mxPoint x="400" y="635" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pipe-ecr-label" value="Docker Pull (Runtime Container Images)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontStyle=1;fontColor=#B45309;backgroundColor=#FFFFFF;" vertex="1" connectable="0" parent="pipe-ecr">
+          <mxGeometry x="-0.4" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

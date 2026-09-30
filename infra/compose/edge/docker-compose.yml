@@ -1,0 +1,46 @@
+# Edge node: the agent (runs AI runtimes as sibling containers through the host Docker socket)
+# + node-exporter, and dcgm-exporter on NVIDIA nodes.
+#
+#   cp edge.env.example edge.env                  # cluster/node ids, MQTT host (gitignored)
+#   docker compose up -d                          # CPU node
+#   docker compose --profile gpu up -d            # NVIDIA node (needs the NVIDIA container toolkit)
+name: edgeops-edge
+
+services:
+  # Host network: scrapes the exporters on 127.0.0.1, keeps a stable MQTT client id and serves
+  # runtimes on :8081 (they reach it at host.docker.internal:8081).
+  agent:
+    image: ${REGISTRY:-edgeops}/edge-agent:${TAG:-latest}
+    build: { context: ../../.., dockerfile: infra/docker/edge/Dockerfile.api }
+    restart: unless-stopped
+    network_mode: host
+    env_file: edge.env
+    environment:
+      EDGE_STATE_DIR: /var/lib/edge-agent
+      # Early-warning model baked into the image; outbox/alarm windows go to $EDGE_STATE_DIR/health.db
+      EDGE_HEALTH_MODEL_DIR: ${EDGE_HEALTH_MODEL_DIR:-/app/models/node_health/lstm-v1}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Same path on host and in the container: model files are bind-mounted into runtimes from here
+      - /var/lib/edge-agent:/var/lib/edge-agent
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command: ["--path.rootfs=/host", "--web.listen-address=127.0.0.1:9100"]
+    volumes:
+      - /:/host:ro,rslave
+
+  dcgm-exporter:
+    profiles: [gpu]
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:3.3.7-3.5.0-ubuntu22.04
+    restart: unless-stopped
+    network_mode: host
+    command: ["-a", "127.0.0.1:9400"]
+    cap_add: [SYS_ADMIN]
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]

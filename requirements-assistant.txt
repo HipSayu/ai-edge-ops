@@ -1,0 +1,26 @@
+# Assistant (chatbot agent). Install from repo root: pip install -r requirements-assistant.txt
+# LLM provider package follows ASSISTANT_LLM_MODEL ("anthropic:..." -> langchain-anthropic, "openai:..." -> langchain-openai)
+./packages/http
+./packages/observability
+
+fastapi>=0.115
+uvicorn>=0.30
+pydantic>=2.7
+pydantic-settings>=2.4
+httpx>=0.27
+mcp>=2.2
+langchain>=1.0
+langgraph>=1.0
+langchain-anthropic>=1.0
+langchain-openai>=1.0
+# Chat streams + conversation memory (Redis 8)
+redis>=5.0
+langgraph-checkpoint-redis>=0.5
+# Knowledge (RAG): embeddings + vector store
+openai>=1.50
+qdrant-client>=1.12
+pyyaml>=6.0
+# Local embeddings (ASSISTANT_EMBEDDING_PROVIDER=sentence_transformers), e.g. dangvantuan/vietnamese-embedding.
+# Optional and heavy (torch): pip install "sentence-transformers>=3.0" "pyvi>=0.1.1"
+# Tracing (optional: on when ASSISTANT_LANGFUSE_* keys are set)
+langfuse>=3.0

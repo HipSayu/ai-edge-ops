@@ -1,0 +1,11 @@
+# API gateway (token verification + routing). Install from repo root: pip install -r requirements-gateway.txt
+./packages/http
+./packages/observability
+
+fastapi>=0.115
+# [standard] brings the WebSocket server implementation
+uvicorn[standard]>=0.30
+pydantic-settings>=2.4
+PyJWT[crypto]>=2.8
+httpx>=0.27
+websockets>=13

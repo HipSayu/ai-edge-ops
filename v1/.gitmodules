@@ -1,6 +1,0 @@
-[submodule "packages"]
-	path = packages
-	url = https://github.com/hopquangdo/python-packages
-[submodule "inference/package/ultralytics"]
-	path = inference/package/ultralytics
-	url = https://github.com/hopquangdo/yolo-ppe-optimizer.git

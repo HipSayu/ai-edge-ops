@@ -1,0 +1,134 @@
+name: build-deploy (reusable)
+
+# Builds images → GHCR, then rolls the given services of infra/compose/cloud out on the cloud host (EC2)
+# with docker compose (pull + up -d --wait; dependencies not yet running are started too).
+# Secrets (environment "production"): CLOUD_SSH_HOST, CLOUD_SSH_USER, CLOUD_SSH_KEY, GHCR_PULL_TOKEN,
+# plus the env secret named by `env_secret`, written to infra/compose/cloud/<env_file>.
+
+on:
+  workflow_call:
+    inputs:
+      services:
+        description: Space-separated services of infra/compose/cloud to roll out (e.g. "api")
+        required: true
+        type: string
+      images:
+        description: 'JSON list of {"name","context","file"}'
+        required: true
+        type: string
+      bundle:
+        description: Extra comma-separated paths shipped next to the compose file
+        required: false
+        type: string
+        default: ""
+      env_secret:
+        description: Name of the secret holding the env file (empty = none)
+        required: false
+        type: string
+        default: ""
+      env_file:
+        description: File under infra/compose/cloud/ the env secret is written to
+        required: false
+        type: string
+        default: .env
+
+env:
+  DEPLOY_DIR: /opt/edgeops
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: ${{ fromJSON(inputs.images) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: reg
+        run: echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/edgeops" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.reg.outputs.registry }}/${{ matrix.image.name }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-host
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: vars
+        env:
+          BUNDLE: ${{ inputs.bundle }}
+        run: |
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/edgeops" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "source=infra/compose/cloud/docker-compose.yml${BUNDLE:+,$BUNDLE}" >> "$GITHUB_OUTPUT"
+
+      # Keeps the repo layout: the compose file mounts infra/config and db/migrations relative to the repo root.
+      - name: Ship compose file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CLOUD_SSH_HOST }}
+          username: ${{ secrets.CLOUD_SSH_USER }}
+          key: ${{ secrets.CLOUD_SSH_KEY }}
+          source: ${{ steps.vars.outputs.source }}
+          target: ${{ env.DEPLOY_DIR }}
+
+      - name: Roll out
+        uses: appleboy/ssh-action@v1
+        env:
+          SERVICES: ${{ inputs.services }}
+          ENV_FILE: ${{ inputs.env_file }}
+          STACK_ENV: ${{ inputs.env_secret != '' && secrets[inputs.env_secret] || '' }}
+          GHCR_USER: ${{ github.repository_owner }}
+          GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          REGISTRY: ${{ steps.vars.outputs.registry }}
+          TAG: ${{ steps.vars.outputs.tag }}
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+        with:
+          host: ${{ secrets.CLOUD_SSH_HOST }}
+          username: ${{ secrets.CLOUD_SSH_USER }}
+          key: ${{ secrets.CLOUD_SSH_KEY }}
+          envs: SERVICES,ENV_FILE,STACK_ENV,GHCR_USER,GHCR_TOKEN,REGISTRY,TAG,DEPLOY_DIR
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_DIR/infra/compose/cloud"
+            if [ -n "$STACK_ENV" ]; then
+              (umask 077; printf '%s\n' "$STACK_ENV" > "$ENV_FILE")
+            fi
+            touch .env assistant.env
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export REGISTRY TAG
+            docker compose pull $SERVICES
+            docker compose up -d --wait $SERVICES
+            docker compose ps
