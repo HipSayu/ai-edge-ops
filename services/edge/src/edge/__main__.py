@@ -5,7 +5,7 @@ import signal
 import threading
 
 from edge.bootstrap.container import build_container
-from edge.bootstrap.settings import Settings
+from edge.bootstrap.config import Settings
 
 
 def main() -> None:

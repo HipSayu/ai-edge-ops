@@ -8,10 +8,10 @@ from edge.application.durable_publisher import DurablePublisher
 from edge.application.camera_logic import CameraLogic
 from edge.application.runtime import EdgeRuntime, NodeStream
 from edge.application.zone_book import ZoneBook
-from edge.bootstrap.settings import Settings
+from edge.bootstrap.config import Settings, deepstream_config
 from edge.domain.confirmation import Confirmation
 from edge.domain.cooldown import Cooldown
-from edge.infrastructure.deepstream.config import CameraSource, DeepStreamConfig
+from edge.infrastructure.deepstream.config import CameraSource
 from edge.infrastructure.deepstream.pipeline import DeepStreamStream
 from edge.infrastructure.alarm import CommandAlarm, HttpAlarm, LogAlarm, MultiAlarm
 from edge.infrastructure.jpeg_renderer import JpegRenderer
@@ -105,15 +105,3 @@ def build_alarm(settings: Settings) -> MultiAlarm:
     if settings.alarm_url:
         sinks.append(HttpAlarm(settings.alarm_url))
     return MultiAlarm(sinks)
-
-
-def deepstream_config(settings: Settings, node_id: str, cameras: list[CameraSource], several_nodes: bool) -> DeepStreamConfig:
-    """One node's pipeline: its cameras (and so its batch size) and the engine, from the settings."""
-    return DeepStreamConfig(
-        cameras=tuple(cameras), engine_path=settings.engine_path, class_names=settings.class_names,
-        precision=settings.precision, net_size=settings.infer_imgsz, conf=settings.conf, interval=settings.infer_interval,
-        mux_width=settings.mux_width, mux_height=settings.mux_height, mux_timeout_us=settings.mux_timeout_us,
-        tracking=settings.tracking, tracker_lib=settings.tracker_lib, tracker_config=settings.tracker_config,
-        unified_memory=settings.unified_memory, reconnect_sec=settings.reconnect_sec,
-        work_dir=settings.deepstream_dir / node_id if several_nodes else settings.deepstream_dir,
-    )

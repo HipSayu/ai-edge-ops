@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from edge.bootstrap.settings import Settings
+from edge.bootstrap.config import Settings
 
 
 def test_a_single_node_is_the_classic_settings():

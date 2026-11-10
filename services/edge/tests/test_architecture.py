@@ -43,3 +43,8 @@ def test_application_knows_no_infrastructure_or_protocols():
 def test_never_imports_another_service():
     bad = [f"{p} imports {m}" for p in modules(SRC) for m in imports_of(p) if m.split(".")[0] in OTHER_SERVICES]
     assert not bad, bad
+
+
+def test_infrastructure_never_reaches_back_to_bootstrap():
+    bad = [f"{p.name} imports {m}" for p in modules(SRC / "infrastructure") for m in imports_of(p) if m.startswith("edge.bootstrap")]
+    assert not bad, bad
