@@ -25,8 +25,8 @@ class DeepStreamConfig:
     net_size: int = 960
     conf: float = 0.35
     interval: int = 0  # batches skipped between two inferences (the tracker carries the objects across them)
-    mux_width: int = 1280
-    mux_height: int = 720
+    mux_width: int = 960
+    mux_height: int = 540
     mux_timeout_us: int = 66667  # how long the muxer waits for a late camera before sending the batch it has: about one frame at 15 fps
     tracking: bool = True
     tracker_lib: str = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so"

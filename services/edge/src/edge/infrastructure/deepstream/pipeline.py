@@ -166,11 +166,12 @@ class DeepStreamStream:
         pyds, cfg = self._pyds, self._cfg
         buffer = info.get_buffer()
         if buffer is None:
-            return 0  # Gst.PadProbeReturn.OK
+            return Gst.PadProbeReturn.OK
         for batch, frame in self._frames(buffer):
             tensor = self._tensor_of(frame)
             if tensor is None:
                 continue
+            frame.bInferDone = True  # the tracker only follows the objects of a frame whose detection is done
             for cls, conf, (x1, y1, x2, y2) in parse_yolo(tensor, cfg.conf, cfg.net_size, frame.source_frame_width, frame.source_frame_height):
                 obj = pyds.nvds_acquire_obj_meta_from_pool(batch)
                 obj.unique_component_id = PGIE_ID
@@ -180,8 +181,10 @@ class DeepStreamStream:
                 obj.obj_label = cfg.class_names[cls] if cls < len(cfg.class_names) else str(cls)
                 rect = obj.rect_params
                 rect.left, rect.top, rect.width, rect.height = x1, y1, x2 - x1, y2 - y1
+                original = obj.detector_bbox_info.org_bbox_coords  # the tracker reads the detector's own box from here
+                original.left, original.top, original.width, original.height = x1, y1, x2 - x1, y2 - y1
                 pyds.nvds_add_obj_meta_to_frame(frame, obj, None)
-        return 0
+        return Gst.PadProbeReturn.OK
 
     def _tensor_of(self, frame) -> np.ndarray | None:
         pyds = self._pyds
@@ -206,7 +209,7 @@ class DeepStreamStream:
         pyds, cfg = self._pyds, self._cfg
         buffer = info.get_buffer()
         if buffer is None or self._handler is None:
-            return 0
+            return Gst.PadProbeReturn.OK
         for _batch, frame in self._frames(buffer):
             detections: list[Detection] = []
             node = frame.obj_meta_list
@@ -226,7 +229,7 @@ class DeepStreamStream:
                 camera_id, frame.buf_pts / 1e9, frame.source_frame_width, frame.source_frame_height, detections,
                 lambda f=frame, b=buffer: self._picture(b, f),
             )
-        return 0
+        return Gst.PadProbeReturn.OK
 
     def _picture(self, buffer, frame) -> np.ndarray:
         """The frame as a BGR image on the CPU. Only called inside the probe, while the buffer is still ours."""

@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     infer_imgsz: int = 960
     conf: float = 0.35
     infer_interval: int = 0  # batches skipped between two inferences; the tracker carries the objects across them
-    mux_width: int = 1280  # the size every camera is scaled to before the model
-    mux_height: int = 720
+    mux_width: int = 960  # the size every camera is scaled to before the model
+    mux_height: int = 540
     mux_timeout_us: int = 66667  # how long the muxer waits for a late camera: about one frame at 15 fps
     unified_memory: bool = True  # lets the snapshot be read back on a discrete GPU; a Jetson does not need it
     reconnect_sec: int = 10  # a dropped camera is retried this often
