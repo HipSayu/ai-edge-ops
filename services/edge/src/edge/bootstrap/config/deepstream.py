@@ -1,7 +1,46 @@
-"""From the node's settings to what its DeepStream pipeline is built with."""
+"""What one node's DeepStream pipeline is built from, and how it is made from the node's settings."""
+
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from edge.bootstrap.config.settings import Settings
-from edge.infrastructure.deepstream.config import CameraSource, DeepStreamConfig
+
+
+@dataclass(frozen=True)
+class CameraSource:
+    camera_id: int
+    uri: str  # rtsp://..., file:///..., or a device the nvurisrcbin knows
+
+    @property
+    def live(self) -> bool:
+        return self.uri.startswith(("rtsp://", "rtsps://", "http://", "https://"))
+
+
+@dataclass(frozen=True)
+class DeepStreamConfig:
+    cameras: tuple[CameraSource, ...]
+    engine_path: Path
+    class_names: tuple[str, ...]
+    precision: str = "fp16"
+    net_size: int = 960
+    conf: float = 0.35
+    interval: int = 0  # batches skipped between two inferences (the tracker carries the objects across them)
+    mux_width: int = 1280
+    mux_height: int = 720
+    mux_timeout_us: int = 66667  # how long the muxer waits for a late camera before sending the batch it has: about one frame at 15 fps
+    tracking: bool = True
+    tracker_lib: str = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so"
+    tracker_config: str = "/opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_IOU.yml"
+    tracker_width: int = 640
+    tracker_height: int = 384
+    unified_memory: bool = True  # lets the snapshot be read back to the CPU on a discrete GPU (not needed on a Jetson)
+    work_dir: Path = Path("data/deepstream")
+    reconnect_sec: int = 10  # a camera that drops is retried this often
+    extra: dict = field(default_factory=dict)
+
+    @property
+    def batch_size(self) -> int:
+        return len(self.cameras)
 
 
 def deepstream_config(settings: Settings, node_id: str, cameras: list[CameraSource], several_nodes: bool) -> DeepStreamConfig:

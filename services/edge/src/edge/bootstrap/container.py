@@ -8,10 +8,9 @@ from edge.application.durable_publisher import DurablePublisher
 from edge.application.camera_logic import CameraLogic
 from edge.application.runtime import EdgeRuntime, NodeStream
 from edge.application.zone_book import ZoneBook
-from edge.bootstrap.config import Settings, deepstream_config
+from edge.bootstrap.config import CameraSource, Settings, deepstream_config
 from edge.domain.confirmation import Confirmation
 from edge.domain.cooldown import Cooldown
-from edge.infrastructure.deepstream.config import CameraSource
 from edge.infrastructure.deepstream.pipeline import DeepStreamStream
 from edge.infrastructure.alarm import CommandAlarm, HttpAlarm, LogAlarm, MultiAlarm
 from edge.infrastructure.jpeg_renderer import JpegRenderer

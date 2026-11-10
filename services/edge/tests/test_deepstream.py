@@ -5,7 +5,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from edge.infrastructure.deepstream.config import CameraSource, DeepStreamConfig, nvinfer_properties
+from edge.bootstrap.config import CameraSource, DeepStreamConfig
+from edge.infrastructure.deepstream.nvinfer import nvinfer_properties
 from edge.infrastructure.deepstream.parser import parse_yolo
 
 

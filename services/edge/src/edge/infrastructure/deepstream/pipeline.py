@@ -24,7 +24,8 @@ from gi.repository import GLib, Gst  # noqa: E402
 
 from edge.application.ports import DetectionHandler
 from edge.domain.detection import Detection
-from edge.infrastructure.deepstream.config import NO_TRACK, PGIE_ID, DeepStreamConfig, nvinfer_properties
+from edge.bootstrap.config.deepstream import DeepStreamConfig
+from edge.infrastructure.deepstream.nvinfer import NO_TRACK, PGIE_ID, nvinfer_properties
 from edge.infrastructure.deepstream.parser import parse_yolo
 
 log = logging.getLogger("edge.deepstream")
