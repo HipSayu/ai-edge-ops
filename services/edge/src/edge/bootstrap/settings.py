@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class CameraConfig(BaseModel):
     id: int  # the camera's id in the cloud service: events are filed under it
-    video: Path  # a video file, or a folder of them, played in a loop (stands in for a live camera)
+    uri: str  # rtsp://host/stream for a camera, or file:///path/video.mp4 (played in a loop) to stand in for one
 
 
 class NodeConfig(BaseModel):
@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="EDGE_", env_file=".env", extra="ignore")
 
     node_id: str | None = None  # names this device in the topics
-    cameras: list[CameraConfig] = []  # as JSON in EDGE_CAMERAS, e.g. [{"id": 1, "video": "videos/cam1"}]
+    cameras: list[CameraConfig] = []  # as JSON in EDGE_CAMERAS, e.g. [{"id": 1, "uri": "rtsp://camera1/stream"}]
     # Or several nodes in one process, sharing one model (a mock fleet on one machine; a real device runs one node):
-    # EDGE_NODES='[{"node_id": "edge-c1", "mqtt_password": "...", "cameras": [{"id": 53, "video": "/videos/4/22/53"}]}]'
+    # EDGE_NODES='[{"node_id": "edge-c1", "mqtt_password": "...", "cameras": [{"id": 53, "uri": "file:///videos/53.mp4"}]}]'
     nodes: list[NodeConfig] = []
 
     mqtt_host: str = "localhost"
@@ -30,18 +30,22 @@ class Settings(BaseSettings):
     mqtt_password: str | None = None
     mqtt_tls_ca: str | None = None  # CA certificate (PEM) of the broker: set it to talk TLS (port 8883)
 
-    model_path: Path = Path("weights/ppe.pt")
+    engine_path: Path = Path("weights/ppe_fp16.engine")  # a TensorRT engine built for this device, with a batch of at least the number of cameras
+    precision: str = "fp16"  # which engine it is: fp16 or int8 (the engine decides; this only names it for DeepStream)
+    class_names: tuple[str, ...] = ("person", "helmet", "no_helmet", "vest", "no_vest", "gloves", "no_gloves", "boots", "no_boots")
     infer_imgsz: int = 960
-    device: str = "cpu"  # where the model runs: "cpu", or "cuda:0" on a GPU build of the image
     conf: float = 0.35
-    batch_max: int = 8  # frames of different cameras looked at in one model call (a GPU does eight in little more time than one)
-    batch_gather_ms: float = 4.0  # how long a call waits for more frames once it has one
-    infer_every_n_frames: int = 1  # at most one detection per this many frames of a camera
-    video_max_fps: float = 30.0  # caps how fast a video file is decoded; lower it on an underpowered host
-    torch_threads: int = 1  # threads inside one inference; cameras run in parallel on top of that
+    infer_interval: int = 0  # batches skipped between two inferences; the tracker carries the objects across them
+    mux_width: int = 1280  # the size every camera is scaled to before the model
+    mux_height: int = 720
+    mux_timeout_us: int = 66667  # how long the muxer waits for a late camera: about one frame at 15 fps
+    unified_memory: bool = True  # lets the snapshot be read back on a discrete GPU; a Jetson does not need it
+    reconnect_sec: int = 10  # a dropped camera is retried this often
+    deepstream_dir: Path = Path("data/deepstream")  # where the property files DeepStream reads are written
+    tracker_lib: str = "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so"
+    tracker_config: str = "/opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_IOU.yml"
     event_cooldown_sec: float = 5.0  # per violation of one person once tracked, per label otherwise
-    tracking: bool = True  # follow each violation with ByteTrack so the cooldown and the confirmation are per person
-    track_buffer: int = 90  # detections a lost track is kept for before it is dropped
+    tracking: bool = True  # follow the objects with nvtracker so the cooldown and the confirmation are per person
     min_frames: int = 3  # sightings of a violation (detections, not camera frames) before it is reported
     forget_after_sec: float = 10.0  # a violation not seen for this long starts counting again
     publish_detections: bool = True  # send every box to the cloud so the web can draw them over the video

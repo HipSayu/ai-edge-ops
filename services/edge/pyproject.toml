@@ -1,7 +1,7 @@
 [project]
 name = "edge"
 version = "0.1.0"
-description = "Edge runtime: reads camera frames next to the cameras, runs the PPE detector and publishes violation events over MQTT."
+description = "Edge runtime: a DeepStream pipeline next to the cameras (decode, batch, TensorRT detector, tracker) and the PPE rules on its detections, publishing violation events over MQTT."
 requires-python = ">=3.12"
 dependencies = [
     "edge_link",
@@ -9,7 +9,6 @@ dependencies = [
     "paho-mqtt>=2.1",
     "numpy>=1.26",
     "opencv-python-headless>=4.9",
-    "ultralytics>=8.3",
 ]
 
 [dependency-groups]

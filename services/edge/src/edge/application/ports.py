@@ -1,7 +1,7 @@
 """What the edge runtime needs from the outside. Infrastructure implements these; nothing here imports it."""
 
-from collections.abc import Iterator
-from dataclasses import dataclass
+import threading
+from collections.abc import Callable
 from typing import Protocol
 
 import numpy as np
@@ -10,25 +10,16 @@ from edge.domain.detection import Detection
 from edge.domain.event import ViolationEvent
 
 
-@dataclass(frozen=True)
-class Frame:
-    image: np.ndarray
-    ts_sec: float  # position in the source (0 for a live camera that has none)
+# What the stream hands over for one camera and one detection: which camera, where in the source (0 for a live camera that
+# has none), the frame's size in pixels, the detections (already tracked), and a way to get the picture only when it is needed.
+DetectionHandler = Callable[[int, float, int, int, "list[Detection]", Callable[[], np.ndarray]], None]
 
 
-class FrameSource(Protocol):
-    def frames(self) -> Iterator[Frame]:
-        """Frames at the source's own pace. Ends when the source gives up (or never, for a looping source)."""
+class DetectionStream(Protocol):
+    """Everything between the cameras and the detections of one node: reading, decoding, batching, the model and the
+    tracker. It calls `handler` once per camera frame it looked at, and keeps going until `stop` is set or it fails."""
 
-
-class Detector(Protocol):
-    def detect(self, image: np.ndarray) -> list[Detection]: ...
-
-
-class Tracker(Protocol):
-    def update(self, detections: list[Detection]) -> list[Detection]:
-        """The same detections with the id of the track each one belongs to (None where there is none yet). Keeps
-        the tracks of one camera, so every camera has its own."""
+    def run(self, handler: DetectionHandler, stop: threading.Event) -> None: ...
 
 
 class SnapshotRenderer(Protocol):

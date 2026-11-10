@@ -6,10 +6,10 @@ import time
 
 import numpy as np
 import pytest
+from support import Frame, Pipe
 
 from edge_link import ZoneSpec, ZonesMessage
-from edge.application.pipeline import CameraPipeline
-from edge.application.ports import Frame
+from edge.application.camera_logic import CameraLogic
 from edge.application.zone_book import ZoneBook
 from edge.domain.confirmation import Confirmation
 from edge.domain.cooldown import Cooldown
@@ -100,12 +100,12 @@ def watching(detector, zones=(zone(),), alarm=None, min_frames=1, cooldown=10.0,
     book.replace(7, list(zones))
     clock = Clock()
     sink = Sink()
-    p = CameraPipeline(
-        node_id="n1", camera_id=7, source=None, detector=detector, renderer=Renderer(), publisher=sink,
-        violation_classes=frozenset({"no_helmet"}), every_n=1, cooldown=Cooldown(5.0), clock=clock,
+    logic = CameraLogic(
+        node_id="n1", camera_id=7, renderer=Renderer(), publisher=sink,
+        violation_classes=frozenset({"no_helmet"}), cooldown=Cooldown(5.0), clock=clock,
         zones=book, alarm=alarm, zone_confirmation=Confirmation(min_frames), zone_cooldown=Cooldown(cooldown), **kw,
     )
-    return p, sink, clock
+    return Pipe(logic, detector), sink, clock
 
 
 def frame():

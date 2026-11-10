@@ -1,23 +1,17 @@
-"""The pipeline with fakes, the MQTT message contract, the video source and the renderer."""
-
-import threading
-import time
-from pathlib import Path
+"""The camera logic with fakes, the runtime over a fake stream, the MQTT message contract and the renderer."""
 
 import cv2
 import numpy as np
+from support import Frame, Pipe
 
 from edge_link import ViolationMessage
 from edge_link.topics import events_topic
-from edge.application.latest_frame import LatestFrame
-from edge.application.pipeline import CameraPipeline
-from edge.application.ports import Frame
-from edge.application.runtime import EdgeRuntime
+from edge.application.camera_logic import CameraLogic
+from edge.application.runtime import EdgeRuntime, NodeStream
 from edge.domain.cooldown import Cooldown
 from edge.domain.detection import Detection
 from edge.infrastructure.jpeg_renderer import JpegRenderer
 from edge.infrastructure.mqtt_publisher import MqttEventPublisher
-from edge.infrastructure.video_source import VideoFileSource
 
 CLASSES = frozenset({"no_helmet", "no_vest"})
 
@@ -60,11 +54,12 @@ def frame(ts=0.0):
     return Frame(np.zeros((40, 40, 3), np.uint8), ts)
 
 
-def pipeline(detector, sink, renderer=None, every_n=1, cooldown=5.0, clock=None, source=None):
-    return CameraPipeline(
-        node_id="n1", camera_id=7, source=source, detector=detector, renderer=renderer or FakeRenderer(), publisher=sink,
-        violation_classes=CLASSES, every_n=every_n, cooldown=Cooldown(cooldown), clock=clock or Clock(),
+def pipeline(detector, sink, renderer=None, cooldown=5.0, clock=None):
+    logic = CameraLogic(
+        node_id="n1", camera_id=7, renderer=renderer or FakeRenderer(), publisher=sink,
+        violation_classes=CLASSES, cooldown=Cooldown(cooldown), clock=clock or Clock(),
     )
+    return Pipe(logic, detector)
 
 
 # ---------------------------------------------------------------- pipeline
@@ -110,115 +105,78 @@ def test_cooldown_is_per_violation_type():
     assert [e.violation_type for e in sink.events] == ["no_helmet", "no_vest"]
 
 
-class MarkedDetector:
-    """Remembers which frame it was shown (the frames are filled with their number), and takes `pause` seconds."""
-
-    def __init__(self, pause: float = 0.0, fail_on: int | None = None) -> None:
-        self.seen, self.pause, self.fail_on = [], pause, fail_on
-
-    def detect(self, image):
-        mark = int(image[0, 0, 0])
-        self.seen.append(mark)
-        time.sleep(self.pause)
-        if mark == self.fail_on:
-            raise RuntimeError("model crashed")
-        return []
+def seen(label="no_helmet"):
+    return [Detection(label, 0.9, (1, 1, 5, 5))]
 
 
-def marked(n: int) -> Frame:
-    return Frame(np.full((4, 4, 3), n, np.uint8), float(n))
+class FakeStream:
+    """Stands in for DeepStream: hands the handler what it is told to, once, then returns (or raises)."""
+
+    def __init__(self, items, fail: Exception | None = None) -> None:
+        self.items, self.fail = items, fail
+
+    def run(self, handler, stop) -> None:
+        for camera_id, detections in self.items:
+            handler(camera_id, 1.0, 40, 40, detections, lambda: np.zeros((40, 40, 3), np.uint8))
+        if self.fail:
+            raise self.fail
 
 
-class Frames:
-    """A source of numbered frames, `gap` seconds apart."""
-
-    def __init__(self, count: int, gap: float = 0.0) -> None:
-        self.count, self.gap = count, gap
-
-    def frames(self):
-        for n in range(self.count):
-            yield marked(n)
-            time.sleep(self.gap)
+def logic_of(camera_id: int, sink, cls=CameraLogic) -> CameraLogic:
+    return cls(node_id="n1", camera_id=camera_id, renderer=FakeRenderer(), publisher=sink,
+               violation_classes=CLASSES, cooldown=Cooldown(5.0), clock=Clock())
 
 
-def test_the_latest_frame_slot_hands_out_only_the_newest():
-    slot = LatestFrame()
-    for n in range(3):
-        slot.put(marked(n))
-    index, newest = slot.take(0)
-    assert (index, newest.ts_sec) == (2, 2.0)
-
-
-def test_taking_waits_for_a_frame_that_is_new_enough():
-    slot = LatestFrame()
-    slot.put(marked(0))
-    threading.Timer(0.1, lambda: slot.put(marked(1))).start()
-    assert slot.take(1, timeout=2)[0] == 1
-    assert slot.take(5, timeout=0.05) is None  # nothing that new came
-    slot.close()
-    assert slot.take(5, timeout=2) is None and slot.closed  # and nothing will
-
-
-def test_a_slow_detector_drops_frames_and_ends_on_the_newest():
-    detector = MarkedDetector(pause=0.05)  # about ten times slower than the camera below
-    p = pipeline(detector, Sink(), every_n=1, source=Frames(40, gap=0.005))
-    p.run(threading.Event())
-    assert 2 < len(detector.seen) < 15  # it did not work through all 40
-    assert detector.seen[-1] == 39  # and what it saw last is what the camera showed last
-    assert p.dropped == 40 - len(detector.seen)
-
-
-def test_the_detector_looks_at_most_once_per_every_n_frames():
-    detector = MarkedDetector()
-    pipeline(detector, Sink(), every_n=4, source=Frames(24, gap=0.01)).run(threading.Event())
-    gaps = [b - a for a, b in zip(detector.seen, detector.seen[1:])]
-    assert gaps and min(gaps) >= 4
-    assert len(detector.seen) >= 3
-
-
-def test_a_failing_detector_stops_the_camera_with_its_error():
-    p = pipeline(MarkedDetector(fail_on=0), Sink(), every_n=1, source=Frames(200, gap=0.005))
-    try:
-        p.run(threading.Event())
-    except RuntimeError as error:
-        assert "model crashed" in str(error)
-    else:
-        raise AssertionError("the error was swallowed")
-
-
-# ---------------------------------------------------------------- runtime
-
-class OneFrameSource:
-    def frames(self):
-        yield frame()
-
-
-class BrokenSource:
-    def frames(self):
-        raise RuntimeError("camera unplugged")
-        yield  # pragma: no cover
-
-
-def test_a_broken_camera_does_not_stop_the_others():
-    sink = Sink()
-    good = pipeline(FakeDetector("no_helmet"), sink, source=OneFrameSource())
-    bad = pipeline(FakeDetector(), sink, source=BrokenSource())
-    runtime = EdgeRuntime([bad, good])
+def run_to_end(*nodes: NodeStream) -> None:
+    runtime = EdgeRuntime(list(nodes))
     runtime.start()
     runtime.wait()
+
+
+def test_the_runtime_gives_each_camera_its_own_detections():
+    sink = Sink()
+    stream = FakeStream([(1, seen("no_helmet")), (2, seen("no_vest"))])
+    run_to_end(NodeStream("n1", stream, {1: logic_of(1, sink), 2: logic_of(2, sink)}))
+    assert sorted((e.camera_id, e.violation_type) for e in sink.events) == [(1, "no_helmet"), (2, "no_vest")]
+
+
+def test_a_camera_that_breaks_does_not_stop_the_others_in_the_stream():
+    class Broken(CameraLogic):
+        def handle(self, *args, **kwargs):
+            raise RuntimeError("logic broke")
+
+    sink = Sink()
+    stream = FakeStream([(1, seen()), (2, seen())])
+    run_to_end(NodeStream("n1", stream, {1: logic_of(1, sink, Broken), 2: logic_of(2, sink)}))
+    assert [e.camera_id for e in sink.events] == [2]
+
+
+def test_a_node_whose_stream_fails_does_not_stop_the_other_node():
+    sink = Sink()
+    bad = NodeStream("bad", FakeStream([], fail=RuntimeError("no GPU")), {})
+    good = NodeStream("good", FakeStream([(1, seen())]), {1: logic_of(1, sink)})
+    run_to_end(bad, good)
     assert len(sink.events) == 1
 
 
-def test_stop_ends_a_running_camera():
-    class Endless:
-        def frames(self):
-            while True:
-                yield frame()
+def test_a_detection_for_an_unknown_camera_is_ignored():
+    sink = Sink()
+    run_to_end(NodeStream("n1", FakeStream([(99, seen())]), {1: logic_of(1, sink)}))
+    assert sink.events == []
 
-    runtime = EdgeRuntime([pipeline(FakeDetector(), Sink(), source=Endless())])
-    runtime.start()
-    runtime.stop()
-    assert not any(t.is_alive() for t in runtime._threads)
+
+def test_the_picture_is_fetched_only_when_an_event_needs_it():
+    fetched = []
+
+    def picture():
+        fetched.append(1)
+        return np.zeros((40, 40, 3), np.uint8)
+
+    logic = logic_of(1, Sink())
+    logic.handle(1.0, 40, 40, seen("person"), picture)
+    assert fetched == []
+    logic.handle(2.0, 40, 40, seen("no_helmet"), picture)
+    assert fetched == [1]
 
 
 # ---------------------------------------------------------------- MQTT adapter
@@ -250,36 +208,7 @@ def test_adapter_sends_the_event_as_the_shared_message():
     assert message.occurred_at == event.occurred_at.isoformat()
 
 
-# ---------------------------------------------------------------- video source and renderer
-
-def write_video(path: Path, frames: int = 5) -> None:
-    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"MJPG"), 100.0, (64, 48))
-    for i in range(frames):
-        writer.write(np.full((48, 64, 3), i * 20, np.uint8))
-    writer.release()
-
-
-def test_video_source_plays_files_in_name_order_without_looping(tmp_path):
-    write_video(tmp_path / "a.avi", 3)
-    write_video(tmp_path / "b.avi", 2)
-    frames = list(VideoFileSource(tmp_path, loop=False).frames())
-    assert len(frames) == 5
-    assert [f.ts_sec for f in frames][:3] == sorted(f.ts_sec for f in frames[:3])
-
-
-def test_video_source_loops_until_stopped(tmp_path):
-    write_video(tmp_path / "a.avi", 3)
-    source = VideoFileSource(tmp_path / "a.avi", loop=True).frames()
-    assert len([next(source) for _ in range(7)]) == 7
-
-
-def test_video_source_without_a_video_fails_loudly(tmp_path):
-    try:
-        next(VideoFileSource(tmp_path / "nothing").frames())
-    except FileNotFoundError:
-        return
-    raise AssertionError("expected FileNotFoundError")
-
+# ---------------------------------------------------------------- renderer
 
 def test_renderer_makes_a_small_jpeg():
     image = np.zeros((1080, 1920, 3), np.uint8)

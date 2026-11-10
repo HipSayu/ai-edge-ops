@@ -5,20 +5,18 @@ from dataclasses import dataclass
 from edge_link import ZonesSubscriber
 
 from edge.application.durable_publisher import DurablePublisher
-from edge.application.pipeline import CameraPipeline
-from edge.application.runtime import EdgeRuntime
+from edge.application.camera_logic import CameraLogic
+from edge.application.runtime import EdgeRuntime, NodeStream
 from edge.application.zone_book import ZoneBook
 from edge.bootstrap.settings import Settings
 from edge.domain.confirmation import Confirmation
 from edge.domain.cooldown import Cooldown
+from edge.infrastructure.deepstream.config import CameraSource, DeepStreamConfig
+from edge.infrastructure.deepstream.pipeline import DeepStreamStream
 from edge.infrastructure.alarm import CommandAlarm, HttpAlarm, LogAlarm, MultiAlarm
-from edge.infrastructure.batching_detector import BatchingDetector
-from edge.infrastructure.bytetrack_tracker import ByteTrackTracker
 from edge.infrastructure.jpeg_renderer import JpegRenderer
 from edge.infrastructure.mqtt_publisher import MqttEventPublisher
 from edge.infrastructure.sqlite_outbox import SqliteOutbox
-from edge.infrastructure.video_source import VideoFileSource
-from edge.infrastructure.yolo_detector import YoloDetector
 from edge.infrastructure.zone_sync import ZoneSync
 
 
@@ -56,14 +54,11 @@ class Container:
 
 
 def build_container(settings: Settings) -> Container:
-    detector = YoloDetector(settings.model_path, settings.infer_imgsz, settings.conf, settings.torch_threads, settings.device)  # one model for every camera
-    if settings.batch_max > 1 and settings.device != "cpu":  # on a CPU a batch is no faster than its frames one by one
-        detector = BatchingDetector(detector, settings.batch_max, settings.batch_gather_ms / 1000)
     renderer = JpegRenderer()
     alarm = build_alarm(settings)
     nodes = settings.node_configs()
     links: list[NodeLink] = []
-    pipelines: list[CameraPipeline] = []
+    streams: list[NodeStream] = []
     for node in nodes:
         single = len(nodes) == 1
         mqtt = MqttEventPublisher(
@@ -85,13 +80,10 @@ def build_container(settings: Settings) -> Container:
                 client_id=f"edge-zones-{node.node_id}", tls_ca=settings.mqtt_tls_ca,
             )
         links.append(NodeLink(mqtt, sender, outbox, zones_link))
-        pipelines += [
-            CameraPipeline(
-                node_id=node.node_id, camera_id=camera.id,
-                source=VideoFileSource(camera.video, max_fps=settings.video_max_fps), detector=detector,
-                renderer=renderer, publisher=sender, violation_classes=frozenset(settings.violation_classes),
-                every_n=settings.infer_every_n_frames, cooldown=Cooldown(settings.event_cooldown_sec),
-                tracker=ByteTrackTracker(settings.track_buffer) if settings.tracking else None,  # one per camera
+        cameras = {
+            camera.id: CameraLogic(
+                node_id=node.node_id, camera_id=camera.id, renderer=renderer, publisher=sender,
+                violation_classes=frozenset(settings.violation_classes), cooldown=Cooldown(settings.event_cooldown_sec),
                 confirmation=Confirmation(settings.min_frames, settings.forget_after_sec),
                 detection_sink=mqtt if settings.publish_detections else None,  # straight to the link: a box is not worth queueing
                 zones=book if settings.zones_enabled else None, alarm=alarm,
@@ -99,8 +91,10 @@ def build_container(settings: Settings) -> Container:
                 zone_confirmation=Confirmation(settings.min_frames, settings.forget_after_sec),
             )
             for camera in node.cameras
-        ]
-    return Container(EdgeRuntime(pipelines), links)
+        }
+        stream = DeepStreamStream(deepstream_config(settings, node.node_id, [CameraSource(c.id, c.uri) for c in node.cameras], len(nodes) > 1))
+        streams.append(NodeStream(node.node_id, stream, cameras))
+    return Container(EdgeRuntime(streams), links)
 
 
 def build_alarm(settings: Settings) -> MultiAlarm:
@@ -111,3 +105,15 @@ def build_alarm(settings: Settings) -> MultiAlarm:
     if settings.alarm_url:
         sinks.append(HttpAlarm(settings.alarm_url))
     return MultiAlarm(sinks)
+
+
+def deepstream_config(settings: Settings, node_id: str, cameras: list[CameraSource], several_nodes: bool) -> DeepStreamConfig:
+    """One node's pipeline: its cameras (and so its batch size) and the engine, from the settings."""
+    return DeepStreamConfig(
+        cameras=tuple(cameras), engine_path=settings.engine_path, class_names=settings.class_names,
+        precision=settings.precision, net_size=settings.infer_imgsz, conf=settings.conf, interval=settings.infer_interval,
+        mux_width=settings.mux_width, mux_height=settings.mux_height, mux_timeout_us=settings.mux_timeout_us,
+        tracking=settings.tracking, tracker_lib=settings.tracker_lib, tracker_config=settings.tracker_config,
+        unified_memory=settings.unified_memory, reconnect_sec=settings.reconnect_sec,
+        work_dir=settings.deepstream_dir / node_id if several_nodes else settings.deepstream_dir,
+    )
