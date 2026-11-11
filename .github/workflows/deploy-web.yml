@@ -1,13 +1,13 @@
 name: Deploy Web
 
-# Web dashboard (apps/dashboard; nginx proxies to api/ws/assistant) → EC2, port 80.
+# Web dashboard (apps/web; nginx proxies to the cloud) → EC2. Env secret: CLOUD_ENV (the compose .env).
 on:
   push:
     branches: [main]
     paths:
-      - "apps/dashboard/**"
-      - "!apps/dashboard/example/**"
-      - "infra/compose/cloud/**"
+      - "apps/web/**"
+      - "!apps/web/dist/**"
+      - "docker-compose.yml"
       - ".github/workflows/deploy-web.yml"
       - ".github/workflows/_build-deploy.yml"
   workflow_dispatch:
@@ -20,5 +20,6 @@ jobs:
       packages: write
     secrets: inherit
     with:
-      services: dashboard
-      images: '[{"name":"web-dashboard","context":"apps/dashboard","file":"apps/dashboard/Dockerfile"}]'
+      services: web
+      images: '[{"name":"web","context":"apps/web","file":"apps/web/Dockerfile"}]'
+      env_secret: CLOUD_ENV

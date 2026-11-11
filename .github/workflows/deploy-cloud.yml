@@ -1,19 +1,15 @@
 name: Deploy Cloud
 
-# Cloud control plane: one process (REST + WS + MCP + embedded worker) → EC2. Env secret: CLOUD_ENV.
+# Cloud service (REST + MCP) → EC2, only when its code or what it installs changes. Env secret: CLOUD_ENV (the compose .env).
 on:
   push:
     branches: [main]
     paths:
-      - "apps/cloud/**"
-      - "src/cloud/**"
-      - "src/shared/**"
-      - "packages/**"
-      - "requirements-cloud.txt"
-      - "infra/docker/cloud/**"
-      - "infra/compose/cloud/**"
-      - "infra/config/**"
-      - "db/migrations/**"
+      - "services/cloud/**"
+      - "services/shared/**"
+      - "package/trace_id/**"
+      - "package/edge_link/**"
+      - "docker-compose.yml"
       - ".github/workflows/deploy-cloud.yml"
       - ".github/workflows/_build-deploy.yml"
   workflow_dispatch:
@@ -26,8 +22,6 @@ jobs:
       packages: write
     secrets: inherit
     with:
-      services: api
-      images: >-
-        [{"name":"cloud-api","context":".","file":"infra/docker/cloud/Dockerfile.api"}]
-      bundle: infra/config/**,db/migrations/**
+      services: cloud
+      images: '[{"name":"cloud","context":".","file":"services/cloud/Dockerfile"}]'
       env_secret: CLOUD_ENV

@@ -1,15 +1,15 @@
 name: build-deploy (reusable)
 
-# Builds images → GHCR, then rolls the given services of infra/compose/cloud out on the cloud host (EC2)
-# with docker compose (pull + up -d --wait; dependencies not yet running are started too).
+# Builds images → GHCR, then rolls the given services of docker-compose.yml out on the cloud host (EC2)
+# with docker compose (pull + up -d --no-deps --wait: only the named services are recreated; image names must match `image:` there).
 # Secrets (environment "production"): CLOUD_SSH_HOST, CLOUD_SSH_USER, CLOUD_SSH_KEY, GHCR_PULL_TOKEN,
-# plus the env secret named by `env_secret`, written to infra/compose/cloud/<env_file>.
+# plus the env secret named by `env_secret`, written to <env_file> next to the compose file.
 
 on:
   workflow_call:
     inputs:
       services:
-        description: Space-separated services of infra/compose/cloud to roll out (e.g. "api")
+        description: Space-separated services of docker-compose.yml to roll out (e.g. "cloud")
         required: true
         type: string
       images:
@@ -27,7 +27,7 @@ on:
         type: string
         default: ""
       env_file:
-        description: File under infra/compose/cloud/ the env secret is written to
+        description: File next to docker-compose.yml the env secret is written to
         required: false
         type: string
         default: .env
@@ -92,9 +92,9 @@ jobs:
         run: |
           echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/edgeops" >> "$GITHUB_OUTPUT"
           echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "source=infra/compose/cloud/docker-compose.yml${BUNDLE:+,$BUNDLE}" >> "$GITHUB_OUTPUT"
+          echo "source=docker-compose.yml${BUNDLE:+,$BUNDLE}" >> "$GITHUB_OUTPUT"
 
-      # Keeps the repo layout: the compose file mounts infra/config and db/migrations relative to the repo root.
+      # The compose file mounts ./volume/... relative to itself; those folders live on the host.
       - name: Ship compose file
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -122,13 +122,13 @@ jobs:
           envs: SERVICES,ENV_FILE,STACK_ENV,GHCR_USER,GHCR_TOKEN,REGISTRY,TAG,DEPLOY_DIR
           script: |
             set -euo pipefail
-            cd "$DEPLOY_DIR/infra/compose/cloud"
+            cd "$DEPLOY_DIR"
             if [ -n "$STACK_ENV" ]; then
               (umask 077; printf '%s\n' "$STACK_ENV" > "$ENV_FILE")
             fi
-            touch .env assistant.env
+            touch .env
             printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export REGISTRY TAG
             docker compose pull $SERVICES
-            docker compose up -d --wait $SERVICES
+            docker compose up -d --no-deps --wait $SERVICES
             docker compose ps

@@ -1,0 +1,213 @@
+@import "tailwindcss";
+
+/* Industrial HMI look (ISA-101 spirit): neutral steel greys, colour kept for state (alarm red, warning amber, normal
+   green) and one steel-blue accent. Square corners, 1px solid lines, no glow, no blur, numbers in a mono face.
+   Single source of truth: the semantic tokens in :root (dark) and [data-theme="light"]. Everything below, including the
+   remapped Tailwind palette steps, only references those tokens. */
+:root {
+  --bg: #0f1113;
+  --panel: #161a1d;
+  --panel2: #1e2327;
+  --line: #2b3238;
+  --line-strong: #3f4952;
+  --ink: #e4e8eb;
+  --dim: #8b96a0;
+  --dim-strong: #b6bfc7;
+  --accent: #4a9fd8;
+  --accent-hover: #2f84c0;
+  --accent-soft: #6bb0e0;
+  --danger: #e5484d;
+  --danger-hover: #cf3a3f;
+  --danger-soft: #f06a6a;
+  --ok: #3fb55f;
+  --ok-hover: #2f9a4d;
+  --ok-soft: #4cc26b;
+  --warning: #f0a81c;
+  --warning-soft: #f5b83d;
+  --unavailable: #b8562e;
+  --on-accent: #ffffff;
+  --selection: rgba(74, 159, 216, 0.35);
+  /* Topology graph: one fill per node type, muted so the state rings keep the attention. */
+  --graph-cloud: #6b7782;
+  --graph-cluster: #3b82b8;
+  --graph-node: #2e8f8a;
+  --graph-camera: #7a6bb0;
+  color-scheme: dark;
+}
+
+/* ISA-101 grey scheme: light steel background, same state colours darkened to hold contrast on white. */
+:root[data-theme="light"] {
+  --bg: #d9dde0;
+  --panel: #eceff1;
+  --panel2: #e0e4e7;
+  --line: #c3c9ce;
+  --line-strong: #9aa3aa;
+  --ink: #1b2227;
+  --dim: #55606a;
+  --dim-strong: #3b454d;
+  --accent: #1f6fb2;
+  --accent-hover: #185a92;
+  --accent-soft: #1f6fb2;
+  --danger: #c62828;
+  --danger-hover: #a81f1f;
+  --danger-soft: #c62828;
+  --ok: #2e7d32;
+  --ok-hover: #256628;
+  --ok-soft: #2e7d32;
+  --warning: #b26a00;
+  --warning-soft: #b26a00;
+  --unavailable: #9c4a1e;
+  --selection: rgba(31, 111, 178, 0.25);
+  --graph-cloud: #55606a;
+  --graph-cluster: #1f6fb2;
+  --graph-node: #247a75;
+  --graph-camera: #6a5aa0;
+  color-scheme: light;
+}
+
+@theme {
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, Menlo, monospace;
+
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel2: var(--panel2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-dim: var(--dim);
+  --color-brand: var(--accent);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warning: var(--warning);
+
+  /* Tailwind palette steps used across the screens, remapped onto the tokens: accent hues collapse to the accent,
+     state hues become the standard alarm set. */
+  --color-blue-400: var(--accent-soft);
+  --color-blue-500: var(--accent);
+  --color-blue-600: var(--accent-hover);
+  --color-blue-700: var(--accent-hover);
+  --color-indigo-500: var(--accent);
+  --color-indigo-600: var(--accent-hover);
+  --color-cyan-300: var(--accent-soft);
+  --color-cyan-400: var(--accent-soft);
+  --color-cyan-500: var(--accent);
+  --color-cyan-600: var(--accent-hover);
+  --color-rose-400: var(--danger-soft);
+  --color-rose-500: var(--danger);
+  --color-rose-600: var(--danger-hover);
+  --color-rose-700: var(--danger-hover);
+  --color-emerald-400: var(--ok-soft);
+  --color-emerald-500: var(--ok);
+  --color-emerald-600: var(--ok-hover);
+  --color-amber-400: var(--warning-soft);
+  --color-amber-500: var(--warning);
+  --color-slate-300: var(--dim-strong);
+  --color-slate-400: var(--dim);
+  --color-slate-500: var(--dim);
+  --color-slate-700: var(--line);
+  --color-slate-800: var(--panel2);
+  --color-slate-900: var(--panel);
+  --color-slate-950: var(--bg);
+
+  /* Square corners; rounded-full stays for status dots. */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 3px;
+  --radius-3xl: 4px;
+
+  /* Flat: depth comes from borders, not shadows. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+  --shadow-lg: 0 0 #0000;
+  --shadow-xl: 0 0 #0000;
+  --shadow-2xl: 0 0 #0000;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums; /* digits keep their width: counters and clocks do not jitter */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+/* Regular weight everywhere; only the logo (.brand) stays bold. */
+body *, body *::before, body *::after {
+  font-weight: 400 !important;
+}
+body .brand, body .brand * {
+  font-weight: 800 !important;
+}
+
+/* No frosted glass anywhere: panels are opaque. */
+[class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) var(--panel);
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 0;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--dim);
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+/* Hide scrollbar entirely while keeping full scroll capability */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Selected camera: a plain steel-blue frame. */
+.vms-selected {
+  outline: 2px solid var(--color-brand) !important;
+  outline-offset: -2px;
+}
+
+/* Alarm: a red frame that blinks, like an unacknowledged alarm on a panel. */
+.vms-alert {
+  outline: 2px solid var(--color-danger) !important;
+  outline-offset: -2px;
+}
+
+@keyframes pulse-vms {
+  0%, 100% { outline-color: var(--color-danger); }
+  50% { outline-color: transparent; }
+}
+
+.vms-alert-pulse {
+  animation: pulse-vms 1s steps(1, end) infinite;
+}

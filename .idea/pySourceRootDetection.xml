@@ -4,19 +4,21 @@
     <option name="sourcePathsSet">
       <set>
         <option value="$PROJECT_DIR$/backend/libs/edge_protocol/src" />
+        <option value="$PROJECT_DIR$/packages/svc_core" />
         <option value="$PROJECT_DIR$/backend/libs/edge_protocol" />
         <option value="$PROJECT_DIR$/backend/packages/svc_core" />
         <option value="$PROJECT_DIR$/backend/server" />
         <option value="$PROJECT_DIR$/backend/edge_agent" />
-        <option value="$PROJECT_DIR$/backend/inference" />
-        <option value="$PROJECT_DIR$/backend/inference/src" />
-        <option value="$PROJECT_DIR$/edge_agent" />
         <option value="$PROJECT_DIR$/inference" />
         <option value="$PROJECT_DIR$/edge_agent/src" />
-        <option value="$PROJECT_DIR$/libs/edge_protocol/src" />
-        <option value="$PROJECT_DIR$/libs/edge_protocol" />
         <option value="$PROJECT_DIR$/inference/src" />
-        <option value="$PROJECT_DIR$/packages/svc_core" />
+        <option value="$PROJECT_DIR$/libs/edge_protocol" />
+        <option value="$PROJECT_DIR$/edge_agent" />
+        <option value="$PROJECT_DIR$/backend/inference" />
+        <option value="$PROJECT_DIR$/backend/inference/src" />
+        <option value="$PROJECT_DIR$/libs/edge_protocol/src" />
+        <option value="$PROJECT_DIR$/apps/cloud/api-gateway" />
+        <option value="$PROJECT_DIR$/server" />
       </set>
     </option>
   </component>

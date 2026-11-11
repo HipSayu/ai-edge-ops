@@ -1,0 +1,234 @@
+# The cloud interface (services/cloud/src/cloud/interface) over the services in services/; the chat assistant is an agent in Dunly. Build context is app/.
+# Run: docker compose -f docker-compose.services.yml up --build   then open http://localhost:${WEB_PORT:-8080}
+name: ppe-vision
+
+services:
+  db:
+    container_name: ppe-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: safety
+      POSTGRES_USER: safety
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./volume/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safety -d safety"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mosquitto:
+    container_name: ppe-mosquitto
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./volume/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./volume/mosquitto/passwd:/mosquitto/config/passwd:ro   # mosquitto_passwd -c volume/mosquitto/passwd cloud
+      - ./volume/mosquitto/acl:/mosquitto/config/acl:ro         # a node may write only under its own id
+      - ./volume/mosquitto/certs:/mosquitto/certs:ro            # bash docs/mosquitto/make-certs.sh
+      - ./volume/mosquitto/data:/mosquitto/data
+    ports:
+      - "${MQTT_BIND:-0.0.0.0}:${MQTT_PORT:-8883}:8883"   # edge nodes publish here, over TLS (MQTT_BIND=127.0.0.1: this machine only)
+    restart: unless-stopped
+
+  redis:
+    container_name: ppe-redis
+    # redis-stack: edge event ids already taken (database 0 only).
+    image: redis/redis-stack-server:7.4.0-v8
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env} --appendonly yes"
+    volumes:
+      - ./volume/redis:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"   # for services run on the host; not reachable from other machines
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  mediamtx:
+    container_name: ppe-mediamtx
+    image: bluenviron/mediamtx:1.21.2-ffmpeg   # fake IP cameras: loops each camera's videos as RTSP
+    volumes:
+      - ./volume/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - ./volume/mediamtx/playlists:/playlists:ro
+      - ./volume/data/video:/data/video:ro
+    restart: unless-stopped
+
+  cloud:
+    container_name: ppe-cloud
+    image: ${REGISTRY:-ppe-vision}/cloud:${TAG:-dev}   # CI pushes these; `up --build` builds locally
+    build:
+      context: .
+      dockerfile: services/cloud/Dockerfile   # REST /api + MCP /mcp
+    env_file: services/cloud/.env
+    # The API (and /mcp, which Dunly's agent calls back into: CLOUD_DUNLY_* in services/cloud/.env).
+    # API_BIND=127.0.0.1: this machine only (the web container reaches it inside docker; Dunly on this machine as
+    # host.docker.internal:API_PORT).
+    ports:
+      - "${API_BIND:-0.0.0.0}:${API_PORT:-8200}:8100"
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      CLOUD_DATA_DIR: /data
+      CLOUD_VIDEO_DIR: /data/video
+      CLOUD_DATABASE_URL: postgresql+psycopg://safety:${POSTGRES_PASSWORD}@db:5432/safety
+      CLOUD_JWT_PRIVATE_KEY_PATH: /keys/safety-private.pem
+      CLOUD_MQTT_HOST: mosquitto
+      CLOUD_MQTT_PORT: 8883
+      CLOUD_MQTT_USERNAME: ${MQTT_CLOUD_USERNAME:-cloud}
+      CLOUD_MQTT_PASSWORD: ${MQTT_CLOUD_PASSWORD:?Set MQTT_CLOUD_PASSWORD in .env}
+      CLOUD_MQTT_TLS_CA: /certs/ca.crt
+      CLOUD_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0   # edge events already taken, shared by every cloud instance
+      CLOUD_DETECTOR_URL: http://detector:8400   # dashboard's "test a picture" and the chat's detect_ppe; no published port
+      CLOUD_IMAGE_DIR: /data/chat_images   # pictures attached to the chat
+      CLOUD_REPORT_DIR: /data/reports      # reports the chat writes
+      CLOUD_REGULATION_DIR: /regulations
+      CLOUD_QDRANT_URL: http://qdrant:6333
+      CLOUD_EMBEDDING_BASE_URL: http://embedding:80/v1
+      CLOUD_EMBEDDING_MODEL: AITeamVN/Vietnamese_Embedding   # same as the embedding container's --model-id
+    depends_on:
+      db:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      detector:
+        condition: service_started
+      qdrant:
+        condition: service_started
+      embedding:
+        condition: service_started
+    volumes:
+      - ./volume/data:/data
+      - ./volume/regulations:/regulations:ro
+      - ./volume/mosquitto/certs/ca.crt:/certs/ca.crt:ro
+      - ./volume/keys:/keys:ro          # RS256 private key: only cloud mounts it
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8100/api/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  embedding:
+    container_name: ppe-embedding
+    # Hugging Face text-embeddings-inference, OpenAI-compatible at /v1/embeddings. GPU: use a `cuda-` tag + `gpus: all`.
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7
+    # 1024-d, Vietnamese; must match CLOUD_EMBEDDING_MODEL. The batch limits keep the memory small: with the defaults
+    # (16384 tokens per batch, 512 concurrent requests) the CPU backend took 24 GB of RAM on an idle machine.
+    command: ["--model-id", "AITeamVN/Vietnamese_Embedding", "--max-batch-tokens", "4096", "--max-client-batch-size", "16",
+              "--max-concurrent-requests", "16", "--auto-truncate"]
+    mem_limit: 8g   # 4g is not enough: the model is killed while it loads (measured)
+    volumes:
+      - ./volume/embedding:/data   # downloaded weights are cached here
+    restart: unless-stopped
+
+  detector:
+    container_name: ppe-detector
+    # The PPE model behind HTTP: the cloud sends it the pictures users attach to the chat (tool detect_ppe).
+    # CPU unless docker-compose.gpu.yml is added. Needs the weights in volume/weights/ppe/.
+    build:
+      context: .
+      dockerfile: services/detector/Dockerfile
+      args:
+        TORCH_INDEX: ${EDGE_TORCH_INDEX:-https://download.pytorch.org/whl/cpu}
+    environment:
+      DETECTOR_MODEL: /weights/exp02_sho_yolo26n_best.pt
+      DETECTOR_DEVICE: ${EDGE_DEVICE:-cpu}
+    volumes:
+      - ./volume/weights/ppe:/weights:ro
+    restart: unless-stopped
+
+  qdrant:
+    container_name: ppe-qdrant
+    image: qdrant/qdrant:v1.19.1   # keep the minor version equal to qdrant-client's (services/cloud/requirements.txt)
+    volumes:
+      - ./volume/qdrant:/qdrant/storage
+    restart: unless-stopped
+
+  edge-nodes:
+    # Mock edge nodes: each plays the videos of its cameras, detects (all of them share one model, on the GPU when
+    # docker-compose.gpu.yml is added) and sends the boxes and violations over MQTT, signed in as its own node.
+    #   docker compose --profile edge up -d --build edge-nodes
+    # Needs, in .env, EDGE_NODES: a JSON list with one entry per node, and the weights in volume/weights/ppe/, e.g.
+    #   EDGE_NODES='[{"node_id": "edge-b1", "mqtt_password": "...", "cameras": [{"id": 45, "video": "/videos/3/18/45"}]}]'
+    profiles: ["edge"]
+    container_name: ppe-edge-nodes
+    build:
+      context: .
+      dockerfile: services/edge/Dockerfile
+      args:
+        TORCH_INDEX: ${EDGE_TORCH_INDEX:-https://download.pytorch.org/whl/cpu}   # GPU: see docker-compose.gpu.yml
+    environment:
+      EDGE_DEVICE: ${EDGE_DEVICE:-cpu}
+      EDGE_NODES: ${EDGE_NODES:?Set EDGE_NODES in .env}
+      EDGE_MQTT_HOST: mosquitto
+      EDGE_MQTT_PORT: 8883
+      EDGE_MQTT_TLS_CA: /certs/ca.crt
+      EDGE_MODEL_PATH: /weights/exp02_sho_yolo26n_best.pt
+    depends_on:
+      mosquitto:
+        condition: service_started
+    volumes:
+      - ./volume/data/video:/videos:ro
+      - ./volume/weights/ppe:/weights:ro
+      - ./volume/mosquitto/certs/ca.crt:/certs/ca.crt:ro
+      - ./volume/edge-data:/srv/data   # the outbox of unsent events and the forbidden zones: they survive a restart
+    restart: unless-stopped
+
+  fake-edges:
+    # A fleet of fake edge nodes for demos and load tests: docker compose --profile sim up -d fake-edges
+    # Needs volume/data/fake-edges/fleet.json (python tools/fake_edges/fake_edges.py provision) and the broker users.
+    profiles: ["sim"]
+    container_name: ppe-fake-edges
+    build:
+      context: .
+      dockerfile: tools/fake_edges/Dockerfile
+    command: ["run", "--interval", "${FAKE_EDGE_INTERVAL:-10}"]   # seconds between events of one node, on average
+    environment:
+      FAKE_MQTT_HOST: mosquitto
+      FAKE_MQTT_PORT: 8883
+      FAKE_MQTT_CA: /certs/ca.crt
+      FAKE_MQTT_PASSWORD: ${FAKE_EDGE_PASSWORD:?Set FAKE_EDGE_PASSWORD in .env}
+      FAKE_FLEET: /fleet/fleet.json
+    depends_on:
+      mosquitto:
+        condition: service_started
+    volumes:
+      - ./volume/mosquitto/certs/ca.crt:/certs/ca.crt:ro
+      - ./volume/data/fake-edges:/fleet:ro
+    restart: unless-stopped
+
+  ec2-tunnel:
+    # Keeps a reverse SSH tunnel open so an edge node on the AWS box (no public port open to this machine's mosquitto,
+    # only its own SSH) can reach this mosquitto as if it were local: the AWS box's 127.0.0.1:18883 is forwarded here to
+    # 127.0.0.1:58883 (mosquitto's published port). The AWS-side edge then just sets EDGE_MQTT_HOST=127.0.0.1,
+    # EDGE_MQTT_PORT=18883. The private key (./volume/keys/ppe_tunnel) is for this one hop only, nothing else.
+    container_name: ppe-ec2-tunnel
+    image: alpine:3.20
+    command: >
+      sh -c "apk add --no-cache openssh-client >/dev/null && exec ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -i /keys/ppe_tunnel -R 127.0.0.1:18883:mosquitto:8883 ec2-user@ec2-18-207-125-238.compute-1.amazonaws.com"
+    volumes:
+      - ./volume/keys/ppe_tunnel:/keys/ppe_tunnel:ro
+      - ./volume/ssh:/root/.ssh   # known_hosts persisted, so a restart does not re-prompt
+    depends_on:
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    container_name: ppe-web
+    image: ${REGISTRY:-ppe-vision}/web:${TAG:-dev}
+    build:
+      context: ./apps/web
+    depends_on:
+      cloud:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    restart: unless-stopped

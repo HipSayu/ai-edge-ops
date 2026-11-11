@@ -19,7 +19,29 @@
       <sourceFolder url="file://$MODULE_DIR$/packages/ai_core/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/packages/svc_core" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/packages/svc_core/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/server" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/cloud/https" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/contracts/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/http" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/http/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/messaging" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/messaging/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/observability" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/observability/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/v1/inference/.venv-run/Lib/site-packages" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/assistant" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/packages/ultralytics/runtime" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/package/edge_link" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/package/edge_link/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/package/trace_id" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/package/trace_id/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/assistant" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/assistant/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/cloud" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/cloud/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/gateway" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/gateway/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/shared" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/shared/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/backend/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/backend/edge_agent/.venv" />

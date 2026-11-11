@@ -36,6 +36,8 @@ class DeepStreamConfig:
     unified_memory: bool = True  # lets the snapshot be read back to the CPU on a discrete GPU (not needed on a Jetson)
     work_dir: Path = Path("data/deepstream")
     reconnect_sec: int = 10  # a camera that drops is retried this often
+    sync: bool = False  # play at the sources' own pace (a file standing in for a camera); a live camera paces itself
+    drop_frame_interval: int = 0  # the decoder passes on one frame in this many (0: all); 2 turns a 30 fps camera into 15
     extra: dict = field(default_factory=dict)
 
     @property

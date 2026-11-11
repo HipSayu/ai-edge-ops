@@ -1,0 +1,7 @@
+fastapi==0.146.0
+numpy==2.5.3
+opencv-python-headless==5.0.0.93
+pydantic-settings==2.15.0
+paho-mqtt==2.1.0
+ultralytics==8.4.52
+uvicorn==0.54.0

@@ -61,7 +61,7 @@ class DeepStreamStream:
         infer = self._make(Gst, "nvinfer", "infer")
         infer.set_property("config-file-path", str(infer_cfg))
         sink = self._make(Gst, "fakesink", "sink")
-        sink.set_property("sync", False)  # as fast as the batches come
+        sink.set_property("sync", cfg.sync)  # unsynced: as fast as the batches come
 
         chain = [mux, convert, caps, infer]
         tracker = None
@@ -86,6 +86,8 @@ class DeepStreamStream:
                 self._set(source, **{"rtsp-reconnect-interval": cfg.reconnect_sec})
             if cfg.unified_memory:
                 self._set(source, **{"cudadec-memtype": 2})
+            if cfg.drop_frame_interval > 1:
+                self._set(source, **{"drop-frame-interval": cfg.drop_frame_interval})
             pipeline.add(source)
             source.connect("pad-added", self._on_pad, mux, index, Gst)
         return pipeline, infer, tracker or infer

@@ -1,0 +1,17 @@
+# Runs the mock edge on the GPU: docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile edge up -d --build edge-nodes
+# Needs the NVIDIA container runtime on the host. The model is small (under 1 GB of GPU memory for two cameras).
+services:
+  edge-nodes:
+    build:
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu126
+    environment:
+      EDGE_DEVICE: cuda:0
+    gpus: all
+  detector:
+    build:
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu126
+    environment:
+      DETECTOR_DEVICE: cuda:0
+    gpus: all

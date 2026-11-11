@@ -1,0 +1,14 @@
+# Copy to volume/mosquitto/acl.
+#
+# Topics (see package/edge_link): ppe/{node_id}/cameras/{camera_id}/events, ppe/{node_id}/status, and the forbidden zones
+# the cloud sends to the nodes: ppe/config/cameras/{camera_id}/zones.
+# An edge node signs in with its node id as the user name (EDGE_MQTT_USERNAME = EDGE_NODE_ID): it may write only
+# under its own node id; it reads only the zones (ppe/config/...). The cloud user reads every node and writes only the zones.
+# One password per node: a stolen edge machine cannot speak for another node or listen to the others.
+
+pattern write ppe/%u/#
+pattern read ppe/config/#
+
+user cloud
+topic read ppe/#
+topic write ppe/config/#

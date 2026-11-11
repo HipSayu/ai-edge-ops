@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -c \"import mcp, importlib.metadata as m; print\\(m.version\\('mcp'\\)\\)\")",
+      "PowerShell(python -c \"from src.shared.contracts import CommandType; print\\(list\\(CommandType\\)\\)\")"
+    ]
+  }
+}

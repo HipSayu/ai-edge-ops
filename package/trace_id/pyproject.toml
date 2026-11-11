@@ -1,0 +1,16 @@
+[project]
+name = "trace_id"
+version = "0.1.0"
+description = "One request id per HTTP request and one log line per result, shared by the cloud, assistant and gateway services."
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8", "starlette>=0.40", "httpx>=0.27"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trace_id"]

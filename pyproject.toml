@@ -1,59 +1,44 @@
 [project]
 name = "edge-ops"
 version = "0.1.0"
-description = "Cloud-Edge AI platform: Cloud control plane, Edge Agent, AI Runtime"
+description = "PPE cloud platform: the cloud service behind one web app"
 requires-python = ">=3.12"
-dependencies = [
-    "hopquangdo-messaging[mqtt]",
-    "hopquangdo-http",
-    "hopquangdo-observability",
-    "fastapi>=0.115",
-    "uvicorn>=0.30",
-    "pydantic>=2.7",
-    "pydantic-settings>=2.4",
-    "asyncpg>=0.29",
-    "redis>=5.0",
-    "httpx>=0.27",
-    "psutil>=6.0",
-    "numpy>=1.26",
-    "PyJWT>=2.8",
-    "argon2-cffi>=23.1",
-    "docker-py>=1.10.6",
-    "huggingface-hub>=2.0.0",
-]
-
-[project.optional-dependencies]
-runtime = ["ultralytics"]
-ml = ["numpy>=1.26", "pandas>=2.2", "matplotlib>=3.8", "scikit-learn>=1.5", "torch>=2.3", "jupyter>=1.0"]
-assistant = ["langchain>=1.0", "langgraph>=1.0", "langchain-anthropic>=1.0", "langgraph-checkpoint-redis>=0.5", "openai>=1.50", "qdrant-client>=1.12"]
+dependencies = ["shared", "trace_id", "cloud"]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "fakeredis>=2.20"]
-
-[tool.uv.workspace]
-members = ["packages/messaging", "packages/http", "packages/observability"]
-
-[tool.uv.sources]
-hopquangdo-messaging = { workspace = true }
-hopquangdo-http = { workspace = true }
-hopquangdo-observability = { workspace = true }
-ultralytics = { path = "packages/ultralytics", editable = true }
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "httpx>=0.27", "ruff"]
 
 [tool.uv]
 package = false
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-pythonpath = [
-    ".",
-    "packages/messaging/src",
-    "packages/http/src",
-    "packages/observability/src",
-]
+[tool.uv.workspace]
+members = ["services/shared", "package/edge_link", "package/trace_id", "services/edge", "services/cloud"]
+
+[tool.uv.sources]
+shared = { workspace = true }
+edge_link = { workspace = true }
+trace_id = { workspace = true }
+edge = { workspace = true }
+cloud = { workspace = true }
+
+# Each service keeps its own pytest.ini (pythonpath, asyncio mode); run them from the service directory.
 
 [tool.ruff]
 line-length = 120
+extend-exclude = ["legacy"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's Depends()/Query()/File() are meant to be called in defaults.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Header",
+    "fastapi.Security",
+]
 
 [tool.ruff.lint.isort]
-known-first-party = ["src", "apps"]
+known-first-party = ["apps", "shared", "trace_id", "cloud"]

@@ -59,3 +59,11 @@ tmp/
 .DS_Store
 Thumbs.db
 desktop.ini
+# access notes (secrets)
+access.txt
+
+# runtime data mounted by docker compose (db, videos, reports, weights copy)
+volume/
+
+# ---------- Editor / build output ----------
+apps/web/dist/
